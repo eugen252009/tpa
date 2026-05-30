@@ -4,61 +4,69 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
+
+	"github.com/eugen252009/tpa/internals/aptpackage"
 )
 
 func main() {
- 	buildCmd := flag.NewFlagSet("build", flag.ExitOnError)
-	pkgName := buildCmd.String("name", "mema", "Name des Pakets")
-	pkgVer := buildCmd.String("version", "0.0.1", "Version des Pakets")
+	namePtr := flag.String("name", "myNewAPTPackage", "Name of the package")
+	verPtr := flag.String("ver", "0.0.1", "Version of the package")
+	gpgPtr := flag.String("gpg", "", "GPG Key ID for signing, None for no gpg signing")
+	archPtr := flag.String("arch", "all", "Architecture of the package (e.g., all, amd64)")
+	maintainerPtr := flag.String("maintainer", "No Maintainer", "Maintainer contact information")
+	descriptionPtr := flag.String("desc", "No Description", "Short description of the package")
+	outDirPtr := flag.String("out", ".", "Output directory for the .deb file")
+	force := flag.Bool("force", false, "Skip validation")
+	flat := flag.Bool("flat", false, "build a Flat Repository")
+
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: packer <init|build|index>")
+		fmt.Println("Usage: packer <init|build|index|pack>")
+		flag.PrintDefaults()
 		return
 	}
+	flag.CommandLine.Parse(os.Args[2:])
+
+	aptpkg := aptpackage.Control{}
+	aptpkg.Init(*namePtr, *archPtr, *verPtr, *maintainerPtr, *descriptionPtr)
 
 	switch os.Args[1] {
 	case "init":
-		name:="myNewAPTPackage"
-		if len(os.Args)>3{
-			name= os.Args[2]
+		remainingArgs := flag.Args()
+		name := *namePtr
+		targetPath := "." // Standardpfad, falls nichts angegeben ist
+
+		if len(remainingArgs) > 0 {
+			// Erstes Argument ist immer der Name
+			name = remainingArgs[0]
 		}
-		os.MkdirAll(name, 0755)
-		fmt.Println("Basis-Struktur bereit.")
+
+		if len(remainingArgs) > 1 {
+			// Zweites Argument ist der Pfad
+			targetPath = remainingArgs[1]
+		}
+
+		// Hier kannst du den Pfad nutzen
+		fmt.Printf("Initialisiere Paket '%s' in: %s\n", name, targetPath)
+
+		aptpkg.Package = name
+		// Falls deine Funktion InitPackage auch einen Pfad entgegennehmen kann:
+		// aptpackage.InitPackage(aptpkg, targetPath)
+
+		// Falls du den Pfad manuell setzen musst:
+		// os.Chdir(targetPath)
+		aptpackage.InitPackage(aptpkg)
 	case "build":
-  buildCmd.Parse(os.Args[2:])
-		runBuild(*pkgName, *pkgVer)
-	case "index":
-		runIndex()
-	case "list":
-		fmt.Println("TODO!")
+		aptpackage.Build(aptpkg)
+	case "pack":
+		aptpkg := aptpackage.PackPackage{
+			Control: aptpkg,
+			GPG:     *gpgPtr,
+			OutDir:  *outDirPtr,
+			Force:   *force,
+			Flat:    *flat,
+		}
+		aptpkg.Pack()
 	default:
 		fmt.Println("Befehl unbekannt.")
 	}
-}
-
-func runBuild(name, ver string) {
-	fmt.Printf("Baue Paket: %s Version: %s\n", name, ver)
-	// Hier wird fpm mit den Variablen gefüttert
-	cmd := exec.Command("fpm", "-s", "dir", "-t", "deb", "-n", name, "-v", ver, "usr/=/usr/")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Run()
-}
-
-func runIndex() {
-	outFile, err := os.Create("Packages")
-	if err != nil {
-		fmt.Printf("Fehler beim Erstellen von Packages: %v\n", err)
-		return
-	}
-	defer outFile.Close()
-
-	cmd := exec.Command("dpkg-scanpackages", ".", "/dev/null")
-	cmd.Stdout = outFile // Hier leiten wir den Stream direkt um
-	cmd.Stderr = os.Stderr
-	
-	if err := cmd.Run(); err != nil {
-		fmt.Printf("Fehler beim Indizieren: %v\n", err)
-	}
-	fmt.Println("Packages Datei erfolgreich geschrieben.")
 }
