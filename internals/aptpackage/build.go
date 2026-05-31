@@ -4,42 +4,42 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 )
 
-func Build(c BuildContext) {
-	out, err := os.ReadFile(c.InDir + "/DEBIAN/control")
+func Build(c Config) error {
+	DEBIANpath := fmt.Sprintf("%s/DEBIAN", c.InDir)
+	controlpath := fmt.Sprintf("%s/control", DEBIANpath)
+	out, err := os.ReadFile(controlpath)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return fmt.Errorf("error while reading file: %w", err)
 	}
-	contolfile, err := ParseControl(out)
+	control, err := ParseControl(out)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return fmt.Errorf("parsing file failed: %w", err)
 	}
-	c.Control = contolfile
-	c.Control.Package = strings.ToLower(c.Control.Package)
-	os.MkdirAll(c.OutDir, 0o755)
+	err = os.MkdirAll(DEBIANpath, 0o755)
+	if err != nil {
+		return fmt.Errorf("could not create folders: %s %s", c.OutDir, err)
+	}
 	scripts := []string{"postinst", "preinst", "prerm", "postrm"}
 	for _, s := range scripts {
-		fmt.Println(c.InDir + "/DEBIAN/" + s)
-		os.Chmod(c.OutDir+"/DEBIAN/"+s, 0o755)
+		path := fmt.Sprintf("%s/%s", DEBIANpath, s)
+		err = os.Chmod(path, 0o755)
+		if err != nil {
+			return fmt.Errorf("chmod failed: %s %s", path, err)
+		}
 	}
-	packagename := fmt.Sprintf("%s_%s_%s.deb", c.Control.Package, c.Control.Version, c.Control.Architecture)
+	packagename := fmt.Sprintf("%s_%s_%s.deb", control.Name, c.Control.Version, c.Control.Architecture)
 	cmd := exec.Command(
 		"dpkg-deb",
 		"--root-owner-group",
-		"--build",
-		c.InDir,
-		c.OutDir,
+		"--build", c.InDir, c.OutDir,
 	)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("Fehler beim Bauen von %s: %v\n", packagename, err)
-	} else {
-		fmt.Printf("Paket %s.deb erfolgreich erstellt!\n", packagename)
+		return fmt.Errorf("error building %s: %w", packagename, err)
 	}
+	return nil
 }

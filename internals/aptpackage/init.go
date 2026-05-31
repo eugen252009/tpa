@@ -1,35 +1,48 @@
 package aptpackage
 
 import (
-	"fmt"
 	"os"
 )
 
-func InitPackage(controlfile BuildContext) {
-	dirs := []string{controlfile.OutDir, controlfile.OutDir + "/DEBIAN", controlfile.OutDir + "/usr/bin"}
-	fmt.Println(dirs)
+func InitPackage(cfg Config) error {
+	dirs := []string{cfg.OutDir, cfg.OutDir + "/DEBIAN", cfg.OutDir + "/usr/bin"}
 	for _, dir := range dirs {
-		os.MkdirAll(dir, 0o755)
+		err := os.MkdirAll(dir, 0o755)
+		if err != nil {
+			return err
+		}
 	}
 
-	controlfile.Control.Init(
-		controlfile.Control.Package,
-		controlfile.Control.Architecture,
-		controlfile.Control.Version,
-		controlfile.Control.Maintainer,
-		controlfile.Control.Description,
-	)
-	os.WriteFile(
-		controlfile.OutDir+"/DEBIAN/control",
-		[]byte(controlfile.Control.Render()),
+	err := os.WriteFile(
+		cfg.OutDir+"/DEBIAN/control",
+		[]byte(cfg.Control.Render()),
 		0o644)
-
-	for _, file := range []string{"postinst", "preinst", "prerm", "postrm"} {
-		os.WriteFile(
-			controlfile.OutDir+"/DEBIAN/"+file,
-			[]byte("#!/bin/sh\nset -e\n"),
+	if err != nil {
+		return err
+	}
+	scriptfile := []string{"preinst", "postinst", "prerm", "postrm"}
+	for _, file := range scriptfile {
+		data := []byte("#!/bin/sh\nset -e\n")
+		if file == scriptfile[0] && cfg.Control.PreInstBody != "" {
+			data = []byte(cfg.Control.PreInstBody)
+		}
+		if file == scriptfile[1] && cfg.Control.PostInstBody != "" {
+			data = []byte(cfg.Control.PostInstBody)
+		}
+		if file == scriptfile[2] && cfg.Control.PreRmBody != "" {
+			data = []byte(cfg.Control.PreRmBody)
+		}
+		if file == scriptfile[3] && cfg.Control.PostRmBody != "" {
+			data = []byte(cfg.Control.PostRmBody)
+		}
+		err := os.WriteFile(
+			cfg.OutDir+"/DEBIAN/"+file,
+			data,
 			0o755,
 		)
+		if err != nil {
+			panic(err)
+		}
 	}
-	fmt.Printf("Paket-Struktur für '%s' erstellt.\n", controlfile.InDir+"/"+controlfile.Control.Package)
+	return nil
 }
