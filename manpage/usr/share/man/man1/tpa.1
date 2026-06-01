@@ -1,0 +1,148 @@
+.TH TPA 1 "Juni 2026" "TPA Manual" "User Commands"
+.SH NAME
+tpa \- Minimalist package builder and repository bundler for .deb archives.
+
+.SH SYNOPSIS
+.B tpa
+[COMMANDS] [OPTIONS]
+
+.SH DESCRIPTION
+.B tpa
+is a high-performance, minimalist tool designed for automating the creation of Debian packages (.deb) and managing apt-compatible repositories. It is built for efficiency, allowing package definitions via JSON blueprints or direct command-line arguments.
+
+.SH COMMANDS
+.TP
+.B init
+Initialize a new project structure.
+.TP
+.B build
+Build a .deb package from input files and metadata.
+.TP
+.B parse
+Parse existing package metadata.
+.TP
+.B pack
+Create or update an apt repository index.
+.TP
+.B json
+Generate a JSON blueprint from command-line arguments.
+.TP
+.B schema
+Output the schema definition for JSON blueprints.
+
+.SH OPTIONS
+.SS General Options
+.TP
+.BI -in " directory"
+Input directory containing source files (default: ".").
+.TP
+.BI -out " directory"
+Output directory for the generated .deb file (default: ".").
+
+.SS Package Metadata
+.TP
+.BI -name " string"
+Package name (default: "myNewAPTPackage").
+.TP
+.BI -ver " string"
+Package version (default: "0.0.1").
+.TP
+.BI -desc " string"
+Short description.
+.TP
+.BI -maintainer " string"
+Maintainer contact info.
+.TP
+.BI -section " string"
+Package section (default: "utils").
+
+.SS Dependencies & Relationships
+.TP
+.BI -depends " string"
+Package dependencies (comma separated).
+.TP
+.BI -conflicts " string"
+Conflicting packages.
+
+.SS Repository Options
+.TP
+.BI -arch " string"
+Architecture (default: "all").
+.TP
+.BI -gpg " ID"
+GPG Key ID for signing (empty for no signing).
+
+.SH EXAMPLE CONFIGURATION
+The following is an example of a valid control file structure as utilized by 
+.B tpa
+itself, including advanced relationship fields:
+
+.nf
+Package: tpa
+Version: 0.0.1
+Architecture: amd64
+Maintainer: Eugen Lupricht <eugen@lupricht.net>
+Description: Automation tool for Debian packages and repository bundling
+ tpa is a minimalist package builder and repository bundler for .deb archives.
+ .
+ As a standalone tool, tpa decouples packaging from system structure and
+ enables the efficient orchestration of software stacks.
+Depends: libc6, dpkg, gpg, gzip
+Recommends: git, make
+Suggests: bash-completion
+Breaks: old-tpa-version
+Replaces: old-tpa-version
+Homepage: https://github.com/eugen252009/tpa
+Section: utils
+Essential: no
+.fi
+.SH EXAMPLE USAGE
+The following workflow demonstrates the complete lifecycle of creating a 
+package and bundling it into an apt repository. Optional GPG signing can 
+be enabled by removing the comment symbol (#):
+
+.nf
+# 1. Initialize the package structure
+tpa init -name=helloDeb -ver=0.1 -desc="Short description" -maintainer="Maintainer" -section=utils -out=hello_deb
+
+# 2. Build the .deb package
+tpa build -in=hello_deb -out="hello_deb/hello_deb.deb"
+
+# 3. Bundle into an apt repository (optional: uncomment for GPG signing)
+tpa pack -in=hello_deb -out=repo # -gpg=YOUR_GPG_KEY_ID
+.fi
+
+.SH EXAMPLE OUTPUT
+.nf
+Initializing package 'helloDeb' in: hello_deb
+Package structure for './helloDeb' created.
+dpkg-deb: building package 'hellodeb' in 'hello_deb/hello_deb.deb'.
+Package myNewAPTPackage.deb successfully created!
+Repo build complete!
+.fi
+
+.SH TPA DEPENDENCIES:
+.I tpa 
+is a lean tool that relies on the following core system utilities to function:
+.IP \(bu 2
+.B libc6: 
+Standard C library (for runtime execution).
+.IP \(bu 2
+.B dpkg: 
+Required for the actual .deb packaging process.
+.IP \(bu 2
+.B gpg: 
+Required only if you intend to sign your repositories.
+.IP \(bu 2
+.B gzip: 
+Used for compression of package data.
+
+.SH AUTHOR
+Eugen Lupricht
+
+.SH SEE ALSO
+.BR dpkg-deb (1),
+.BR apt-ftparchive (1),
+.BR gzip (1),
+.BR gpg (1)
+.PP

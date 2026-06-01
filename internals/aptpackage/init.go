@@ -5,7 +5,11 @@ import (
 )
 
 func InitPackage(cfg Config) error {
-	dirs := []string{cfg.OutDir, cfg.OutDir + "/DEBIAN", cfg.OutDir + "/usr/bin"}
+	dirs := []string{
+		cfg.OutDir + "/DEBIAN",
+		cfg.OutDir + "/usr/local/bin",
+	}
+
 	for _, dir := range dirs {
 		err := os.MkdirAll(dir, 0o755)
 		if err != nil {
@@ -20,6 +24,7 @@ func InitPackage(cfg Config) error {
 	if err != nil {
 		return err
 	}
+
 	scriptfile := []string{"preinst", "postinst", "prerm", "postrm"}
 	for _, file := range scriptfile {
 		data := []byte("#!/bin/sh\nset -e\n")

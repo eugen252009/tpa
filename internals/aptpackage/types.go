@@ -103,6 +103,7 @@ func (c *Control) Render() string {
 	for _, f := range fields {
 		if f.Value != "" {
 			fmt.Fprintf(&b, "%s: %s\n", f.Label, f.Value)
+			continue
 		}
 	}
 
