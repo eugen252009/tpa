@@ -1,6 +1,8 @@
 package aptpackage
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func validJSONKeys(c Control) bool {
 	if c.Name == "" {
@@ -21,38 +23,7 @@ func validJSONKeys(c Control) bool {
 	return true
 }
 
-func (c *Config) ToControl() Control {
-	control := Control{
-		Name:         c.Control.Name,
-		Version:      c.Control.Version,
-		Architecture: c.Control.Architecture,
-		Maintainer:   c.Control.Maintainer,
-		Description:  c.Control.Description,
-		Depends:      "",
-		Homepage:     "",
-		Section:      "",
-		Priority:     "",
-		PreInstBody:  "",
-		PostInstBody: "",
-		PreRmBody:    "",
-		PostRmBody:   "",
-		PreDepends:   "",
-		Recommends:   "",
-		Suggests:     "",
-		Breaks:       "",
-		Conflicts:    "",
-		Replaces:     "",
-		Provides:     "",
-		BuiltUsing:   "",
-		Essential:    "",
-		MultiArch:    "",
-	}
-
-	return control
-}
-
 func JSONBuild(cfg Config) error {
-	cfg.ToControl()
 	if !validJSONKeys(cfg.Control) {
 		return fmt.Errorf("%s", "invalid JSON schema")
 	}

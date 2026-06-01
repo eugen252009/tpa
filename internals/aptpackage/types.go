@@ -24,13 +24,13 @@ type PackPackage struct {
 }
 
 type RepoConfig struct {
-	Origin        string
-	Label         string
-	Suite         string
-	Architectures string
-	Components    string
-	Codename      string
-	Description   string
+	Origin        string `json:"origin"`
+	Label         string `json:"label"`
+	Suite         string `json:"suite"`
+	Architectures string `json:"architectures"`
+	Components    string `json:"components"`
+	Codename      string `json:"codename"`
+	Description   string `json:"description"`
 }
 
 type Control struct {
@@ -63,12 +63,12 @@ type Control struct {
 }
 
 type Config struct {
-	Control Control
-	Repo    RepoConfig
+	Control Control    `json:"control"`
+	Repo    RepoConfig `json:"repo"`
 
-	InDir  string
-	OutDir string
-	GPG    string
+	InDir  string `json:"indir"`
+	OutDir string `json:"outdir"`
+	GPG    string `json:"gpg"`
 }
 
 func (c *Control) Render() string {
@@ -109,3 +109,4 @@ func (c *Control) Render() string {
 
 	return b.String()
 }
+

@@ -95,8 +95,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		var data aptpackage.Control
-		err = json.Unmarshal(bytes, &data)
+		err = json.Unmarshal(bytes, &cfg)
 		if err != nil {
 			panic(err)
 		}
