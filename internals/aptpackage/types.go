@@ -9,7 +9,50 @@ import (
 	"strings"
 )
 
-const JSONSCHEMA = "export interface Control {\n name: string;\n version: string;\n architecture: string;\n maintainer: string;\n description: string;\n depends: string;\n homepage: string;\n section: string;\n priority: string;\n preinstbody: string;\n postinstbody: string;\n prermbody: string;\n postrmbody: string;\n preDepends: string;\n recommends: string;\n suggests: string;\n breaks: string;\n conflicts: string;\n replaces: string;\n provides: string;\n builtUsing: string;\n essential: string;\n multiArch: string;\n }"
+const JSONSCHEMA = `export interface Control {
+    control: ControlClass;
+    repo:    Repo;
+    indir:   string;
+    outdir:  string;
+    gpg:     string;
+}
+
+export interface ControlClass {
+    name:         string;
+    version:      string;
+    architecture: string;
+    maintainer:   string;
+    description:  string;
+    depends:      string;
+    homepage:     string;
+    section:      string;
+    priority:     string;
+    preinstbody:  string;
+    postinstbody: string;
+    prermbody:    string;
+    postrmbody:   string;
+    preDepends:   string;
+    recommends:   string;
+    suggests:     string;
+    breaks:       string;
+    conflicts:    string;
+    replaces:     string;
+    provides:     string;
+    builtUsing:   string;
+    essential:    string;
+    multiArch:    string;
+}
+
+export interface Repo {
+    origin:        string;
+    label:         string;
+    suite:         string;
+    architectures: string;
+    components:    string;
+    codename:      string;
+    description:   string;
+}
+`
 
 type BuildContext struct {
 	Control Control
@@ -109,4 +152,3 @@ func (c *Control) Render() string {
 
 	return b.String()
 }
-

@@ -1,3 +1,7 @@
+// Package aptpackage serves as a high-performance helper for automating
+// the generation and management of Debian package archives and repository structures.
+// It abstracts complex packaging, indexing, and filesystem synchronization processes,
+// enabling efficient, routing-based processing of repository builds at the filesystem level.
 package aptpackage
 
 import (
