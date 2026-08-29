@@ -64,22 +64,22 @@ func main() {
 	if os.Args[1] == "pack" {
 		if *output != "" && *atomicPublish != "" {
 			fmt.Fprintln(os.Stderr, "tpa: --output and --atomic-publish are mutually exclusive")
-			return
+			os.Exit(2)
 		}
 		args := flag.Args()
 		if len(args) > 1 {
 			fmt.Fprintln(os.Stderr, "tpa: pack accepts at most one JSON config path")
-			return
+			os.Exit(2)
 		}
 		if len(args) == 1 {
 			data, err := os.ReadFile(args[0])
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "tpa: read config: %v\n", err)
-				return
+				os.Exit(2)
 			}
 			if err := json.Unmarshal(data, &cfg); err != nil {
 				fmt.Fprintf(os.Stderr, "tpa: parse config: %v\n", err)
-				return
+				os.Exit(2)
 			}
 		}
 		if *output != "" {
@@ -122,7 +122,7 @@ func main() {
 		}
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Build failed: %v\n", err)
-			return
+			os.Exit(1)
 		}
 		fmt.Println("Repo build complete!")
 	case "json":
