@@ -50,7 +50,7 @@ func InitPackage(cfg Config) error {
 			0o755,
 		)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
 	return nil

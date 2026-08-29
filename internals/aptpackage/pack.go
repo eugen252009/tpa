@@ -1,7 +1,5 @@
-// Package aptpackage serves as a high-performance helper for automating
-// the generation and management of Debian package archives and repository structures.
-// It abstracts complex packaging, indexing, and filesystem synchronization processes,
-// enabling efficient, routing-based processing of repository builds at the filesystem level.
+// Package aptpackage provides small helpers for building Debian packages and
+// flat APT repositories.
 package aptpackage
 
 import (
@@ -12,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -21,198 +20,208 @@ type Repo struct {
 	Dist    string
 }
 
-func must(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
+// Pack creates repository metadata and copies packages into the pool. Pool
+// population is deliberately independent of signing: unsigned repositories
+// are useful for local testing and must still be complete repositories.
 func Pack(cfg Config) error {
-	files, err := os.ReadDir(cfg.InDir)
-	must(err)
-	pkgs := []Repo{}
-	for _, file := range files {
-		if strings.HasSuffix(file.Name(), ".deb") {
-			pkg, err := ParsePackage(cfg.InDir + "/" + file.Name())
-			must(err)
-			pkgs = append(pkgs, Repo{
-				Control: pkg,
-				Dist:    cfg.InDir + "/" + file.Name(),
-			})
-		}
+	entries, err := os.ReadDir(cfg.InDir)
+	if err != nil {
+		return fmt.Errorf("read package directory: %w", err)
 	}
 
-	err = os.MkdirAll(fmt.Sprintf("%s/dists/%s/%s", cfg.OutDir, cfg.Repo.Codename, cfg.Repo.Components), 0o755)
-	must(err)
-	err = os.MkdirAll(fmt.Sprintf("%s/pool/%s", cfg.OutDir, cfg.Repo.Components), 0o755)
-	must(err)
+	pkgs := make([]Repo, 0)
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".deb") {
+			continue
+		}
+		path := filepath.Join(cfg.InDir, entry.Name())
+		control, err := ParsePackage(path)
+		if err != nil {
+			return fmt.Errorf("parse %s: %w", entry.Name(), err)
+		}
+		pkgs = append(pkgs, Repo{Control: control, Dist: path})
+	}
+	if len(pkgs) == 0 {
+		return fmt.Errorf("no .deb packages found in %s", cfg.InDir)
+	}
+	sort.Slice(pkgs, func(i, j int) bool {
+		if pkgs[i].Control.Architecture != pkgs[j].Control.Architecture {
+			return pkgs[i].Control.Architecture < pkgs[j].Control.Architecture
+		}
+		return pkgs[i].Control.Name < pkgs[j].Control.Name
+	})
 
-	pkgMap := make(map[string][]Repo)
-	initalMap := make(map[byte]int)
+	component := cfg.Repo.Components
+	if component == "" {
+		component = "main"
+	}
+	codename := cfg.Repo.Codename
+	if codename == "" {
+		codename = "stable"
+	}
+	distDir := filepath.Join(cfg.OutDir, "dists", codename)
+	if err := os.MkdirAll(distDir, 0o755); err != nil {
+		return fmt.Errorf("create distribution directory: %w", err)
+	}
+
+	byArch := make(map[string][]Repo)
 	for _, pkg := range pkgs {
-		pkgMap[pkg.Control.Architecture] = append(pkgMap[pkg.Control.Architecture], pkg)
-		initalMap[pkg.Control.Name[0]] = 0
+		byArch[pkg.Control.Architecture] = append(byArch[pkg.Control.Architecture], pkg)
 	}
-
-	releasePath := filepath.Join(cfg.OutDir, "dists", cfg.Repo.Codename, "Release")
-	inReleasePath := filepath.Join(cfg.OutDir, "dists", cfg.Repo.Codename, "InRelease")
-	releaseFile, err := os.Create(releasePath)
-	must(err)
-	archList := []string{}
-	for arch := range pkgMap {
-		archList = append(archList, arch)
+	architectures := make([]string, 0, len(byArch))
+	for arch := range byArch {
+		architectures = append(architectures, arch)
 	}
+	sort.Strings(architectures)
 
-	_, err = fmt.Fprintf(releaseFile, "Origin: %s\n", "TPA-Repo")
-	must(err)
-	_, err = fmt.Fprintf(releaseFile, "Label: %s\n", "TPA-Repo")
-	must(err)
-	_, err = fmt.Fprintf(releaseFile, "Suite: %s\n", "stable")
-	must(err)
-	_, err = fmt.Fprintf(releaseFile, "Architectures: %s\n", strings.Join(archList, " "))
-	must(err)
-	_, err = fmt.Fprintf(releaseFile, "Components: %s\n", "main")
-	must(err)
-	_, err = fmt.Fprintf(releaseFile, "Codename: %s\n", "stable")
-	must(err)
-	_, err = fmt.Fprintf(releaseFile, "Date: %s\n", time.Now().UTC().Format(time.RFC1123Z))
-	must(err)
-	_, err = fmt.Fprintf(releaseFile, "Description: %s\n", "My Private TPA Repository")
-	must(err)
-	_, err = fmt.Fprintf(releaseFile, "SHA256:\n")
-	must(err)
-
-	for _, arch := range archList {
-		archPath := filepath.Join(cfg.OutDir, "dists", cfg.Repo.Codename, cfg.Repo.Components, "binary-"+arch)
-		packagesPath := filepath.Join(cfg.OutDir, "dists", cfg.Repo.Codename, cfg.Repo.Components, "binary-"+arch, "Packages")
-		err := os.MkdirAll(archPath, 0o755)
-		must(err)
-		packagesFile, err := os.Create(packagesPath)
-		must(err)
-
-		for _, deb := range pkgMap[arch] {
-			_, err = fmt.Fprintf(packagesFile, "Package: %s\n", deb.Control.Name)
-			must(err)
-			_, err = fmt.Fprintf(packagesFile, "Version: %s\n", deb.Control.Version)
-			must(err)
-			_, err = fmt.Fprintf(packagesFile, "Architecture: %s\n", deb.Control.Architecture)
-			must(err)
-			relPath := filepath.Join(
-				"pool",
-				cfg.Repo.Codename,
-				string(deb.Control.Name[0]),
-				deb.Control.Name,
-				filepath.Base(deb.Control.Name+".deb"),
-			)
-			_, err = fmt.Fprintf(packagesFile, "Filename: %s\n", relPath)
-			must(err)
-			_, err = fmt.Fprintf(packagesFile, "Hash: SHA256\n")
-			must(err)
-			fileInfo, err := os.Stat(deb.Dist)
-			must(err)
-			_, err = fmt.Fprintf(packagesFile, "Size: %d\n", fileInfo.Size())
-			must(err)
-
-			hash, err := getHash(deb.Dist)
-			must(err)
-			_, err = fmt.Fprintf(packagesFile, "SHA256: %s\n\n", hash)
-			must(err)
+	// Copy first, so a successful return always leaves a usable pool.
+	for _, pkg := range pkgs {
+		poolDir := filepath.Join(cfg.OutDir, "pool", component,
+			string(pkg.Control.Name[0]), pkg.Control.Name)
+		if err := os.MkdirAll(poolDir, 0o755); err != nil {
+			return fmt.Errorf("create pool directory: %w", err)
 		}
-		err = packagesFile.Close()
-		must(err)
-
-		cmd := exec.Command("gzip", "-fk", packagesPath)
-		err = cmd.Run()
-		must(err)
-
-		{
-			packagesHash, err := getHash(packagesPath)
-			must(err)
-			packageSize, err := os.Stat(packagesPath)
-			must(err)
-			_, err = fmt.Fprintf(releaseFile,
-				" %s %d %s\n", packagesHash, packageSize.Size(),
-				fmt.Sprintf("%s/"+"binary-%s/Packages", cfg.Repo.Components, arch),
-			)
-			must(err)
-		}
-		{
-			packagesHash, err := getHash(packagesPath + ".gz")
-			must(err)
-			packageSize, err := os.Stat(packagesPath + ".gz")
-			must(err)
-			_, err = fmt.Fprintf(releaseFile,
-				" %s %d %s\n",
-				packagesHash,
-				packageSize.Size(),
-				fmt.Sprintf("%s/binary-%s/Packages.gz", cfg.Repo.Components, arch))
-			must(err)
+		dest := filepath.Join(poolDir, filepath.Base(pkg.Dist))
+		if err := CopyFile(pkg.Dist, dest); err != nil {
+			return fmt.Errorf("copy %s: %w", pkg.Dist, err)
 		}
 	}
-	err = releaseFile.Close()
-	must(err)
+
+	releasePath := filepath.Join(distDir, "Release")
+	release, err := os.Create(releasePath)
+	if err != nil {
+		return fmt.Errorf("create Release: %w", err)
+	}
+	closeRelease := func() error { return release.Close() }
+	origin, label, suite := cfg.Repo.Origin, cfg.Repo.Label, cfg.Repo.Suite
+	if origin == "" {
+		origin = "TPA-Repo"
+	}
+	if label == "" {
+		label = origin
+	}
+	if suite == "" {
+		suite = codename
+	}
+	description := cfg.Repo.Description
+	if description == "" {
+		description = "TPA package repository"
+	}
+	_, err = fmt.Fprintf(release, "Origin: %s\nLabel: %s\nSuite: %s\nArchitectures: %s\nComponents: %s\nCodename: %s\nDate: %s\nDescription: %s\nSHA256:\n",
+		origin, label, suite, strings.Join(architectures, " "), component, codename,
+		time.Now().UTC().Format(time.RFC1123Z), description)
+	if err != nil {
+		_ = closeRelease()
+		return fmt.Errorf("write Release: %w", err)
+	}
+
+	for _, arch := range architectures {
+		binaryDir := filepath.Join(distDir, component, "binary-"+arch)
+		if err := os.MkdirAll(binaryDir, 0o755); err != nil {
+			_ = closeRelease()
+			return fmt.Errorf("create metadata directory: %w", err)
+		}
+		packagesPath := filepath.Join(binaryDir, "Packages")
+		packages, err := os.Create(packagesPath)
+		if err != nil {
+			_ = closeRelease()
+			return fmt.Errorf("create Packages: %w", err)
+		}
+		for _, pkg := range byArch[arch] {
+			info, err := os.Stat(pkg.Dist)
+			if err != nil {
+				_ = packages.Close()
+				_ = closeRelease()
+				return fmt.Errorf("stat package: %w", err)
+			}
+			relPath := filepath.ToSlash(filepath.Join("pool", component, string(pkg.Control.Name[0]), pkg.Control.Name, filepath.Base(pkg.Dist)))
+			hash, err := getHash(pkg.Dist)
+			if err != nil {
+				_ = packages.Close()
+				_ = closeRelease()
+				return err
+			}
+			if _, err = fmt.Fprintf(packages, "Package: %s\nVersion: %s\nArchitecture: %s\nFilename: %s\nSize: %d\nSHA256: %s\n\n", pkg.Control.Name, pkg.Control.Version, pkg.Control.Architecture, relPath, info.Size(), hash); err != nil {
+				_ = packages.Close()
+				_ = closeRelease()
+				return fmt.Errorf("write Packages: %w", err)
+			}
+		}
+		if err := packages.Close(); err != nil {
+			_ = closeRelease()
+			return fmt.Errorf("close Packages: %w", err)
+		}
+		if err := gzipFile(packagesPath); err != nil {
+			_ = closeRelease()
+			return err
+		}
+		for _, path := range []string{packagesPath, packagesPath + ".gz"} {
+			hash, err := getHash(path)
+			if err != nil {
+				_ = closeRelease()
+				return err
+			}
+			info, err := os.Stat(path)
+			if err != nil {
+				_ = closeRelease()
+				return err
+			}
+			rel := filepath.ToSlash(filepath.Join(component, "binary-"+arch, filepath.Base(path)))
+			if _, err = fmt.Fprintf(release, " %s %d %s\n", hash, info.Size(), rel); err != nil {
+				_ = closeRelease()
+				return fmt.Errorf("write Release hash: %w", err)
+			}
+		}
+	}
+	if err := closeRelease(); err != nil {
+		return fmt.Errorf("close Release: %w", err)
+	}
 	if cfg.GPG == "" {
 		return nil
 	}
-	cmd := exec.Command(
-		"gpg",
-		"--batch", "--yes", "--clearsign",
-		"-u", cfg.GPG,
-		"-o", inReleasePath,
-		releasePath,
-	)
+	inRelease := filepath.Join(distDir, "InRelease")
+	cmd := exec.Command("gpg", "--batch", "--yes", "--clearsign", "-u", cfg.GPG, "-o", inRelease, releasePath)
 	cmd.Stderr = os.Stderr
-	err = cmd.Run()
-	must(err)
-	for initial := range initalMap {
-		poolDir := filepath.Join(cfg.OutDir, "pool", cfg.Repo.Components, string(initial))
-
-		err := os.MkdirAll(poolDir, 0o755)
-		must(err)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("sign Release: %w: %s", err, strings.TrimSpace(string(output)))
 	}
-	for _, pkg := range pkgs {
-		initial := string(pkg.Control.Name[0])
-		poolDir := filepath.Join(cfg.OutDir, "pool", cfg.Repo.Codename, initial, pkg.Control.Name)
-		err = os.MkdirAll(poolDir, 0o755)
-		must(err)
+	return nil
+}
 
-		dest := filepath.Join(poolDir, filepath.Base(pkg.Control.Name+".deb"))
-		err = CopyFile(pkg.Dist, dest)
-		must(err)
+func gzipFile(path string) error {
+	cmd := exec.Command("gzip", "-fk", path)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("compress %s: %w: %s", path, err, strings.TrimSpace(string(output)))
 	}
 	return nil
 }
 
 func CopyFile(src, dst string) error {
-	sourceFile, err := os.Open(src)
+	source, err := os.Open(src)
 	if err != nil {
 		return err
 	}
-	defer sourceFile.Close()
-
-	destFile, err := os.Create(dst)
+	defer source.Close()
+	dest, err := os.OpenFile(dst, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}
-	defer destFile.Close()
-
-	_, err = io.Copy(destFile, sourceFile)
-	if err != nil {
+	if _, err = io.Copy(dest, source); err != nil {
+		_ = dest.Close()
 		return err
 	}
-
-	info, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-	return os.Chmod(dst, info.Mode())
+	return dest.Close()
 }
 
 func getHash(path string) (string, error) {
-	file, err := os.ReadFile(path)
+	file, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("error: %w", err)
+		return "", fmt.Errorf("hash %s: %w", path, err)
 	}
-	rawbytes := sha256.Sum256(file)
-	return hex.EncodeToString(rawbytes[:]), nil
+	defer file.Close()
+	h := sha256.New()
+	if _, err = io.Copy(h, file); err != nil {
+		return "", fmt.Errorf("hash %s: %w", path, err)
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

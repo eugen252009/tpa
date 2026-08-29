@@ -76,32 +76,27 @@ func main() {
 		}
 		fmt.Println(pkg)
 	case "pack":
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Fprintf(os.Stderr, "Build failed: %s\n", r)
-				os.Exit(1)
-			}
-		}()
-
 		if err := aptpackage.Pack(cfg); err != nil {
-			if cleanupErr := os.RemoveAll(cfg.OutDir); cleanupErr != nil {
-				panic(fmt.Sprintf("Build error: %v\nFailed to clean up OutDir: %v", err, cleanupErr))
-			}
-			panic(fmt.Sprintf("Build failed: %v", err))
+			fmt.Fprintf(os.Stderr, "Build failed: %v\n", err)
+			return
 		}
 		fmt.Println("Repo build complete!")
 	case "json":
 		bytes, err := io.ReadAll(os.Stdin)
 		if err != nil {
-			panic(err)
+			fmt.Fprintf(os.Stderr, "read JSON: %v\n", err)
+			return
 		}
-		err = json.Unmarshal(bytes, &cfg)
-		if err != nil {
-			panic(err)
+		if err = json.Unmarshal(bytes, &cfg); err != nil {
+			fmt.Fprintf(os.Stderr, "parse JSON: %v\n", err)
+			return
 		}
-		aptpackage.JSONBuild(cfg)
+		if err = aptpackage.JSONBuild(cfg); err != nil {
+			fmt.Fprintf(os.Stderr, "build JSON package: %v\n", err)
+			return
+		}
 	case "schema":
-		fmt.Println(aptpackage.JSONSCHEMA)
+		fmt.Print(aptpackage.JSONSCHEMA)
 	default:
 		fmt.Println("Unknown command.")
 	}
