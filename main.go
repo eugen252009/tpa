@@ -44,6 +44,8 @@ func main() {
 	flag.StringVar(&cfg.InDir, "in", ".", "Your input directory")
 	flag.StringVar(&cfg.OutDir, "out", ".", "Output directory for the .deb file")
 	flag.StringVar(&cfg.GPG, "gpg", "", "GPG Key ID for signing, empty for no gpg signing")
+	output := flag.String("output", "", "Repository output directory (alias for -out)")
+	atomicPublish := flag.String("atomic-publish", "", "Atomically publish the repository at this path")
 
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: tpa <init|build|parse|pack|json|schema>")
@@ -51,6 +53,34 @@ func main() {
 		return
 	}
 	flag.CommandLine.Parse(os.Args[2:])
+	if os.Args[1] == "pack" {
+		if *output != "" && *atomicPublish != "" {
+			fmt.Fprintln(os.Stderr, "tpa: --output and --atomic-publish are mutually exclusive")
+			return
+		}
+		args := flag.Args()
+		if len(args) > 1 {
+			fmt.Fprintln(os.Stderr, "tpa: pack accepts at most one JSON config path")
+			return
+		}
+		if len(args) == 1 {
+			data, err := os.ReadFile(args[0])
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "tpa: read config: %v\n", err)
+				return
+			}
+			if err := json.Unmarshal(data, &cfg); err != nil {
+				fmt.Fprintf(os.Stderr, "tpa: parse config: %v\n", err)
+				return
+			}
+		}
+		if *output != "" {
+			cfg.OutDir = *output
+		}
+		if *atomicPublish != "" {
+			cfg.OutDir = *atomicPublish
+		}
+	}
 
 	switch os.Args[1] {
 	case "init":
@@ -76,7 +106,13 @@ func main() {
 		}
 		fmt.Println(pkg)
 	case "pack":
-		if err := aptpackage.Pack(cfg); err != nil {
+		var err error
+		if *atomicPublish != "" {
+			err = aptpackage.AtomicPack(cfg, *atomicPublish)
+		} else {
+			err = aptpackage.Pack(cfg)
+		}
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Build failed: %v\n", err)
 			return
 		}
