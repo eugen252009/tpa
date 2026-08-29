@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/eugen252009/tpa/internals/aptpackage"
 )
@@ -52,7 +53,14 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
-	flag.CommandLine.Parse(os.Args[2:])
+	flagArgs := os.Args[2:]
+	// The standard flag package stops at the first positional argument. Move
+	// pack's optional config path behind flags so `pack config.json --output`
+	// remains compatible with the documented form.
+	if os.Args[1] == "pack" && len(flagArgs) > 0 && !strings.HasPrefix(flagArgs[0], "-") {
+		flagArgs = append(append([]string{}, flagArgs[1:]...), flagArgs[0])
+	}
+	flag.CommandLine.Parse(flagArgs)
 	if os.Args[1] == "pack" {
 		if *output != "" && *atomicPublish != "" {
 			fmt.Fprintln(os.Stderr, "tpa: --output and --atomic-publish are mutually exclusive")
