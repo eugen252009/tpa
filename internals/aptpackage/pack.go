@@ -181,7 +181,6 @@ func Pack(cfg Config) error {
 	}
 	inRelease := filepath.Join(distDir, "InRelease")
 	cmd := exec.Command("gpg", "--batch", "--yes", "--clearsign", "-u", cfg.GPG, "-o", inRelease, releasePath)
-	cmd.Stderr = os.Stderr
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("sign Release: %w: %s", err, strings.TrimSpace(string(output)))
 	}
