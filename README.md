@@ -49,6 +49,21 @@ non-zero command failed or its invocation was invalid
 Diagnostics are written to standard error. Callers should use the exit status,
 not match diagnostic text.
 
+### Important flags
+
+Package flags include `-name`, `-ver`, `-arch`, `-maintainer`, `-desc`,
+`-depends`, `-pre-depends`, `-recommends`, `-suggests`, `-provides`,
+`-conflicts`, `-breaks`, `-replaces`, `-homepage`, `-section`, `-priority`,
+`-built-using`, `-essential`, `-multi-arch`, `-preinst`, `-postinst`, `-prerm`,
+and `-postrm`.
+
+Repository flags include `-origin`, `-label`, `-suite`, `-codename`, and
+`-components`. Repository architectures are inferred from the actual `.deb`
+artifacts; there is no architecture-list override. `-gpg` selects a signing key.
+The general path flags are `-in` and `-out`. For `pack`, `--output` is an alias
+for `-out`, while `--atomic-publish` selects atomic replacement; those two
+output overrides cannot be used together.
+
 ## Package creation
 
 Relationship flags include `-depends`, `-pre-depends`, `-recommends`,
@@ -66,7 +81,8 @@ tpa build -in=build/hello-tpa -out=dist/hello-tpa_1.0.0_all.deb
 ```
 
 `tpa json` performs the same initialization from standard input. Omitted fields
-retain the CLI defaults.
+retain the CLI defaults. The JSON uses the field names printed by `tpa schema`.
+The `json` command initializes a package tree only; it does not build a `.deb`.
 
 ```sh
 printf '%s\n' '{
@@ -108,7 +124,9 @@ when the result must be an exact snapshot. Direct output remains useful for
 manual generation where no concurrent reader observes the destination.
 
 `pack` also accepts one positional JSON config file. `--output` and
-`--atomic-publish` explicitly override the output path from that file.
+`--atomic-publish` explicitly override the output path from that file. The
+configuration file supplies the same package/repository fields as the CLI;
+package artifacts are still read from the configured input directory.
 
 ## Repository semantics
 
