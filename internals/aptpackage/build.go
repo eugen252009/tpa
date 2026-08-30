@@ -1,13 +1,10 @@
-// Package aptpackage serves as a high-performance helper for automating
-// the generation and management of Debian package archives and repository structures.
-// It abstracts complex packaging, indexing, and filesystem synchronization processes,
-// enabling efficient, routing-based processing of repository builds at the filesystem level.
 package aptpackage
 
 import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 func Build(c Config) error {
@@ -28,15 +25,19 @@ func Build(c Config) error {
 	scripts := []string{"postinst", "preinst", "prerm", "postrm"}
 	for _, s := range scripts {
 		path := fmt.Sprintf("%s/%s", DEBIANpath, s)
-		if _, err := os.Stat(path); err != nil {
+		if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
 			continue
+		} else if statErr != nil {
+			return fmt.Errorf("inspect maintainer script %s: %w", path, statErr)
 		}
-		err = os.Chmod(path, 0o755)
-		if err != nil {
+		if err = os.Chmod(path, 0o755); err != nil {
 			return fmt.Errorf("chmod failed: %s %s", path, err)
 		}
 	}
-	packagename := fmt.Sprintf("%s_%s_%s.deb", control.Name, c.Control.Version, c.Control.Architecture)
+	if err = os.MkdirAll(filepath.Dir(c.OutDir), 0o755); err != nil {
+		return fmt.Errorf("create output directory: %w", err)
+	}
+	packagename := fmt.Sprintf("%s_%s_%s.deb", control.Name, control.Version, control.Architecture)
 	cmd := exec.Command(
 		"dpkg-deb",
 		"--root-owner-group",

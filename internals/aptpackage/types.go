@@ -1,7 +1,4 @@
-// Package aptpackage serves as a high-performance helper for automating
-// the generation and management of Debian package archives and repository structures.
-// It abstracts complex packaging, indexing, and filesystem synchronization processes,
-// enabling efficient, routing-based processing of repository builds at the filesystem level.
+// Package aptpackage implements Debian package and APT repository construction.
 package aptpackage
 
 import (
@@ -47,32 +44,19 @@ export interface Repo {
     origin:        string;
     label:         string;
     suite:         string;
-    architectures: string;
     components:    string;
     codename:      string;
     description:   string;
-}`
-
-type BuildContext struct {
-	Control Control
-	OutDir  string
-	InDir   string
 }
-
-type PackPackage struct {
-	Context BuildContext
-	GPG     string
-	Flat    bool
-}
+`
 
 type RepoConfig struct {
-	Origin        string `json:"origin"`
-	Label         string `json:"label"`
-	Suite         string `json:"suite"`
-	Architectures string `json:"architectures"`
-	Components    string `json:"components"`
-	Codename      string `json:"codename"`
-	Description   string `json:"description"`
+	Origin      string `json:"origin"`
+	Label       string `json:"label"`
+	Suite       string `json:"suite"`
+	Components  string `json:"components"`
+	Codename    string `json:"codename"`
+	Description string `json:"description"`
 }
 
 type Control struct {

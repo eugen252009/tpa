@@ -6,103 +6,150 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/eugen252009/tpa/internals/aptpackage"
 )
 
 func main() {
+	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
+}
+
+func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	cfg := aptpackage.Config{}
-	flag.StringVar(&cfg.Control.Name, "name", "myNewAPTPackage", "Name of the package")
-	flag.StringVar(&cfg.Control.Version, "ver", "0.0.1", "Version of the package")
-	flag.StringVar(&cfg.Control.Maintainer, "maintainer", "No Maintainer", "Maintainer contact info")
-	flag.StringVar(&cfg.Control.Description, "desc", "No Description", "Short description")
-	flag.StringVar(&cfg.Control.Architecture, "arch", "all", "Architecture (e.g. all, amd64)")
-	flag.StringVar(&cfg.Control.Depends, "depends", "", "Package dependencies")
-	flag.StringVar(&cfg.Control.Homepage, "homepage", "", "Homepage URL")
-	flag.StringVar(&cfg.Control.Section, "section", "utils", "Package section")
-	flag.StringVar(&cfg.Control.Priority, "priority", "optional", "Package priority")
-	flag.StringVar(&cfg.Control.PreDepends, "pre-depends", "", "Pre-dependencies")
-	flag.StringVar(&cfg.Control.Recommends, "recommends", "", "Recommended packages")
-	flag.StringVar(&cfg.Control.Suggests, "suggests", "", "Suggested packages")
-	flag.StringVar(&cfg.Control.Breaks, "breaks", "", "Packages this breaks")
-	flag.StringVar(&cfg.Control.Conflicts, "conflicts", "", "Conflicting packages")
-	flag.StringVar(&cfg.Control.Replaces, "replaces", "", "Replaced packages")
-	flag.StringVar(&cfg.Control.Provides, "provides", "", "Provided features")
-	flag.StringVar(&cfg.Control.BuiltUsing, "built-using", "", "Built-using info")
-	flag.StringVar(&cfg.Control.Essential, "essential", "no", "Essential package (yes/no)")
-	flag.StringVar(&cfg.Control.MultiArch, "multi-arch", "no", "Multi-Arch support")
-	flag.StringVar(&cfg.Control.PreInstBody, "preinst", "", "Path or content for preinst")
-	flag.StringVar(&cfg.Control.PostInstBody, "postinst", "", "Path or content for postinst")
-	flag.StringVar(&cfg.Control.PreRmBody, "prerm", "", "Path or content for prerm")
-	flag.StringVar(&cfg.Control.PostRmBody, "postrm", "", "Path or content for postrm")
-	flag.StringVar(&cfg.Repo.Origin, "origin", "TPA-Repo", "Repository Origin")
-	flag.StringVar(&cfg.Repo.Label, "label", "TPA-Repo", "Repository Label")
-	flag.StringVar(&cfg.Repo.Suite, "suite", "stable", "Repository Suite")
-	flag.StringVar(&cfg.Repo.Architectures, "archs", "amd64", "Space separated architectures")
-	flag.StringVar(&cfg.Repo.Components, "components", "main", "Components (e.g. main)")
-	flag.StringVar(&cfg.Repo.Codename, "codename", "stable", "Distribution Codename")
-	flag.StringVar(&cfg.InDir, "in", ".", "Your input directory")
-	flag.StringVar(&cfg.OutDir, "out", ".", "Output directory for the .deb file")
-	flag.StringVar(&cfg.GPG, "gpg", "", "GPG Key ID for signing, empty for no gpg signing")
+	flags := flag.NewFlagSet("tpa", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	flags.StringVar(&cfg.Control.Name, "name", "myNewAPTPackage", "Name of the package")
+	flags.StringVar(&cfg.Control.Version, "ver", "0.0.1", "Version of the package")
+	flags.StringVar(&cfg.Control.Maintainer, "maintainer", "No Maintainer", "Maintainer contact info")
+	flags.StringVar(&cfg.Control.Description, "desc", "No Description", "Short description")
+	flags.StringVar(&cfg.Control.Architecture, "arch", "all", "Architecture (e.g. all, amd64)")
+	flags.StringVar(&cfg.Control.Depends, "depends", "", "Package dependencies")
+	flags.StringVar(&cfg.Control.Homepage, "homepage", "", "Homepage URL")
+	flags.StringVar(&cfg.Control.Section, "section", "utils", "Package section")
+	flags.StringVar(&cfg.Control.Priority, "priority", "optional", "Package priority")
+	flags.StringVar(&cfg.Control.PreDepends, "pre-depends", "", "Pre-dependencies")
+	flags.StringVar(&cfg.Control.Recommends, "recommends", "", "Recommended packages")
+	flags.StringVar(&cfg.Control.Suggests, "suggests", "", "Suggested packages")
+	flags.StringVar(&cfg.Control.Breaks, "breaks", "", "Packages this breaks")
+	flags.StringVar(&cfg.Control.Conflicts, "conflicts", "", "Conflicting packages")
+	flags.StringVar(&cfg.Control.Replaces, "replaces", "", "Replaced packages")
+	flags.StringVar(&cfg.Control.Provides, "provides", "", "Provided features")
+	flags.StringVar(&cfg.Control.BuiltUsing, "built-using", "", "Built-using info")
+	flags.StringVar(&cfg.Control.Essential, "essential", "no", "Essential package (yes/no)")
+	flags.StringVar(&cfg.Control.MultiArch, "multi-arch", "no", "Multi-Arch support")
+	flags.StringVar(&cfg.Control.PreInstBody, "preinst", "", "Path or content for preinst")
+	flags.StringVar(&cfg.Control.PostInstBody, "postinst", "", "Path or content for postinst")
+	flags.StringVar(&cfg.Control.PreRmBody, "prerm", "", "Path or content for prerm")
+	flags.StringVar(&cfg.Control.PostRmBody, "postrm", "", "Path or content for postrm")
+	flags.StringVar(&cfg.Repo.Origin, "origin", "TPA-Repo", "Repository Origin")
+	flags.StringVar(&cfg.Repo.Label, "label", "TPA-Repo", "Repository Label")
+	flags.StringVar(&cfg.Repo.Suite, "suite", "stable", "Repository Suite")
+	flags.StringVar(&cfg.Repo.Components, "components", "main", "Components (e.g. main)")
+	flags.StringVar(&cfg.Repo.Codename, "codename", "stable", "Distribution Codename")
+	flags.StringVar(&cfg.InDir, "in", ".", "Your input directory")
+	flags.StringVar(&cfg.OutDir, "out", ".", "Output directory for the .deb file")
+	flags.StringVar(&cfg.GPG, "gpg", "", "GPG Key ID or full fingerprint for signing, empty for no signing")
+	output := flags.String("output", "", "Repository output directory (alias for -out)")
+	atomicPublish := flags.String("atomic-publish", "", "Atomically publish the repository at this path")
 
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: tpa <init|build|parse|pack|json|schema>")
-		flag.PrintDefaults()
-		return
+	if len(args) == 0 {
+		fmt.Fprintln(stderr, "Usage: tpa <init|build|parse|pack|json|schema>")
+		flags.PrintDefaults()
+		return 2
 	}
-	flag.CommandLine.Parse(os.Args[2:])
+	command := args[0]
+	flagArgs := args[1:]
+	// The standard flag package stops at the first positional argument. Move
+	// pack's optional config path behind flags so `pack config.json --output`
+	// remains compatible with the documented form.
+	if command == "pack" && len(flagArgs) > 0 && !strings.HasPrefix(flagArgs[0], "-") {
+		flagArgs = append(append([]string{}, flagArgs[1:]...), flagArgs[0])
+	}
+	if err := flags.Parse(flagArgs); err != nil {
+		return 2
+	}
+	if command == "pack" {
+		if *output != "" && *atomicPublish != "" {
+			fmt.Fprintln(stderr, "tpa: --output and --atomic-publish are mutually exclusive")
+			return 2
+		}
+		positional := flags.Args()
+		if len(positional) > 1 {
+			fmt.Fprintln(stderr, "tpa: pack accepts at most one JSON config path")
+			return 2
+		}
+		if len(positional) == 1 {
+			data, err := os.ReadFile(positional[0])
+			if err != nil {
+				fmt.Fprintf(stderr, "tpa: read config: %v\n", err)
+				return 2
+			}
+			if err := json.Unmarshal(data, &cfg); err != nil {
+				fmt.Fprintf(stderr, "tpa: parse config: %v\n", err)
+				return 2
+			}
+		}
+		if *output != "" {
+			cfg.OutDir = *output
+		}
+		if *atomicPublish != "" {
+			cfg.OutDir = *atomicPublish
+		}
+	}
 
-	switch os.Args[1] {
+	switch command {
 	case "init":
-		fmt.Printf("Initializing package '%s' in: %s\n", cfg.Control.Name, cfg.OutDir)
-		err := aptpackage.InitPackage(cfg)
-		if err != nil {
-			fmt.Println(err.Error())
-			return
+		fmt.Fprintf(stdout, "Initializing package '%s' in: %s\n", cfg.Control.Name, cfg.OutDir)
+		if err := aptpackage.InitPackage(cfg); err != nil {
+			fmt.Fprintf(stderr, "initialize package: %v\n", err)
+			return 1
 		}
-		fmt.Printf("Package structure for '%s' created.\n", cfg.InDir+"/"+cfg.Control.Name)
+		fmt.Fprintf(stdout, "Package structure for '%s' created.\n", cfg.InDir+"/"+cfg.Control.Name)
 	case "build":
-		err := aptpackage.Build(cfg)
-		if err != nil {
-			fmt.Println(err.Error())
-			return
+		if err := aptpackage.Build(cfg); err != nil {
+			fmt.Fprintf(stderr, "build package: %v\n", err)
+			return 1
 		}
-		fmt.Printf("Package successfully created!\n")
+		fmt.Fprintln(stdout, "Package successfully created!")
 	case "parse":
 		pkg, err := aptpackage.ParsePackage(cfg.InDir)
 		if err != nil {
-			fmt.Println(err)
-			return
+			fmt.Fprintf(stderr, "parse package: %v\n", err)
+			return 1
 		}
-		fmt.Println(pkg)
+		fmt.Fprintln(stdout, pkg)
 	case "pack":
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Fprintf(os.Stderr, "Build failed: %s\n", r)
-				os.Exit(1)
-			}
-		}()
-
-		if err := aptpackage.Pack(cfg); err != nil {
-			if cleanupErr := os.RemoveAll(cfg.OutDir); cleanupErr != nil {
-				panic(fmt.Sprintf("Build error: %v\nFailed to clean up OutDir: %v", err, cleanupErr))
-			}
-			panic(fmt.Sprintf("Build failed: %v", err))
+		var err error
+		if *atomicPublish != "" {
+			err = aptpackage.AtomicPack(cfg, *atomicPublish)
+		} else {
+			err = aptpackage.Pack(cfg)
 		}
-		fmt.Println("Repo build complete!")
+		if err != nil {
+			fmt.Fprintf(stderr, "Build failed: %v\n", err)
+			return 1
+		}
+		fmt.Fprintln(stdout, "Repo build complete!")
 	case "json":
-		bytes, err := io.ReadAll(os.Stdin)
+		data, err := io.ReadAll(stdin)
 		if err != nil {
-			panic(err)
+			fmt.Fprintf(stderr, "read JSON: %v\n", err)
+			return 1
 		}
-		err = json.Unmarshal(bytes, &cfg)
-		if err != nil {
-			panic(err)
+		if err = json.Unmarshal(data, &cfg); err != nil {
+			fmt.Fprintf(stderr, "parse JSON: %v\n", err)
+			return 2
 		}
-		aptpackage.JSONBuild(cfg)
+		if err = aptpackage.JSONBuild(cfg); err != nil {
+			fmt.Fprintf(stderr, "build JSON package: %v\n", err)
+			return 1
+		}
 	case "schema":
-		fmt.Println(aptpackage.JSONSCHEMA)
+		fmt.Fprint(stdout, aptpackage.JSONSCHEMA)
 	default:
-		fmt.Println("Unknown command.")
+		fmt.Fprintf(stderr, "Unknown command: %s\n", command)
+		return 2
 	}
+	return 0
 }

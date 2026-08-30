@@ -1,148 +1,110 @@
-.TH TPA 1 "Juni 2026" "TPA Manual" "User Commands"
+.TH TPA 1 "August 2026" "TPA Manual" "User Commands"
 .SH NAME
-tpa \- Minimalist package builder and repository bundler for .deb archives.
-
+tpa \- build Debian packages and verified APT repository trees
 .SH SYNOPSIS
 .B tpa
-[COMMANDS] [OPTIONS]
-
+.I command
+.RI [ options ]
 .SH DESCRIPTION
 .B tpa
-is a high-performance, minimalist tool designed for automating the creation of Debian packages (.deb) and managing apt-compatible repositories. It is built for efficiency, allowing package definitions via JSON blueprints or direct command-line arguments.
-
+creates Debian package directory trees, delegates archive operations to
+.BR dpkg-deb (1),
+and derives APT repository metadata from actual .deb artifacts.
 .SH COMMANDS
 .TP
 .B init
-Initialize a new project structure.
+Create a package tree with DEBIAN/control and maintainer scripts.
 .TP
 .B build
-Build a .deb package from input files and metadata.
+Build a .deb package with dpkg-deb.
 .TP
 .B parse
-Parse existing package metadata.
+Read control metadata from a .deb package.
 .TP
 .B pack
-Create or update an apt repository index.
+Generate and verify Packages, Packages.gz, Release, and optionally InRelease.
 .TP
 .B json
-Generate a JSON blueprint from command-line arguments.
+Read package initialization configuration from standard input.
 .TP
 .B schema
-Output the schema definition for JSON blueprints.
-
-.SH OPTIONS
-.SS General Options
+Print the TypeScript-style JSON configuration interface.
+.SH IMPORTANT OPTIONS
 .TP
-.BI -in " directory"
-Input directory containing source files (default: ".").
+.BI -in " path"
+Input package tree, .deb path, or directory of .deb artifacts, depending on the command.
 .TP
-.BI -out " directory"
-Output directory for the generated .deb file (default: ".").
-
-.SS Package Metadata
+.BI -out " path"
+Non-atomic output path.
 .TP
-.BI -name " string"
-Package name (default: "myNewAPTPackage").
+.BI -atomic-publish " path"
+For pack, build and verify a sibling staging tree and atomically publish it at path on Linux.
+Use this mode when replacing a repository that may be read concurrently.
 .TP
-.BI -ver " string"
-Package version (default: "0.0.1").
+.BI -gpg " selector"
+Select one GPG secret key. Full fingerprints are recommended. Empty means unsigned.
+TPA uses the caller's GPG environment, including GNUPGHOME.
 .TP
-.BI -desc " string"
-Short description.
+.BI -depends " relationships"
+Set Depends in a generated package control file.
 .TP
-.BI -maintainer " string"
-Maintainer contact info.
+.BI -pre-depends " relationships"
+Set Pre-Depends.
 .TP
-.BI -section " string"
-Package section (default: "utils").
-
-.SS Dependencies & Relationships
+.BI -recommends " relationships"
+Set Recommends.
 .TP
-.BI -depends " string"
-Package dependencies (comma separated).
+.BI -suggests " relationships"
+Set Suggests.
 .TP
-.BI -conflicts " string"
-Conflicting packages.
-
-.SS Repository Options
+.BI -provides " relationships"
+Set Provides.
 .TP
-.BI -arch " string"
-Architecture (default: "all").
+.BI -conflicts " relationships"
+Set Conflicts.
 .TP
-.BI -gpg " ID"
-GPG Key ID for signing (empty for no signing).
-
-.SH EXAMPLE CONFIGURATION
-The following is an example of a valid control file structure as utilized by 
-.B tpa
-itself, including advanced relationship fields:
-
+.BI -breaks " relationships"
+Set Breaks.
+.TP
+.BI -replaces " relationships"
+Set Replaces.
+.SH REPOSITORY CORRECTNESS
+The .deb artifacts are authoritative package state. Packages, Release, and InRelease
+are derived state; no persistent package database is required. The package control stanza
+is read from each actual .deb and preserved in Packages. Package-provided Filename, Size,
+and SHA256 fields are replaced by values derived from the published artifact.
+TPA verifies package bytes and Release index hashes before success. Signed repositories
+additionally require a valid InRelease signature from the selected full fingerprint and
+a signed payload identical to Release.
+.PP
+Package identity is Package plus Version plus Architecture. Byte-identical duplicate
+artifacts are indexed once. Conflicting artifacts with the same identity fail generation.
+.PP
+The input artifact directory is the desired repository snapshot. An artifact included in
+a fresh input snapshot is included in the generated repository; an omitted artifact is
+absent. Historical versions remain available only while their .deb artifacts remain in
+that input set. Use a new or empty direct output path for exact snapshot generation.
+.SH ATOMIC PUBLICATION
+Atomic publication uses a fresh sibling staging directory, complete generation and
+verification, a Linux rename exchange, and replaced-tree cleanup. Failure before exchange
+leaves the previous live repository unchanged. Repository data is published readable but
+not writable by readers; GPG key material is not stored in the repository tree.
+.SH EXAMPLES
 .nf
-Package: tpa
-Version: 0.0.1
-Architecture: amd64
-Maintainer: Eugen Lupricht <eugen@lupricht.net>
-Description: Automation tool for Debian packages and repository bundling
- tpa is a minimalist package builder and repository bundler for .deb archives.
- .
- As a standalone tool, tpa decouples packaging from system structure and
- enables the efficient orchestration of software stacks.
-Depends: libc6, dpkg, gpg, gzip
-Recommends: git, make
-Suggests: bash-completion
-Breaks: old-tpa-version
-Replaces: old-tpa-version
-Homepage: https://github.com/eugen252009/tpa
-Section: utils
-Essential: no
+tpa init -name=meta -ver=1.0 -arch=all \
+  -maintainer='Example <example@example.invalid>' \
+  -desc='Meta package' -depends='base (= 1.0)' -out=build/meta
+
+tpa build -in=build/meta -out=dist/meta_1.0_all.deb
+
+tpa pack -in=dist -atomic-publish=/srv/apt/example \
+  -gpg=FULL_SIGNING_FINGERPRINT
 .fi
-.SH EXAMPLE USAGE
-The following workflow demonstrates the complete lifecycle of creating a 
-package and bundling it into an apt repository. Optional GPG signing can 
-be enabled by removing the comment symbol (#):
-
-.nf
-# 1. Initialize the package structure
-tpa init -name=helloDeb -ver=0.1 -desc="Short description" -maintainer="Maintainer" -section=utils -out=hello_deb
-
-# 2. Build the .deb package
-tpa build -in=hello_deb -out="hello_deb/hello_deb.deb"
-
-# 3. Bundle into an apt repository (optional: uncomment for GPG signing)
-tpa pack -in=hello_deb -out=repo # -gpg=YOUR_GPG_KEY_ID
-.fi
-
-.SH EXAMPLE OUTPUT
-.nf
-Initializing package 'helloDeb' in: hello_deb
-Package structure for './helloDeb' created.
-dpkg-deb: building package 'hellodeb' in 'hello_deb/hello_deb.deb'.
-Package myNewAPTPackage.deb successfully created!
-Repo build complete!
-.fi
-
-.SH TPA DEPENDENCIES:
-.I tpa 
-is a lean tool that relies on the following core system utilities to function:
-.IP \(bu 2
-.B libc6: 
-Standard C library (for runtime execution).
-.IP \(bu 2
-.B dpkg: 
-Required for the actual .deb packaging process.
-.IP \(bu 2
-.B gpg: 
-Required only if you intend to sign your repositories.
-.IP \(bu 2
-.B gzip: 
-Used for compression of package data.
-
-.SH AUTHOR
-Eugen Lupricht
-
+.SH EXIT STATUS
+Zero indicates success. Invalid input, unknown commands, build failures, verification
+failures, and signing failures return non-zero. Diagnostics are written to standard error.
 .SH SEE ALSO
 .BR dpkg-deb (1),
-.BR apt-ftparchive (1),
+.BR apt-get (8),
 .BR gzip (1),
 .BR gpg (1)
-.PP

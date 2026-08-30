@@ -1,103 +1,222 @@
-# TPA
+# TPA — Tool for Package Automation
 
-TPA (Tool for Package Automation) creates Debian packages and generates the metadata for a small APT repository. It wraps standard Debian tooling so package metadata and maintainer scripts can be supplied through command-line flags or a JSON document.
+TPA creates Debian package directory trees, builds and inspects `.deb` files,
+and derives small APT repositories from package artifacts.
+
+```text
+filesystem input → TPA → filesystem output
+```
+
+The `.deb` artifacts are authoritative package state. `Packages`, `Release`,
+and `InRelease` are derived repository state; TPA does not require a persistent
+package database or metadata cache.
 
 ## Requirements
 
-- Go 1.26.3 or later to build TPA
-- `dpkg-deb` to build and inspect `.deb` archives
-- `gzip` to create compressed APT package indexes
-- `gpg` only when signing a repository with `-gpg`
+- `dpkg-deb` for package building and inspection
+- `gzip` for compressed package indexes
+- `gpg` when signing repositories
+- Linux and a filesystem supporting `renameat2(RENAME_EXCHANGE)` for replacing
+  an existing repository atomically
 
-Build the executable:
+Build TPA with:
 
-```bash
+```sh
 go build -o tpa .
 ```
 
-## Commands
+Run `tpa` without a command to print the command synopsis and all flags. It
+returns a non-zero status because no command was supplied.
 
-| Command | Purpose |
-| --- | --- |
-| `init` | Creates a Debian package directory with `DEBIAN/control`, maintainer scripts, and `usr/local/bin`. |
-| `build` | Runs `dpkg-deb --root-owner-group --build` for a package directory. |
-| `parse` | Reads a `.deb` archive's control metadata and prints it. |
-| `pack` | Creates APT `Packages`, `Packages.gz`, and `Release` metadata from `.deb` files. |
-| `json` | Reads a JSON configuration from standard input and initializes a package directory. |
-| `schema` | Prints the TypeScript-style interface describing the JSON input. |
+## CLI contract
 
-Run `tpa` without a command to see every supported flag and its default value.
+| Command | Input | Output |
+| --- | --- | --- |
+| `init` | Package metadata flags | Package root at `-out`, including `DEBIAN/control`, maintainer scripts, and `usr/local/bin` |
+| `build` | Package root at `-in` | `.deb` archive or destination directory at `-out`, using `dpkg-deb --root-owner-group --build` |
+| `parse` | `.deb` archive at `-in` | Human-readable parsed control summary on standard output |
+| `pack` | Top-level `.deb` files in `-in`, or an optional JSON config path | Verified APT repository at `-out`, `--output`, or `--atomic-publish` |
+| `json` | Configuration JSON on standard input | Initialized package root at JSON `outdir` |
+| `schema` | None | TypeScript-style configuration interface on standard output |
 
-## Create A Package
+Exit status is part of the process contract:
 
-`init` creates the package root, its control file, empty executable maintainer scripts, and `/usr/local/bin` within that root. Add your package files under the package root before building it.
-
-```bash
-./tpa init \
-  -name=hello-tpa \
-  -ver=1.0.0 \
-  -arch=amd64 \
-  -maintainer="Example Maintainer <maintainer@example.com>" \
-  -desc="A package created with TPA" \
-  -out=build/hello-tpa
-
-install -m 0755 hello build/hello-tpa/usr/local/bin/hello
-./tpa build -in=build/hello-tpa -out=dist/hello-tpa_1.0.0_amd64.deb
+```text
+0        command completed successfully
+non-zero command failed or its invocation was invalid
 ```
 
-The package metadata defaults to `myNewAPTPackage`, version `0.0.1`, architecture `all`, section `utils`, and priority `optional`. The required Debian control fields are package name, version, architecture, maintainer, and description.
+Diagnostics are written to standard error. Callers should use the exit status,
+not match diagnostic text.
 
-The metadata flags include `-depends`, `-homepage`, `-section`, `-priority`, `-pre-depends`, `-recommends`, `-suggests`, `-breaks`, `-conflicts`, `-replaces`, `-provides`, `-built-using`, `-essential`, and `-multi-arch`. The `-preinst`, `-postinst`, `-prerm`, and `-postrm` values are written directly as script content; they are not file paths.
+## Package creation
 
-## JSON Input
+Relationship flags include `-depends`, `-pre-depends`, `-recommends`,
+`-suggests`, `-provides`, `-conflicts`, `-breaks`, and `-replaces`.
+Maintainer-script values are script bodies, not paths to script files.
 
-Pass a complete configuration to `json` through standard input. JSON field names follow the struct tags used by the program.
+```sh
+tpa init \
+  -name=hello-tpa -ver=1.0.0 -arch=all \
+  -maintainer='Example <example@example.invalid>' \
+  -desc='Example package' -depends='dependency-package' \
+  -out=build/hello-tpa
 
-```bash
+tpa build -in=build/hello-tpa -out=dist/hello-tpa_1.0.0_all.deb
+```
+
+`tpa json` performs the same initialization from standard input. Omitted fields
+retain the CLI defaults.
+
+```sh
 printf '%s\n' '{
   "control": {
     "name": "hello-tpa",
     "version": "1.0.0",
-    "architecture": "amd64",
-    "maintainer": "Example Maintainer <maintainer@example.com>",
-    "description": "A package created with TPA"
+    "architecture": "all",
+    "maintainer": "Example <example@example.invalid>",
+    "description": "Example package"
   },
   "outdir": "build/hello-tpa"
-}' | ./tpa json
+}' | tpa json
 ```
 
-For JSON input, all five required control fields must be present. `json` performs initialization only; run `build` separately to produce the `.deb` archive.
+## Repository generation
 
-## Generate A Repository
+TPA reads the actual control stanza from every input `.deb` and preserves its
+Debian metadata in `Packages`. It removes any package-provided `Filename`,
+`Size`, and `SHA256` fields and appends values derived from the actual published
+artifact.
 
-Place `.deb` archives in an input directory, then generate repository metadata:
-
-```bash
-./tpa pack -in=dist -out=repo
+```sh
+tpa pack -in=dist -out=repo
 ```
 
-TPA writes `dists/stable/Release` plus a `Packages` and `Packages.gz` pair for every architecture found in the input archives. Use `-gpg=KEY_ID` to write a clear-signed `InRelease` file.
+For the default codename and component, output has this form:
 
-Current repository behavior has important limitations: `pack` currently uses fixed repository values (`TPA-Repo`, `stable`, and `main`) instead of the `-origin`, `-label`, `-suite`, `-components`, and `-codename` flags. It also copies `.deb` archives into `pool/` only when `-gpg` is supplied. An unsigned repository therefore contains indexes but not package files and is not installable as-is.
-
-## Build Release Packages
-
-`build.sh` builds the TPA executable and packages it for `amd64`, `arm64`, and `riscv64`. It writes the resulting Debian packages to `dist/`.
-
-```bash
-./build.sh
+```text
+repo/
+├── dists/stable/Release
+├── dists/stable/InRelease                 # only when signed
+├── dists/stable/main/binary-<arch>/Packages
+├── dists/stable/main/binary-<arch>/Packages.gz
+└── pool/main/<initial>/<package>/<original-archive-name>.deb
 ```
 
-The script requires a Linux Go toolchain capable of cross-compiling those targets, plus `dpkg-deb` and `gzip`.
+`-out` and `--output` select direct, non-atomic output. Use a new or empty path
+when the result must be an exact snapshot. Direct output remains useful for
+manual generation where no concurrent reader observes the destination.
 
-## Project Layout
+`pack` also accepts one positional JSON config file. `--output` and
+`--atomic-publish` explicitly override the output path from that file.
 
-| Path | Purpose |
-| --- | --- |
-| `main.go` | CLI flags and command dispatch. |
-| `internals/aptpackage/` | Package initialization, build, parsing, JSON input, and repository generation. |
-| `build.sh` | Multi-architecture release package build script. |
-| `manpage/` | Installed manpage source and compressed artifact. |
-| `description.txt` | Long Debian package description used by `build.sh`. |
+## Repository semantics
 
-See [`AGENTS.md`](AGENTS.md) for contributor and automation guidance.
+The input artifact set defines the desired repository snapshot:
+
+```text
+artifact included in input → indexed in the generated repository
+artifact omitted from input → absent from a fresh generated repository
+```
+
+TPA does not independently retain package history. To retain an older version,
+keep its `.deb` in the desired input set.
+
+Canonical package identity is:
+
+```text
+Package + Version + Architecture
+```
+
+- Same identity and byte-identical files are accepted idempotently and indexed
+  once.
+- Same identity and different bytes are rejected.
+
+## Verification
+
+Before reporting repository-generation success, TPA verifies:
+
+```text
+.deb bytes
+   │ Size + SHA256
+   ▼
+Packages
+   │ index Size + SHA256
+   ▼
+Release
+   │ signed payload
+   ▼
+InRelease
+```
+
+For every `Packages` entry, the referenced `Filename` must exist and its actual
+size and SHA-256 must match. `Packages` and `Packages.gz` must match the size and
+SHA-256 recorded in `Release`.
+
+For signed repositories, the `InRelease` signature must be valid, its signer
+must match the selected full fingerprint, and its signed payload must exactly
+match `Release`.
+
+## Signing
+
+Use `-gpg` with a GPG selector; a full fingerprint is recommended:
+
+```sh
+tpa pack -in=dist -out=repo -gpg=FULL_SIGNING_FINGERPRINT
+```
+
+TPA invokes the installed `gpg` and uses the caller's GPG environment, including
+`GNUPGHOME`. It selects one primary secret key, signs `Release`, and verifies the
+result. Key creation, storage, expiration, and rotation remain GPG concerns.
+
+## Atomic publication
+
+Use `--atomic-publish` when replacing a repository that may be read
+concurrently:
+
+```sh
+tpa pack -in=dist -atomic-publish=/srv/apt/example \
+  -gpg=FULL_SIGNING_FINGERPRINT
+```
+
+On Linux, TPA performs:
+
+```text
+fresh sibling staging tree
+→ complete generation
+→ repository verification
+→ atomic rename exchange
+→ replaced-tree cleanup
+```
+
+Failure before the exchange removes staging and leaves the previous repository
+unchanged. Repository directories are published as `0755` and files as `0644`.
+GPG key material is never copied into the repository tree.
+
+## Qualification
+
+```sh
+go test -race ./...
+go vet ./...
+./tests/qualification.sh
+./tests/dependency-qualification.sh
+```
+
+The signed qualification covers signature verification and APT install,
+upgrade, and downgrade. The dependency qualification proves that relationship
+metadata survives repository generation and APT resolves both direct and
+transitive dependencies automatically.
+
+## Optional future work
+
+The following are optional repository-format improvements, not baseline
+requirements:
+
+- APT by-hash indexes
+- reproducible gzip timestamps
+- reproducible `Release` dates
+- detached `Release.gpg` output
+
+## License
+
+MIT @ Coffee Maker Studio

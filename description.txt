@@ -1,9 +1,8 @@
-Description: Automation tool for Debian packages and repository bundling
- tpa is a minimalist package builder and repository bundler for .deb archives.
- It serves as a tool for the automated creation of packages from JSON 
- blueprints or via direct parameter passing using command-line flags.
+Automation tool for Debian packages and repository construction
+ tpa creates Debian package trees and derives verified APT repositories from
+ actual .deb artifacts. Package metadata can be supplied through command-line
+ flags or JSON configuration.
  .
- As a standalone tool, tpa decouples packaging from system structure and 
- enables the efficient orchestration of software stacks. It also automates 
- the creation of apt-compatible repositories, including indexing. Detailed 
- documentation can be found in the corresponding manpage (man tpa).
+ Repository metadata and hashes are derived from package bytes. TPA can sign
+ Release metadata and atomically replace a verified repository tree on Linux.
+ Detailed usage is available in the tpa(1) manual page.

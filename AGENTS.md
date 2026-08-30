@@ -2,94 +2,109 @@
 
 ## Purpose
 
-TPA is a Go command-line tool for creating Debian package directory trees, building `.deb` archives, inspecting package metadata, and generating a basic APT repository layout.
+TPA is a Go command-line tool for creating Debian package trees, building and
+inspecting `.deb` archives, and deriving verified APT repository trees from
+actual package artifacts.
 
 ## Repository Facts
 
 - Module: `github.com/eugen252009/tpa`
 - Language: Go 1.26.3 (`go.mod`)
 - Executable entry point: `main.go`
-- Internal package: `internals/aptpackage`
-- External runtime tools: `dpkg-deb`, `gzip`, and optionally `gpg`
+- Internal implementation: `internals/aptpackage`
+- External tools: `dpkg-deb`, `gzip`, and optionally `gpg`
+- Atomic replacement: Linux `renameat2(RENAME_EXCHANGE)`
 - Release script: `build.sh`
-- Supported release architectures: `amd64`, `arm64`, and `riscv64`
-- Output directory for release `.deb` files: `dist/`
+- Release architectures: `amd64`, `arm64`, and `riscv64`
+- Generated release packages: `dist/` (ignored)
 
-No automated tests currently exist. Use `go test ./...`, `go vet ./...`, and a manual package build when changing behavior.
+## Commands
 
-## Command Flow
+| Command | Behavior |
+| --- | --- |
+| `init` | Creates `DEBIAN/`, `usr/local/bin/`, control metadata, and executable maintainer scripts. |
+| `build` | Validates `DEBIAN/control`, fixes present maintainer-script modes, and invokes `dpkg-deb --root-owner-group --build`. |
+| `parse` | Reads a `.deb` control record with `dpkg-deb -f`. |
+| `pack` | Derives and verifies an APT repository from top-level `.deb` files. |
+| `json` | Reads configuration from standard input and initializes a package tree; it does not build an archive. |
+| `schema` | Prints the TypeScript-style configuration interface. |
 
-`main.go` defines shared flags, parses flags after the command, and dispatches on the first argument.
+All successful commands return zero. Invalid invocations and failed operations
+return non-zero and write diagnostics to standard error.
 
-| Command | Implementation | Behavior |
-| --- | --- | --- |
-| `init` | `InitPackage` | Creates `DEBIAN/`, `usr/local/bin/`, control metadata, and executable maintainer scripts. |
-| `build` | `Build` | Parses `DEBIAN/control`, ensures present maintainer scripts are executable, then calls `dpkg-deb --root-owner-group --build`. |
-| `parse` | `ParsePackage` | Calls `dpkg-deb -f` and parses the resulting control fields. |
-| `pack` | `Pack` | Scans the input directory for `.deb` files and writes APT indexes and release metadata. |
-| `json` | `JSONBuild` | Decodes standard input into `Config` and calls `InitPackage`; it does not build an archive. |
-| `schema` | `JSONSCHEMA` | Prints a TypeScript-style interface for the JSON data model. |
+## Repository Invariants
+
+- `.deb` artifacts are authoritative. Repository metadata is derived state.
+- The source package control stanza is preserved in `Packages`.
+- TPA replaces package-provided `Filename`, `Size`, and `SHA256` with values
+  derived from the published artifact.
+- Canonical identity is `Package + Version + Architecture`.
+- Byte-identical duplicate identities are indexed once; conflicting bytes fail.
+- Package files are checked against `Packages`; indexes are checked against
+  `Release`; signed payload and expected signer are checked for `InRelease`.
+- A fresh input set defines a fresh repository snapshot. Historical versions
+  remain only when their artifacts remain in that set.
+- No persistent package metadata or hash cache is used.
+
+`Pack` supports direct generation. Use `AtomicPack`/`--atomic-publish` when an
+existing repository may be read concurrently: TPA builds a sibling staging
+tree, verifies it, exchanges it with the live directory, and removes the
+replaced tree. Failure before exchange leaves the previous tree unchanged.
 
 ## Data Model
 
-`Config` contains:
+`Config` contains package control metadata, repository release metadata, input
+and output paths, and an optional GPG selector. Maintainer script values are raw
+script bodies, not paths.
 
-- `control`: Debian metadata represented by `Control`
-- `repo`: repository metadata represented by `RepoConfig`
-- `indir`: input package directory or input archive directory
-- `outdir`: output package path, package root, or repository root, depending on command
-- `gpg`: optional GPG key ID
-
-Required control values for JSON initialization and package parsing are `name`, `version`, `architecture`, `maintainer`, and `description`. `Control.Render` serializes the metadata into `DEBIAN/control`; add new Debian fields there as well as to `Control`, CLI flags, parsing, and `JSONSCHEMA` when appropriate.
-
-Maintainer script values (`preinstbody`, `postinstbody`, `prermbody`, and `postrmbody`) are raw script bodies. `InitPackage` writes them to executable files beneath `DEBIAN/`; it does not read a script from the value as a path.
+`Control.Render` writes package metadata to `DEBIAN/control`. Keep the CLI
+flags, JSON tags, TypeScript interface, renderer, parser, README, and manpage
+aligned when modeled fields change. Repository indexes preserve the raw package
+control stanza so valid unmodeled Debian fields are not discarded.
 
 ## Local Development
 
-```bash
+```sh
 go build -o tpa .
-go test ./...
+go test -race ./...
 go vet ./...
-./tpa
+./tests/qualification.sh
+./tests/dependency-qualification.sh
 ```
 
-Manual smoke test:
+The signed qualification requires Docker, GPG, `dpkg-deb`, and Go. It verifies
+signature acceptance and APT install, upgrade, and downgrade. The dependency
+qualification verifies direct and transitive APT dependency resolution.
 
-```bash
-./tpa init -name=example -ver=1.0.0 -arch=all -maintainer='Example <example@example.com>' -desc='Example package' -out=/tmp/tpa-example
+Manual package smoke test:
+
+```sh
+./tpa init -name=example -ver=1.0.0 -arch=all \
+  -maintainer='Example <example@example.invalid>' \
+  -desc='Example package' -out=/tmp/tpa-example
 ./tpa build -in=/tmp/tpa-example -out=/tmp/example_1.0.0_all.deb
 ./tpa parse -in=/tmp/example_1.0.0_all.deb
 ```
 
-The build command delegates output naming to `dpkg-deb`; pass the desired archive path through `-out`.
-
 ## Release Build
 
-`build.sh` builds the host `tpa` binary if it is absent, compresses the manpage if needed, cross-compiles a static Linux executable for each configured architecture, and packages each result with TPA. It uses version `1` and reads the long description from `description.txt`.
+`build.sh` uses `TPA_VERSION` when set and otherwise version `1`. It builds a
+static Linux binary for each configured architecture and packages it through
+TPA.
 
-Run it from the repository root:
-
-```bash
+```sh
 ./build.sh
 ```
 
-Do not commit generated `tpa`, `dist/`, or `manpage/usr/share/man/man1/tpa.1.gz` artifacts; they are ignored.
-
-## Repository Caveats
-
-Documented command behavior must follow the implementation, including these current constraints in `Pack`:
-
-- Repository CLI fields in `RepoConfig` are not used when writing `Release`; it hard-codes origin and label to `TPA-Repo`, suite and codename to `stable`, and component to `main`.
-- Archive architecture values are inferred from parsed `.deb` files; `-archs` is unused.
-- Package files are copied to `pool/` only after a repository is GPG-signed. Without `-gpg`, the metadata is generated but archive files are absent from the repository.
-- Package index filenames are constructed from the package name, not the original archive filename.
-
-Preserve or deliberately fix these behaviors with corresponding README and manpage updates. The manpage currently contains stale command descriptions, so update it when changing user-facing CLI behavior.
+Do not commit generated `tpa`, `dist/`, package work directories, or compressed
+manpage artifacts.
 
 ## Change Guidelines
 
-- Keep CLI flags, JSON tags, `JSONSCHEMA`, control rendering, parsing, README, and manpage aligned whenever metadata fields change.
-- Keep Debian maintainer scripts executable (`0755`) and control files readable (`0644`).
-- Prefer standard-library Go and explicit error handling. Do not add dependencies without a concrete need.
-- Run `gofmt` on changed Go files and `go test ./...` before submitting Go changes.
-- Treat package and repository output as externally consumed formats; validate with `dpkg-deb` and APT tooling after format changes.
+- Prefer the Go standard library and explicit error handling.
+- Keep control files readable (`0644`) and maintainer scripts executable
+  (`0755`).
+- Run gofmt, race tests, vet, and both qualification scripts after repository
+  format or publication changes.
+- Treat `.deb` archives and APT metadata as externally consumed formats.
+- Do not weaken verification or artifact-derived hashing for performance.

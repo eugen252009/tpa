@@ -1,7 +1,3 @@
-// Package aptpackage serves as a high-performance helper for automating
-// the generation and management of Debian package archives and repository structures.
-// It abstracts complex packaging, indexing, and filesystem synchronization processes,
-// enabling efficient, routing-based processing of repository builds at the filesystem level.
 package aptpackage
 
 import (
@@ -12,11 +8,19 @@ import (
 	"strings"
 )
 
-func ParsePackage(path string) (Control, error) {
+func readPackageControl(path string) ([]byte, error) {
 	cmd := exec.Command("dpkg-deb", "-f", path)
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return Control{}, fmt.Errorf("could not read package: %w", err)
+		return nil, fmt.Errorf("could not read package: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	return output, nil
+}
+
+func ParsePackage(path string) (Control, error) {
+	output, err := readPackageControl(path)
+	if err != nil {
+		return Control{}, err
 	}
 	return ParseControl(output)
 }
@@ -66,7 +70,7 @@ func ParseControl(output []byte) (Control, error) {
 			c.Section = value
 		case "Priority":
 			c.Priority = value
-		case "PreDepends":
+		case "Pre-Depends":
 			c.PreDepends = value
 		case "Recommends":
 			c.Recommends = value
@@ -80,13 +84,16 @@ func ParseControl(output []byte) (Control, error) {
 			c.Replaces = value
 		case "Provides":
 			c.Provides = value
-		case "BuiltUsing":
+		case "Built-Using":
 			c.BuiltUsing = value
 		case "Essential":
 			c.Essential = value
-		case "MultiArch":
+		case "Multi-Arch":
 			c.MultiArch = value
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		return c, fmt.Errorf("scan control metadata: %w", err)
 	}
 
 	if c.Name == "" {
