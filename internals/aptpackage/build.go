@@ -28,6 +28,9 @@ func Build(c Config) error {
 	scripts := []string{"postinst", "preinst", "prerm", "postrm"}
 	for _, s := range scripts {
 		path := fmt.Sprintf("%s/%s", DEBIANpath, s)
+		if _, err := os.Stat(path); err != nil {
+			continue
+		}
 		err = os.Chmod(path, 0o755)
 		if err != nil {
 			return fmt.Errorf("chmod failed: %s %s", path, err)

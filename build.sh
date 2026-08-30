@@ -2,7 +2,7 @@
 
 ARCHS=("amd64" "riscv64" "arm64")
 DESC="$(cat ./description.txt)"
-VERSION=0.1
+VERSION=1
 DEPENDS="libc6,dpkg,gpg,gzip"
 HOMEPAGE="https://github.com/coffeemakerstudio/tpa"
 MAINTAINER="Coffee Maker Studio <tpa@lupricht.net>"

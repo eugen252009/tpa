@@ -51,8 +51,7 @@ export interface Repo {
     components:    string;
     codename:      string;
     description:   string;
-}
-`
+}`
 
 type BuildContext struct {
 	Control Control

@@ -67,7 +67,7 @@ func main() {
 			fmt.Println(err.Error())
 			return
 		}
-		fmt.Printf("Package %s.deb successfully created!\n", cfg.Control.Name)
+		fmt.Printf("Package successfully created!\n")
 	case "parse":
 		pkg, err := aptpackage.ParsePackage(cfg.InDir)
 		if err != nil {
