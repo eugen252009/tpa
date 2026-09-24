@@ -68,6 +68,36 @@ Set Breaks.
 .TP
 .BI -replaces " relationships"
 Set Replaces.
+.TP
+.BI -preinst " body"
+Write the DEBIAN/preinst maintainer script body.
+.TP
+.BI -postinst " body"
+Write the DEBIAN/postinst maintainer script body.
+.TP
+.BI -prerm " body"
+Write the DEBIAN/prerm maintainer script body.
+.TP
+.BI -postrm " body"
+Write the DEBIAN/postrm maintainer script body.
+.SH JSON CONTROL METADATA
+Known package fields remain typed, while additional scalar fields inside
+.B control
+are accepted without source changes. Keys are converted generically to Debian
+field names, for example packageType becomes Package-Type and memaSchema becomes
+Mema-Schema. Strings, numbers, and booleans are supported; arrays, objects,
+nulls, unsafe names, control characters, and normalized field-name collisions
+are rejected.
+.PP
+Maintainer scripts belong in the separate
+.B scripts
+object with preinst, postinst, prerm, and postrm values. Legacy *body fields are
+accepted for compatibility and normalized into that object; script bodies are
+never emitted as control fields. TPA adds TPA-Version and UTC RFC3339
+Created-At when they are not supplied explicitly. Explicit equivalent values win;
+normalized duplicates are rejected. The --no-provenance option, or provenance: false
+in JSON configuration, disables only automatic generation and preserves explicit
+metadata.
 .SH REPOSITORY CORRECTNESS
 The .deb artifacts are authoritative package state. Packages, Release, and InRelease
 are derived state; no persistent package database is required. The package control stanza

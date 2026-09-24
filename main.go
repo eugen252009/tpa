@@ -38,10 +38,10 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	flags.StringVar(&cfg.Control.BuiltUsing, "built-using", "", "Built-using info")
 	flags.StringVar(&cfg.Control.Essential, "essential", "no", "Essential package (yes/no)")
 	flags.StringVar(&cfg.Control.MultiArch, "multi-arch", "no", "Multi-Arch support")
-	flags.StringVar(&cfg.Control.PreInstBody, "preinst", "", "Path or content for preinst")
-	flags.StringVar(&cfg.Control.PostInstBody, "postinst", "", "Path or content for postinst")
-	flags.StringVar(&cfg.Control.PreRmBody, "prerm", "", "Path or content for prerm")
-	flags.StringVar(&cfg.Control.PostRmBody, "postrm", "", "Path or content for postrm")
+	flags.StringVar(&cfg.Scripts.PreInst, "preinst", "", "Path or content for preinst")
+	flags.StringVar(&cfg.Scripts.PostInst, "postinst", "", "Path or content for postinst")
+	flags.StringVar(&cfg.Scripts.PreRm, "prerm", "", "Path or content for prerm")
+	flags.StringVar(&cfg.Scripts.PostRm, "postrm", "", "Path or content for postrm")
 	flags.StringVar(&cfg.Repo.Origin, "origin", "TPA-Repo", "Repository Origin")
 	flags.StringVar(&cfg.Repo.Label, "label", "TPA-Repo", "Repository Label")
 	flags.StringVar(&cfg.Repo.Suite, "suite", "stable", "Repository Suite")
@@ -52,6 +52,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	flags.StringVar(&cfg.GPG, "gpg", "", "GPG Key ID or full fingerprint for signing, empty for no signing")
 	output := flags.String("output", "", "Repository output directory (alias for -out)")
 	atomicPublish := flags.String("atomic-publish", "", "Atomically publish the repository at this path")
+	noProvenance := flags.Bool("no-provenance", false, "Disable automatic TPA provenance metadata")
 
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, "Usage: tpa <init|build|parse|pack|json|schema>")
@@ -97,6 +98,10 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 			cfg.OutDir = *atomicPublish
 		}
 	}
+	if *noProvenance {
+		disabled := false
+		cfg.Provenance = &disabled
+	}
 
 	switch command {
 	case "init":
@@ -140,6 +145,10 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		if err = json.Unmarshal(data, &cfg); err != nil {
 			fmt.Fprintf(stderr, "parse JSON: %v\n", err)
 			return 2
+		}
+		if *noProvenance {
+			disabled := false
+			cfg.Provenance = &disabled
 		}
 		if err = aptpackage.JSONBuild(cfg); err != nil {
 			fmt.Fprintf(stderr, "build JSON package: %v\n", err)

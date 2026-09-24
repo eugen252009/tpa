@@ -26,19 +26,23 @@ func ParsePackage(path string) (Control, error) {
 }
 
 func ParseControl(output []byte) (Control, error) {
-	var c Control
+	c := Control{Metadata: make(map[string]any)}
 	var lastField string
 	scanner := bufio.NewScanner(bytes.NewReader(output))
 
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		if len(line) > 0 && line[0] == ' ' && lastField != "" {
+		if len(line) > 0 && (line[0] == ' ' || line[0] == '\t') && lastField != "" {
 			switch lastField {
 			case "Description":
 				c.Description += "\n" + strings.TrimLeft(line, " ")
 			case "Depends":
 				c.Depends += " " + strings.TrimLeft(line, " ")
+			default:
+				if previous, ok := c.Metadata[lastField].(string); ok {
+					c.Metadata[lastField] = previous + "\n" + strings.TrimLeft(line, " \t")
+				}
 			}
 			continue
 		}
@@ -50,6 +54,7 @@ func ParseControl(output []byte) (Control, error) {
 
 		key := parts[0]
 		value := parts[1]
+		lastField = key
 
 		switch key {
 		case "Package":
@@ -90,6 +95,8 @@ func ParseControl(output []byte) (Control, error) {
 			c.Essential = value
 		case "Multi-Arch":
 			c.MultiArch = value
+		default:
+			c.Metadata[key] = value
 		}
 	}
 	if err := scanner.Err(); err != nil {

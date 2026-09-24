@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -34,6 +35,41 @@ func TestCommandExitSemantics(t *testing.T) {
 				t.Fatalf("failure returned exit code 0; stdout=%q stderr=%q", stdout.String(), stderr.String())
 			}
 		})
+	}
+}
+
+func TestNoProvenanceFlagDisablesAutomaticMetadata(t *testing.T) {
+	root := t.TempDir()
+	input := `{"control":{"name":"example","version":"1.0.0","architecture":"all","maintainer":"Example","description":"Example","memaType":"backup"},"outdir":"` + root + `"}`
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"json", "--no-provenance"}, bytes.NewBufferString(input), &stdout, &stderr); code != 0 {
+		t.Fatalf("json --no-provenance exit code = %d, stderr=%q", code, stderr.String())
+	}
+	control, err := os.ReadFile(filepath.Join(root, "DEBIAN", "control"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(control)
+	if strings.Contains(text, "TPA-Version:") || strings.Contains(text, "Created-At:") {
+		t.Fatalf("automatic provenance was not disabled:\n%s", text)
+	}
+	if !strings.Contains(text, "Mema-Type: backup\n") {
+		t.Fatalf("custom metadata was disabled with provenance:\n%s", text)
+	}
+
+	persistentRoot := t.TempDir()
+	persistentInput := `{"control":{"name":"example","version":"1.0.0","architecture":"all","maintainer":"Example","description":"Example"},"provenance":false,"outdir":"` + persistentRoot + `"}`
+	stdout.Reset()
+	stderr.Reset()
+	if code := run([]string{"json"}, bytes.NewBufferString(persistentInput), &stdout, &stderr); code != 0 {
+		t.Fatalf("persistent provenance=false exit code = %d, stderr=%q", code, stderr.String())
+	}
+	persistentControl, err := os.ReadFile(filepath.Join(persistentRoot, "DEBIAN", "control"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if text := string(persistentControl); strings.Contains(text, "TPA-Version:") || strings.Contains(text, "Created-At:") {
+		t.Fatalf("persistent provenance=false did not disable automatic metadata:\n%s", text)
 	}
 }
 

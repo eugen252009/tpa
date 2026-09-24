@@ -68,7 +68,9 @@ output overrides cannot be used together.
 
 Relationship flags include `-depends`, `-pre-depends`, `-recommends`,
 `-suggests`, `-provides`, `-conflicts`, `-breaks`, and `-replaces`.
-Maintainer-script values are script bodies, not paths to script files.
+Maintainer scripts are separate from control metadata. CLI script flags are
+`-preinst`, `-postinst`, `-prerm`, and `-postrm`; their values are script
+bodies, not paths to script files.
 
 ```sh
 tpa init \
@@ -83,6 +85,46 @@ tpa build -in=build/hello-tpa -out=dist/hello-tpa_1.0.0_all.deb
 `tpa json` performs the same initialization from standard input. Omitted fields
 retain the CLI defaults. The JSON uses the field names printed by `tpa schema`.
 The `json` command initializes a package tree only; it does not build a `.deb`.
+
+The preferred JSON structure separates control metadata from maintainer scripts:
+
+```json
+{
+  "control": {
+    "name": "example",
+    "version": "1.0.0",
+    "architecture": "all",
+    "maintainer": "Example",
+    "description": "Example",
+    "packageType": "backup",
+    "memaService": "example",
+    "memaSchema": 1
+  },
+  "scripts": {
+    "postinst": "echo installed"
+  },
+  "outdir": "build/example"
+}
+```
+
+Known Debian fields remain typed. Additional scalar control fields are accepted
+without a TPA code change and are converted generically: `packageType` becomes
+`Package-Type`, `memaService` becomes `Mema-Service`, and `memaSchema` becomes
+`Mema-Schema`. Strings, numbers, and booleans are supported; arrays, objects,
+nulls, unsafe names, control characters, and field-name collisions are rejected.
+
+TPA adds `TPA-Version: <version>` and a UTC RFC3339 `Created-At` field when
+those fields are not supplied explicitly. Explicit equivalent metadata values
+win and are emitted once. Use `tpa json --no-provenance` (or the equivalent
+package-definition command) to disable only automatic generation; explicit
+provenance-shaped metadata and all other custom fields are preserved. The
+configuration property `provenance: false` provides the persistent equivalent.
+TPA does not assign semantics to arbitrary custom fields; it transports them as
+Debian control metadata.
+
+For compatibility, legacy `preinstbody`, `postinstbody`, `prermbody`, and
+`postrmbody` fields are accepted and normalized into `scripts`. They are never
+emitted as control fields.
 
 ```sh
 printf '%s\n' '{
@@ -102,7 +144,8 @@ printf '%s\n' '{
 TPA reads the actual control stanza from every input `.deb` and preserves its
 Debian metadata in `Packages`. It removes any package-provided `Filename`,
 `Size`, and `SHA256` fields and appends values derived from the actual published
-artifact.
+artifact. Custom control fields therefore remain visible to APT consumers and
+metadata inspectors.
 
 ```sh
 tpa pack -in=dist -out=repo

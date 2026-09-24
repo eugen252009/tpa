@@ -53,14 +53,21 @@ replaced tree. Failure before exchange leaves the previous tree unchanged.
 
 ## Data Model
 
-`Config` contains package control metadata, repository release metadata, input
-and output paths, and an optional GPG selector. Maintainer script values are raw
-script bodies, not paths.
+`Config` contains package control metadata, maintainer scripts, repository
+release metadata, input and output paths, and an optional GPG selector.
+`Control` contains known typed fields plus scalar custom metadata. `Scripts`
+contains maintainer-script bodies and is the canonical script representation.
 
-`Control.Render` writes package metadata to `DEBIAN/control`. Keep the CLI
-flags, JSON tags, TypeScript interface, renderer, parser, README, and manpage
-aligned when modeled fields change. Repository indexes preserve the raw package
-control stanza so valid unmodeled Debian fields are not discarded.
+`Control.Render` writes known and custom package metadata to `DEBIAN/control`.
+`InitPackage` adds `TPA-Version` and `Created-At` unless explicitly supplied;
+explicit equivalent values win and normalized duplicates are rejected. Automatic
+provenance is enabled by default, can be disabled with `provenance: false`, or
+with the CLI `--no-provenance` escape hatch; explicit metadata remains intact.
+Keep the CLI flags, JSON tags, TypeScript interface, renderer, parser, README,
+and manpage aligned when modeled fields change. Repository indexes preserve the
+raw package control stanza so valid unmodeled Debian fields are not discarded.
+Legacy `*body` script fields are accepted only as JSON compatibility input and
+are normalized into `Config.Scripts`.
 
 ## Local Development
 
