@@ -28,6 +28,7 @@ actual package artifacts.
 | `pack` | Derives and verifies an APT repository from top-level `.deb` files. |
 | `json` | Reads configuration from standard input and initializes a package tree; it does not build an archive. |
 | `schema` | Prints the TypeScript-style configuration interface. |
+| `version` | Prints the TPA program version. |
 
 All successful commands return zero. Invalid invocations and failed operations
 return non-zero and write diagnostics to standard error.

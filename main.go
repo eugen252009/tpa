@@ -55,7 +55,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	noProvenance := flags.Bool("no-provenance", false, "Disable automatic TPA provenance metadata")
 
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "Usage: tpa <init|build|parse|pack|json|schema>")
+		fmt.Fprintln(stderr, "Usage: tpa <init|build|parse|pack|json|schema|version>")
 		flags.PrintDefaults()
 		return 2
 	}
@@ -156,6 +156,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		}
 	case "schema":
 		fmt.Fprint(stdout, aptpackage.JSONSCHEMA)
+	case "version":
+		fmt.Fprintln(stdout, aptpackage.TPAVersion)
 	default:
 		fmt.Fprintf(stderr, "Unknown command: %s\n", command)
 		return 2

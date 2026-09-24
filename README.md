@@ -38,6 +38,11 @@ returns a non-zero status because no command was supplied.
 | `pack` | Top-level `.deb` files in `-in`, or an optional JSON config path | Verified APT repository at `-out`, `--output`, or `--atomic-publish` |
 | `json` | Configuration JSON on standard input | Initialized package root at JSON `outdir` |
 | `schema` | None | TypeScript-style configuration interface on standard output |
+| `version` | None | TPA program version on standard output |
+
+The program version command is `tpa version`. It is distinct from
+`tpa -version`, which is not an alias for the version command and is rejected
+as an invalid command.
 
 Exit status is part of the process contract:
 

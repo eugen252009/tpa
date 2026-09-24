@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/eugen252009/tpa/internals/aptpackage"
 )
 
 func TestCommandExitSemantics(t *testing.T) {
@@ -70,6 +72,23 @@ func TestNoProvenanceFlagDisablesAutomaticMetadata(t *testing.T) {
 	}
 	if text := string(persistentControl); strings.Contains(text, "TPA-Version:") || strings.Contains(text, "Created-At:") {
 		t.Fatalf("persistent provenance=false did not disable automatic metadata:\n%s", text)
+	}
+}
+
+func TestVersionCommandReturnsProgramVersion(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"version"}, bytes.NewReader(nil), &stdout, &stderr); code != 0 {
+		t.Fatalf("version exit code = %d, stderr=%q", code, stderr.String())
+	}
+	if got, want := stdout.String(), aptpackage.TPAVersion+"\n"; got != want {
+		t.Fatalf("version output = %q, want %q", got, want)
+	}
+}
+
+func TestVersionFlagIsNotVersionCommand(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"-version"}, bytes.NewReader(nil), &stdout, &stderr); code == 0 {
+		t.Fatalf("-version unexpectedly succeeded as version command: stdout=%q", stdout.String())
 	}
 }
 

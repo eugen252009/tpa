@@ -43,6 +43,8 @@ export interface ControlClass {
     essential:    string;
     multiArch:    string;
 
+    // Additional user-defined control fields; TPA accepts string, number,
+    // and boolean scalar values and normalizes keys to Debian field names.
     [key: string]: unknown;
 }
 
