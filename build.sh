@@ -6,7 +6,7 @@ cd "$ROOT"
 
 ARCHS="amd64 riscv64 arm64"
 DESC=$(cat description.txt)
-VERSION=${TPA_VERSION:-1}
+VERSION=${TPA_VERSION:-0.4.0}
 DEPENDS="libc6,dpkg,gpg,gzip"
 HOMEPAGE="https://github.com/coffeemakerstudio/tpa"
 MAINTAINER="Coffee Maker Studio <tpa@lupricht.net>"
@@ -27,6 +27,9 @@ for arch in $ARCHS; do
         -name=tpa -ver="$VERSION" -depends="$DEPENDS" \
         -desc="$DESC" -homepage="$HOMEPAGE" -maintainer="$MAINTAINER" \
         -section="$SECTION" -out="$work_dir" -arch="$arch"
+    # TPA init creates empty compatibility scripts; the package needs none.
+    rm -f "$work_dir/DEBIAN/preinst" "$work_dir/DEBIAN/postinst" \
+        "$work_dir/DEBIAN/prerm" "$work_dir/DEBIAN/postrm"
 
     CGO_ENABLED=0 GOOS=linux GOARCH="$arch" go build -o "$work_dir/usr/local/bin/tpa" .
     chmod 0755 "$work_dir/usr/local/bin/tpa"
