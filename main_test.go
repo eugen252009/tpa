@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -88,7 +89,7 @@ func TestVersionCommandReturnsProgramVersion(t *testing.T) {
 func TestVersionFlagIsNotVersionCommand(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	if code := run([]string{"-version"}, bytes.NewReader(nil), &stdout, &stderr); code == 0 {
-		t.Fatalf("-version unexpectedly succeeded as version command: stdout=%q", stdout.String())
+		t.Fatalf("-version unexpectedly succeeded as version command: stdout=%q stderr=%q", stdout.String(), stderr.String())
 	}
 }
 
@@ -99,5 +100,41 @@ func TestSchemaReturnsSuccess(t *testing.T) {
 	}
 	if stdout.Len() == 0 {
 		t.Fatal("schema produced no output")
+	}
+}
+
+func TestPackWritesVerifiedGenerationInventory(t *testing.T) {
+	root := t.TempDir()
+	packageRoot := filepath.Join(root, "package")
+	archive := filepath.Join(root, "fixture.deb")
+	repository := filepath.Join(root, "repository")
+	manifestPath := filepath.Join(root, "generation.json")
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"init", "-name=fixture", "-ver=1.0", "-arch=all", "-maintainer=Fixture", "-desc=Fixture", "-out=" + packageRoot}, bytes.NewReader(nil), &stdout, &stderr); code != 0 {
+		t.Fatalf("init exit=%d stderr=%q", code, stderr.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := run([]string{"build", "-in=" + packageRoot, "-out=" + archive}, bytes.NewReader(nil), &stdout, &stderr); code != 0 {
+		t.Fatalf("build exit=%d stderr=%q", code, stderr.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := run([]string{"pack", "-in=" + root, "-out=" + repository, "-generation-manifest=" + manifestPath, "-repository-id=repo", "-generation-id=0123456789abcdef0123456789abcdef"}, bytes.NewReader(nil), &stdout, &stderr); code != 0 {
+		t.Fatalf("pack exit=%d stderr=%q", code, stderr.String())
+	}
+	manifestData, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest aptpackage.GenerationManifest
+	if err = json.Unmarshal(manifestData, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	if manifest.RepositoryID != "repo" || manifest.GenerationID != "0123456789abcdef0123456789abcdef" || len(manifest.Files) == 0 {
+		t.Fatalf("unexpected generation manifest: %+v", manifest)
+	}
+	if err := aptpackage.VerifyGenerationManifest(repository, manifest, "repo"); err != nil {
+		t.Fatalf("generated inventory does not verify: %v", err)
 	}
 }

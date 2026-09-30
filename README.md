@@ -35,7 +35,7 @@ returns a non-zero status because no command was supplied.
 | `init` | Package metadata flags | Package root at `-out`, including `DEBIAN/control`, maintainer scripts, and `usr/local/bin` |
 | `build` | Package root at `-in` | `.deb` archive or destination directory at `-out`, using `dpkg-deb --root-owner-group --build` |
 | `parse` | `.deb` archive at `-in` | Human-readable parsed control summary on standard output |
-| `pack` | Top-level `.deb` files in `-in`, or an optional JSON config path | Verified APT repository at `-out`, `--output`, or `--atomic-publish` |
+| `pack` | Top-level `.deb` files in `-in`, or an optional JSON config path | Verified APT repository at `-out`, `--output`, or `--atomic-publish`; optionally a generation inventory |
 | `json` | Configuration JSON on standard input | Initialized package root at JSON `outdir` |
 | `schema` | None | TypeScript-style configuration interface on standard output |
 | `version` | None | TPA program version on standard output |
@@ -67,7 +67,11 @@ Repository flags include `-origin`, `-label`, `-suite`, `-codename`, and
 artifacts; there is no architecture-list override. `-gpg` selects a signing key.
 The general path flags are `-in` and `-out`. For `pack`, `--output` is an alias
 for `-out`, while `--atomic-publish` selects atomic replacement; those two
-output overrides cannot be used together.
+output overrides cannot be used together. For hosted prebuilt publication,
+`-generation-manifest`, `-repository-id`, and `-generation-id` write a versioned
+inventory after repository verification; `-parent-generation` binds the expected
+active parent. Use a server-issued repository ID and a fresh 32-character
+lowercase-hex generation ID when publishing to TPA.run.
 
 ## Package creation
 
@@ -171,6 +175,14 @@ repo/
 when the result must be an exact snapshot. Direct output remains useful for
 manual generation where no concurrent reader observes the destination.
 
+For a completed repository, `-generation-manifest=<path>` writes a deterministic
+versioned file inventory outside the repository tree. It requires
+`-repository-id` and `-generation-id`; `-parent-generation` is optional. TPA
+hashes every regular file after repository generation and verifies the inventory
+against the final tree. The v1 contract bounds manifests to 4 MiB, 8,192 files,
+4,096-byte/64-component paths, and 65,536 directories. This inventory is
+transport metadata, not a replacement for APT's signed Release metadata.
+
 `pack` also accepts one positional JSON config file. `--output` and
 `--atomic-publish` explicitly override the output path from that file. The
 configuration file supplies the same package/repository fields as the CLI;
@@ -233,7 +245,33 @@ tpa pack -in=dist -out=repo -gpg=FULL_SIGNING_FINGERPRINT
 
 TPA invokes the installed `gpg` and uses the caller's GPG environment, including
 `GNUPGHOME`. It selects one primary secret key, signs `Release`, and verifies the
-result. Key creation, storage, expiration, and rotation remain GPG concerns.
+result. It rejects expired, revoked, invalid, or ambiguous signature status and
+requires the InRelease signature block to end the file. Key creation, storage,
+expiration, and rotation remain GPG concerns.
+
+## Exporting a hosted generation
+
+TPA.run accepts complete repository trees built and signed by TPA. Register the
+APT public key for the target repository with TPA.run, then build a fresh
+repository tree and inventory:
+
+```sh
+gpg --armor --export "$APT_FINGERPRINT" > apt-signing-public.asc
+tparun signer add "$REPOSITORY_ID" apt-signing-public.asc
+tpa pack -in=artifacts -out=repo-generation -gpg="$APT_FINGERPRINT" \
+  -generation-manifest=generation.json \
+  -repository-id="$REPOSITORY_ID" \
+  -generation-id="$(openssl rand -hex 16)" \
+  -parent-generation="$ACTIVE_GENERATION"
+tparun publish-generation "$REPOSITORY_ID" \
+  --directory repo-generation --manifest generation.json
+```
+
+Omit `-parent-generation` when the repository has no active generation. Keep
+the inventory beside, not inside, the generation tree. TPA.run authenticates
+the publisher, checks the inventory and signed APT metadata independently,
+then stores and activates the immutable generation. Its existing managed-signing
+`tparun publish` flow remains available.
 
 ## Atomic publication
 

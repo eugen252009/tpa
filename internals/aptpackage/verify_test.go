@@ -66,6 +66,40 @@ func TestVerifyRepositoryRejectsReleaseDifferentFromSignedPayload(t *testing.T) 
 	}
 }
 
+func TestVerifyRepositoryRejectsUnsignedTrailingInReleaseData(t *testing.T) {
+	if _, err := exec.LookPath("gpg"); err != nil {
+		t.Skip("gpg is required")
+	}
+	root := t.TempDir()
+	gpgHome := filepath.Join(root, "gnupg")
+	if err := os.Mkdir(gpgHome, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GNUPGHOME", gpgHome)
+	fingerprint := generateTestSigningKey(t, "Trailing data signer <trailing@example.invalid>")
+	input := filepath.Join(root, "packages")
+	buildTestDeb(t, input, "fixture_1.0_all.deb", basicControl("fixture", "1.0", "all"), "signed")
+	cfg := Config{InDir: input, OutDir: filepath.Join(root, "repo"), GPG: fingerprint}
+	if err := Pack(cfg); err != nil {
+		t.Fatal(err)
+	}
+	inRelease := filepath.Join(cfg.OutDir, "dists", "stable", "InRelease")
+	file, err := os.OpenFile(inRelease, os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = file.WriteString("unsigned tail\n"); err != nil {
+		file.Close()
+		t.Fatal(err)
+	}
+	if err = file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err = verifyRepository(cfg); err == nil || !strings.Contains(err.Error(), "trailing data") {
+		t.Fatalf("expected unsigned trailing data rejection, got %v", err)
+	}
+}
+
 func generateTestSigningKey(t *testing.T, identity string) string {
 	t.Helper()
 	cmd := exec.Command("gpg", "--batch", "--pinentry-mode", "loopback", "--passphrase", "", "--quick-generate-key", identity, "rsa2048", "sign", "0")

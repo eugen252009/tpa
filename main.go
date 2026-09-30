@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/eugen252009/tpa/internals/aptpackage"
@@ -52,6 +53,10 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	flags.StringVar(&cfg.GPG, "gpg", "", "GPG Key ID or full fingerprint for signing, empty for no signing")
 	output := flags.String("output", "", "Repository output directory (alias for -out)")
 	atomicPublish := flags.String("atomic-publish", "", "Atomically publish the repository at this path")
+	generationManifest := flags.String("generation-manifest", "", "Write a portable inventory for the verified repository generation")
+	repositoryID := flags.String("repository-id", "", "Repository identity for -generation-manifest")
+	generationID := flags.String("generation-id", "", "Generation identity for -generation-manifest")
+	parentGeneration := flags.String("parent-generation", "", "Expected parent generation for -generation-manifest")
 	noProvenance := flags.Bool("no-provenance", false, "Disable automatic TPA provenance metadata")
 
 	if len(args) == 0 {
@@ -134,6 +139,30 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		if err != nil {
 			fmt.Fprintf(stderr, "Build failed: %v\n", err)
 			return 1
+		}
+		if *generationManifest != "" {
+			manifestPath, pathErr := filepath.Abs(*generationManifest)
+			rootPath, rootErr := filepath.Abs(cfg.OutDir)
+			if pathErr != nil || rootErr != nil {
+				fmt.Fprintln(stderr, "tpa: resolve generation manifest path failed")
+				return 1
+			}
+			rel, relErr := filepath.Rel(rootPath, manifestPath)
+			if relErr != nil || rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))) {
+				fmt.Fprintln(stderr, "tpa: generation manifest must be outside the repository tree")
+				return 2
+			}
+			manifest, manifestErr := aptpackage.CreateGenerationManifest(cfg.OutDir, *repositoryID, *generationID, *parentGeneration)
+			if manifestErr == nil {
+				manifestErr = aptpackage.VerifyGenerationManifest(cfg.OutDir, manifest, *repositoryID)
+			}
+			if manifestErr == nil {
+				manifestErr = aptpackage.WriteGenerationManifest(manifestPath, manifest)
+			}
+			if manifestErr != nil {
+				fmt.Fprintf(stderr, "tpa: create generation manifest: %v\n", manifestErr)
+				return 1
+			}
 		}
 		fmt.Fprintln(stdout, "Repo build complete!")
 	case "json":

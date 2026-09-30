@@ -50,6 +50,19 @@ Use this mode when replacing a repository that may be read concurrently.
 Select one GPG secret key. Full fingerprints are recommended. Empty means unsigned.
 TPA uses the caller's GPG environment, including GNUPGHOME.
 .TP
+.BI -generation-manifest " path"
+After building and verifying a repository, write a deterministic complete-file
+inventory outside the repository tree. Requires -repository-id and -generation-id.
+.TP
+.BI -repository-id " id"
+Repository identity included in a generation manifest.
+.TP
+.BI -generation-id " id"
+Generation identity included in a generation manifest.
+.TP
+.BI -parent-generation " id"
+Optional expected parent generation included in a generation manifest.
+.TP
 .BI -depends " relationships"
 Set Depends in a generated package control file.
 .TP

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -286,27 +287,23 @@ func signingFingerprint(selector string) (string, error) {
 }
 
 func verifyInRelease(path string, releaseData []byte, expectedFingerprint string) error {
+	info, err := os.Lstat(path)
+	if err != nil || !info.Mode().IsRegular() {
+		return fmt.Errorf("InRelease is missing or not a regular file")
+	}
+	if err = requireTerminalInReleaseSignature(path, info.Size()); err != nil {
+		return err
+	}
 	cmd := exec.Command("gpg", "--batch", "--status-fd=1", "--verify", path)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("verify InRelease: %w: %s", err, strings.TrimSpace(string(output)))
 	}
-	validSigner := false
-	for _, line := range strings.Split(string(output), "\n") {
-		marker := "[GNUPG:] VALIDSIG "
-		position := strings.Index(line, marker)
-		if position < 0 {
-			continue
-		}
-		fields := strings.Fields(line[position+len(marker):])
-		if len(fields) == 0 {
-			continue
-		}
-		if strings.EqualFold(fields[0], expectedFingerprint) || (isFingerprint(fields[len(fields)-1]) && strings.EqualFold(fields[len(fields)-1], expectedFingerprint)) {
-			validSigner = true
-		}
+	fingerprint, err := verifiedOpenPGPSigner(output)
+	if err != nil {
+		return fmt.Errorf("verify InRelease status: %w", err)
 	}
-	if !validSigner {
+	if !strings.EqualFold(fingerprint, expectedFingerprint) {
 		return fmt.Errorf("InRelease was not signed by expected fingerprint %s", expectedFingerprint)
 	}
 	plain, err := exec.Command("gpg", "--batch", "--decrypt", path).Output()
@@ -317,6 +314,55 @@ func verifyInRelease(path string, releaseData []byte, expectedFingerprint string
 		return fmt.Errorf("InRelease payload does not match Release")
 	}
 	return nil
+}
+
+func requireTerminalInReleaseSignature(path string, size int64) error {
+	const footer = "-----END PGP SIGNATURE-----\n"
+	if size < int64(len(footer)) {
+		return fmt.Errorf("InRelease signature footer missing")
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	if _, err = file.Seek(-int64(len(footer)), io.SeekEnd); err != nil {
+		return err
+	}
+	tail := make([]byte, len(footer))
+	if _, err = io.ReadFull(file, tail); err != nil || string(tail) != footer {
+		return fmt.Errorf("InRelease contains trailing data or a non-canonical signature footer")
+	}
+	return nil
+}
+
+func verifiedOpenPGPSigner(status []byte) (string, error) {
+	valid := ""
+	for _, line := range strings.Split(string(status), "\n") {
+		if !strings.HasPrefix(line, "[GNUPG:] ") {
+			continue
+		}
+		fields := strings.Fields(strings.TrimPrefix(line, "[GNUPG:] "))
+		if len(fields) == 0 {
+			continue
+		}
+		switch fields[0] {
+		case "EXPKEYSIG", "EXPSIG", "REVKEYSIG", "BADSIG", "ERRSIG", "NO_PUBKEY", "NODATA", "KEYEXPIRED", "SIGEXPIRED":
+			return "", fmt.Errorf("OpenPGP status %s is not acceptable", fields[0])
+		case "VALIDSIG":
+			if len(fields) < 2 || valid != "" {
+				return "", fmt.Errorf("missing or ambiguous valid signature")
+			}
+			valid = strings.ToUpper(fields[1])
+			if len(fields) > 10 && isFingerprint(fields[len(fields)-1]) {
+				valid = strings.ToUpper(fields[len(fields)-1])
+			}
+		}
+	}
+	if valid == "" {
+		return "", fmt.Errorf("no valid OpenPGP signature")
+	}
+	return valid, nil
 }
 
 func isFingerprint(value string) bool {
