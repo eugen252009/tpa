@@ -32,6 +32,8 @@ const (
 	stageDPKGWait
 	stageManifestWalk
 	stageManifestHash
+	stageControlDirect
+	stageControlFallback
 	stageCount
 )
 
@@ -65,4 +67,6 @@ var stageNames = [...]string{
 	"dpkg_deb_wait",
 	"manifest_walk_and_finalize",
 	"manifest_file_hashing",
+	"control_reader_direct_attempt",
+	"control_reader_dpkg_fallback",
 }

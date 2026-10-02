@@ -24,7 +24,7 @@ actual package artifacts.
 | --- | --- |
 | `init` | Creates `DEBIAN/`, `usr/local/bin/`, control metadata, and executable maintainer scripts. |
 | `build` | Validates `DEBIAN/control`, fixes present maintainer-script modes, and invokes `dpkg-deb --root-owner-group --build`. |
-| `parse` | Reads a `.deb` control record with `dpkg-deb -f`. |
+| `parse` | Reads a `.deb` control record in-process; unsupported formats fall back to `dpkg-deb -f`. |
 | `pack` | Derives and verifies an APT repository from top-level `.deb` files. |
 | `json` | Reads configuration from standard input and initializes a package tree; it does not build an archive. |
 | `schema` | Prints the TypeScript-style configuration interface. |

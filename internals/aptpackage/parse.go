@@ -4,18 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"os/exec"
 	"strings"
 )
-
-func readPackageControl(path string) ([]byte, error) {
-	cmd := exec.Command("dpkg-deb", "-f", path)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("could not read package: %w: %s", err, strings.TrimSpace(string(output)))
-	}
-	return output, nil
-}
 
 func ParsePackage(path string) (Control, error) {
 	output, err := readPackageControl(path)
@@ -29,6 +19,7 @@ func ParseControl(output []byte) (Control, error) {
 	c := Control{Metadata: make(map[string]any)}
 	var lastField string
 	scanner := bufio.NewScanner(bytes.NewReader(output))
+	scanner.Buffer(make([]byte, 64*1024), maxControlFileSize)
 
 	for scanner.Scan() {
 		line := scanner.Text()
