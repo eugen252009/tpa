@@ -1,9 +1,93 @@
-# TPA 10,000 meta-package audit and benchmark
+# TPA 10,000-package benchmark: current results and historical baseline
 
-Run data: `results/20261001T181442Z/`. All timed trials used a full-corpus
-warm-up followed by three measured trials, on one shared, warm-cache filesystem.
-Times below are wall-clock medians and min–max unless stated otherwise. No
-production code was changed.
+## Current post-Phase-B results (authoritative)
+
+These results measure TPA commit `078b62977e3cdec78fc84191172780f73468750f`.
+Raw evidence is retained in `post-phaseB-results/20261002T175545Z/`; the
+repository-comparison suite is under
+`post-phaseB-results/20261002T175545Z/workspace/source/bench/results/20261002T175601Z/`.
+The environment was Debian 13, Linux `6.12.107+deb13-amd64`, Go 1.26.4,
+Docker 29.5.2, dpkg 1.22.22, APT 3.0.3, on an AMD Ryzen 7 5800X (8 cores/16
+logical CPUs) with an ext4 NVMe bind mount. See the retained environment records
+for complete details.
+
+### Direct-reader oracle
+
+The committed in-process reader matched `dpkg-deb -f` on all 10,000 corpus
+packages with zero mismatches: **4.128 s versus 34.589 s** (8.38x) for the
+sequential oracle loop. This is a reader microbenchmark, not a Pack timing.
+
+### Signed Pack worker sweep
+
+The three-trial sweep used benchmark-only instrumentation and complete
+manifests. It is distinct from the standard, uninstrumented repository
+comparison below.
+
+| Workers | Trials | Median wall | Speedup vs 1 | Median CPU (user+sys) | Median peak RSS | Direct reads | Fallbacks |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 3 | 5.330 s | 1.00x | 6.740 s | 64.7 MiB | 10,000 | 0 |
+| 2 | 3 | 2.940 s | 1.81x | 6.880 s | 61.8 MiB | 10,000 | 0 |
+| 4 | 3 | 1.830 s | 2.91x | 7.500 s | 62.1 MiB | 10,000 | 0 |
+| 8 | 3 | 1.340 s | 3.98x | 8.460 s | 68.5 MiB | 10,000 | 0 |
+| 16 | 3 | 1.260 s | 4.23x | 8.630 s | 75.4 MiB | 10,000 | 0 |
+
+Eight workers is the practical throughput knee in this run. Sixteen workers
+saved 6.0% median wall time over eight, with 2.0% more CPU and 10.1% more peak
+RSS. This is workload-specific evidence, not a new default recommendation. The
+worker sweep's 1-worker result is explicitly configured and instrumented; it
+must not be conflated with the standard TPA run, which uses its default worker
+count.
+
+### Standard repository comparison
+
+Three-trial medians for the standard comparison were:
+
+| Scenario | TPA | aptly | reprepro |
+| --- | ---: | ---: | ---: |
+| Initial generation | 1.110 s | 339.170 s | 16.390 s |
+| Update | 1.160 s | 4.710 s | 0.290 s |
+
+The update semantics differ. aptly retained old versions and reported 10,100
+entries after update; TPA and reprepro reported 10,000. TPA derives a fresh
+snapshot from the input artifact set, so the update times are not equivalent
+workloads and are not presented as a like-for-like ranking.
+
+### Package-build orchestration and validation
+
+The benchmark-only `aptpackage.Build` orchestration sweep measured medians of
+85.38/36.34/19.58/11.33/12.62/9.55 s at 1/2/4/8/16/32 workers. The 1- and
+32-worker endpoints had three trials; intermediate counts had one observation.
+Package hashes matched across worker counts. These measurements do not establish
+a precise package-build optimum and do not mean individual `tpa build` commands
+build multiple packages concurrently.
+
+All 15 signed Pack trials read 10,000 packages directly with zero metadata
+fallbacks. `Packages` and `Packages.gz` matched across worker counts. The
+10,004-path signed manifest, signature/index checks, APT download, install,
+upgrade/downgrade, and dependency qualification passed. The unsigned repository
+has 10,003 files (no `InRelease`); `bench/validate-results.sh` expects 10,004
+paths for its unsigned-manifest assertion and exits nonzero there. The unsigned
+inventory was independently confirmed to contain 10,003 unique paths matching
+the repository. This validator mismatch is disclosed, not hidden or represented
+as a passing check.
+
+No source optimization, documentation change, deployment, publication, or push
+was part of the measurement run. Do not compare these results directly with
+other hosts or the pre-optimization historical figures below.
+
+---
+
+## Historical pre-optimization baseline (run `results/20261001T181442Z/`)
+
+The following original report describes the earlier implementation before the
+bounded-worker Phase A changes and the Phase B in-process reader. Its 8,192-file
+manifest limit, serial `dpkg-deb -f` path, and timings are historical, not
+current-state claims. Original run data was `results/20261001T181442Z/`; trials
+used a full-corpus warm-up followed by three measured runs on a shared,
+warm-cache filesystem. Times were wall-clock medians and min–max unless stated
+otherwise. No production code was changed during that original measurement.
+The original report data is retained below without replacing its historical
+observations.
 
 ## 1. EXECUTIVE SUMMARY
 

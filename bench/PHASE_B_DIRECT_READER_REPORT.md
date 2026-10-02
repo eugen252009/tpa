@@ -1,6 +1,6 @@
 # Phase B: in-process `.deb` control reader
 
-**Baseline commits:** TPA `5caebcd9c4c28ef0fccaad4c56f01dca24f13af5`; TPA.run `ac8ea6edddc277c894964db4fef7e844dceed1cc`. Phase A was committed separately before this work. Phase B remains uncommitted. No push, deployment, or publication occurred.
+**Historical Phase B baseline:** TPA `5caebcd9c4c28ef0fccaad4c56f01dca24f13af5`; TPA.run `ac8ea6edddc277c894964db4fef7e844dceed1cc`. The original qualification below was written before Phase B was committed; its statement that Phase B was uncommitted describes that earlier report state only. Phase B was subsequently committed as TPA `078b62977e3cdec78fc84191172780f73468750f`. Post-commit results are recorded at the end of this report and in `REPORT.md`. No push, deployment, or publication occurred.
 
 ## Outcome
 
@@ -55,4 +55,18 @@ Raw trials, stage JSON, signatures, and timing files are under `bench/phaseB-res
 
 ## Decision
 
-The parser is correct against the 10k dpkg oracle and qualified APT outputs, retains dpkg compatibility fallback, rejects malformed supported inputs without fallback, and materially reduces both Pack wall time and CPU. The measured RSS increase is bounded and recorded. The in-process reader is retained; no further optimization phase was started.
+The parser is correct against the 10k dpkg oracle and qualified APT outputs, retains dpkg compatibility fallback, rejects malformed supported inputs without fallback, and materially reduces both Pack wall time and CPU. The measured RSS increase is bounded and recorded. The in-process reader was retained; no further optimization phase was started at the time of this report.
+
+## Post-commit remeasurement
+
+A fresh benchmark measured the exact committed Phase B tree, TPA
+`078b62977e3cdec78fc84191172780f73468750f`, in
+`bench/post-phaseB-results/20261002T175545Z/`. The reader oracle matched all
+10,000 packages with zero mismatches: 4.128 s direct versus 34.589 s for
+`dpkg-deb -f` (8.38x). A separate three-trial signed Pack sweep, with
+benchmark-only instrumentation and generation manifests, measured medians of
+5.330/2.940/1.830/1.340/1.260 s at 1/2/4/8/16 workers. Every run made 10,000
+direct reads and zero fallbacks. Eight workers remained near the practical
+knee; 16 workers saved 6.0% wall time over 8 while using 2.0% more CPU and
+10.1% more peak RSS. These fresh results supersede no historical measurement;
+they are a separate dataset and differ from the original report's trials.

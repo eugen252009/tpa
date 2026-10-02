@@ -24,7 +24,7 @@ actual package artifacts.
 | --- | --- |
 | `init` | Creates `DEBIAN/`, `usr/local/bin/`, control metadata, and executable maintainer scripts. |
 | `build` | Validates `DEBIAN/control`, fixes present maintainer-script modes, and invokes `dpkg-deb --root-owner-group --build`. |
-| `parse` | Reads a `.deb` control record in-process; unsupported formats fall back to `dpkg-deb -f`. |
+| `parse` | Reads plain, gzip, and xz control archives in-process; typed unsupported formats fall back to `dpkg-deb -f`, while malformed supported inputs fail directly. |
 | `pack` | Derives and verifies an APT repository from top-level `.deb` files. |
 | `json` | Reads configuration from standard input and initializes a package tree; it does not build an archive. |
 | `schema` | Prints the TypeScript-style configuration interface. |
@@ -46,6 +46,12 @@ return non-zero and write diagnostics to standard error.
 - A fresh input set defines a fresh repository snapshot. Historical versions
   remain only when their artifacts remain in that set.
 - No persistent package metadata or hash cache is used.
+- Supported `.deb` control archive formats (plain, gzip, xz) are read in process;
+  only explicitly unsupported formats use the bounded `dpkg-deb -f` fallback.
+  Keep malformed-supported-input rejection distinct from fallback behavior.
+- Pack worker queues and the ordered inspection window remain bounded; worker
+  changes must preserve deterministic indexes, artifact-derived hashes, and
+  independent repository verification.
 
 `Pack` supports direct generation. Use `AtomicPack`/`--atomic-publish` when an
 existing repository may be read concurrently: TPA builds a sibling staging

@@ -1,53 +1,54 @@
-# TPA scalability optimization report
+# TPA scalability optimization report: Phase A history and Phase B state
 
 **Scope:** TPA package-build orchestration, repository Pack/verification, and
-portable generation manifests. No deployment, publication, push, or commit was
-performed. The earlier `REPORT.md` and its benchmark data remain the historical
-pre-optimization baseline; the measurements below are additional runs, not
-rewrites of that baseline.
+portable generation manifests. The Phase A measurements below are historical;
+the authoritative post-Phase-B results and their caveats are in
+[`REPORT.md`](REPORT.md), with raw evidence in
+`post-phaseB-results/20261002T175545Z/`. No deployment, publication, or push
+was performed.
 
 ## Executive summary
 
-The dominant 10k Pack cost was not hashing, compression, or signing: it was
-10,000 serial `dpkg-deb -f` subprocesses. Bounded package workers (defaulting
-to `GOMAXPROCS`, capped at 32, with `-workers` override) reduced signed Pack
-from a 28.45 s single-worker median to 3.71 s at 16 workers (7.67x). Pool copy
-and independent package verification now also use the same bounded worker
-count. Ordered inspection uses a fixed `2*workers` in-flight window, so
-completion order cannot reorder duplicate handling or package metadata and
-results do not accumulate with corpus size.
+Phase A bounded package workers (defaulting to `GOMAXPROCS`, capped at 32, with
+`-workers` override) reduced signed Pack from a 28.45 s one-worker median to
+3.71 s at 16 workers (7.67x). Those figures predate the Phase B direct reader
+and are retained as historical measurements. Pool copy and independent package
+verification use the same bounded worker count. Ordered inspection has a fixed
+`2*workers` in-flight window, preserving input order and bounding pending
+results.
 
-A source package is now SHA-256 hashed while its bytes are copied to the pool;
-`Packages` gets size and hash from those exact published bytes. Repository
-verification still independently reopens, sizes, and hashes every published
-artifact. Reproducible gzip headers (`gzip -n`) make `Packages.gz` bytes stable
-across worker counts and runs.
+Each input `.deb` is SHA-256 hashed while copied to the pool; `Packages` gets
+size and hash from those exact published bytes. Repository verification still
+independently reopens, sizes, and hashes every published artifact. Reproducible
+gzip headers (`gzip -n`) make `Packages.gz` bytes stable across worker counts
+and runs.
 
-The v1 generation-manifest contract remains unchanged, but its aligned TPA and
-TPA.run limits are now 16 MiB and 65,536 files (previously 4 MiB and 8,192).
-The 10k repository creates and verifies a complete 10,004-file manifest. TPA
-walk order is already lexical, so a second sort and repeated whole-manifest
-marshalling were removed. Manifest writing now encodes one field/file at a
-time through a byte-limited writer into the existing synced temporary file;
-retained inventory and verification maps still scale with file count, but fixed
-caps bound them.
+The v1 generation-manifest contract has aligned TPA and TPA.run limits of
+16 MiB and 65,536 files (historically 4 MiB and 8,192). TPA writes manifests
+incrementally through a byte-limited writer. Lexical walk order avoids a second
+sort and repeated whole-manifest marshalling; retained inventory and
+verification maps still scale with file count, subject to the fixed limits.
 
-The original `dpkg-deb -f` subprocess was **not** replaced. Stage timing showed
-it dominates, but an in-process `.deb` parser would need to duplicate dpkg's ar,
-tar, and multiple control-archive compression semantics or introduce and audit
-new codec dependencies. A partial parser with a fallback would not remove the
-measured subprocess from the baseline corpus. That redesign was not justified
-by the safety/compatibility tradeoff.
+Phase B subsequently replaced the common per-package `dpkg-deb -f` process with
+an in-process control reader for plain, gzip, and xz control archives. Typed
+unsupported formats use a bounded `dpkg-deb -f` fallback; malformed supported
+archives fail directly. `dpkg-deb` remains used for package construction,
+fallback, and oracle/qualification tooling. The fresh 10k oracle matched all
+10,000 packages in 4.128 s direct versus 34.589 s for `dpkg-deb -f`; the
+instrumented signed Pack sweep measured 5.330/2.940/1.830/1.340/1.260 s at
+1/2/4/8/16 workers. Eight workers was near the practical knee. See the current
+report for instrumentation distinctions and full qualifications.
 
 ## Measurement method and retained artifacts
 
-The workload remains the original 10,000 deterministic, normal Debian
-meta-packages (7,760,012 bytes total; 776 bytes/package), generated with
-`SOURCE_DATE_EPOCH=1700000000`. Repository runs use the same signed TPA Pack
-workflow and a disposable OpenPGP key. Package trees and repository outputs
-were on the shared ext4/NVMe bind mount used by the original benchmark, not
-`/tmp`/tmpfs. Host/tool details are in `host.txt` and the original raw
-benchmark's software record.
+The Phase A workload was the original 10,000 deterministic Debian meta-packages
+(7,760,012 bytes total; 776 bytes/package), generated with
+`SOURCE_DATE_EPOCH=1700000000`. Those signed Pack runs used a disposable
+OpenPGP key on the shared ext4/NVMe bind mount described by the original
+benchmark's software record. `host.txt` and the Phase A result directories
+belong to that historical run; fresh Phase B environment metadata is in
+`post-phaseB-results/20261002T175545Z/environment-host.txt` and
+`environment-container.txt`.
 
 Benchmark-only stage timers compile with `-tags=tpa_bench`; ordinary builds use
 a no-op implementation. Paired checks were close: signed Pack was 28.36 s
@@ -67,7 +68,7 @@ and aptly/reprepro results were not overwritten. `worker-sweep-in-container.sh`,
 container. A disposable private signing key existed only in that container and
 the container was removed after qualification.
 
-## Stage profile of the serial baseline
+## Historical Phase A stage profile of the serial baseline
 
 On the signed 10k repository, the paired uninstrumented run took 28.56 s; the
 instrumented profile took 28.36 s. Serial stage durations in that profile:
@@ -100,7 +101,7 @@ Build validation, maintainer-script, and output-directory work totaled about
 build sweep below is a benchmark-only bounded orchestration of these same
 `aptpackage.Build` calls; single-package `tpa build` continues to use dpkg-deb.
 
-## Bounded Pack worker sweep
+## Historical Phase A bounded Pack worker sweep (before the direct reader)
 
 Signed Pack runs used the original immutable input set and distinct output
 paths. Worker counts 1, 8, and 16 have three measured trials; 2 and 4 have one
@@ -213,14 +214,13 @@ silently bypassed.
 
 ## Deliberately unchanged
 
-No external `.deb` parser/codec dependency, native dpkg replacement, cache,
-reuse layer, persistent metadata, or alternate repository viewer was added.
-`dpkg-deb -f` remains authoritative for all Debian-supported control archive
-formats. A parser limited to gzip/plain tar would not help the measured xz
-corpus and would silently narrow compatibility; an all-format parser warrants
-its own audited design. Package index parsing still materializes the Packages
-file/paragraph maps as before; this work bounds parallel task queues but does
-not claim constant memory as repository size grows.
+Phase A added no native dpkg replacement, cache, reuse layer, persistent
+metadata, or alternate repository viewer. Phase B later added the pure-Go
+`github.com/ulikunitz/xz` dependency for supported xz control archives; it did
+not replace dpkg for package construction or remove the bounded fallback for
+unsupported formats. Package index parsing still materializes the Packages
+file/paragraph maps as before; bounded task queues do not imply constant memory
+as repository size grows.
 
 No aptly/reprepro timings or update semantics were changed. Historical
 benchmarks remain as recorded, with the original distinction between TPA's

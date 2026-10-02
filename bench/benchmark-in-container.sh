@@ -176,8 +176,8 @@ for trial in 1 2 3; do
   du -s --apparent-size -B1 "$OUT/initial/reprepro/trial-$trial/repository" >> "$OUT/storage-initial-reprepro-$trial.txt"
 done
 
-# Controlled runtime scaling, one observation per GOMAXPROCS value. TPA's
-# audited code has no worker pool; these runs check whether runtime limits matter.
+# Controlled runtime scaling, one observation per GOMAXPROCS value. Pack's
+# default bounded worker count follows GOMAXPROCS; this tests that default path.
 for procs in 1 2 4 8 16; do
   root="$OUT/scaling/gomaxprocs-$procs"
   mkdir -p "$root"
@@ -286,7 +286,7 @@ python3 /bench/compare-generations.py \
   done
 } > "$OUT/index-counts.txt"
 
-# Capability check (not timed): current manifest limit is 8,192 regular files.
+# Capability check (not timed): record manifest behavior for the 10k corpus.
 mkdir -p "$OUT/manifest-limit"
 set +e
 /usr/local/bin/tpa pack -in="$CORPUS" -out="$OUT/manifest-limit/repository" \

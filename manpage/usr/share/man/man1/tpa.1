@@ -7,9 +7,12 @@ tpa \- build Debian packages and verified APT repository trees
 .RI [ options ]
 .SH DESCRIPTION
 .B tpa
-creates Debian package directory trees, delegates archive operations to
-.BR dpkg-deb (1),
-and derives APT repository metadata from actual .deb artifacts.
+creates Debian package directory trees, uses
+.BR dpkg-deb (1)
+to build package archives, and derives APT repository metadata from actual .deb
+artifacts. Plain, gzip-compressed, and xz-compressed control archives are normally
+read in process; explicitly unsupported formats use a bounded dpkg-deb fallback.
+Malformed supported archives fail directly.
 .SH COMMANDS
 .TP
 .B init
@@ -19,7 +22,9 @@ Create a package tree with DEBIAN/control and maintainer scripts.
 Build a .deb package with dpkg-deb.
 .TP
 .B parse
-Read control metadata from a .deb package.
+Read control metadata from a .deb package. Plain, gzip-compressed, and
+xz-compressed control archives are read in process. Explicitly unsupported
+formats fall back to dpkg-deb; malformed supported archives are rejected.
 .TP
 .B pack
 Generate and verify Packages, Packages.gz, Release, and optionally InRelease.

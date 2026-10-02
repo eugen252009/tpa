@@ -13,7 +13,7 @@ package database or metadata cache.
 
 ## Requirements
 
-- `dpkg-deb` for package building and inspection
+- `dpkg-deb` for package building and fallback inspection of unsupported `.deb` formats
 - `gzip` for compressed package indexes
 - `gpg` when signing repositories
 - Linux and a filesystem supporting `renameat2(RENAME_EXCHANGE)` for replacing
@@ -43,6 +43,11 @@ returns a non-zero status because no command was supplied.
 The program version command is `tpa version`. It is distinct from
 `tpa -version`, which is not an alias for the version command and is rejected
 as an invalid command.
+
+`parse` and repository generation normally read control metadata in process for
+plain, gzip-compressed, and xz-compressed control archives. Unsupported archive
+formats use a bounded `dpkg-deb -f` fallback; malformed supported archives fail
+directly rather than being hidden by fallback.
 
 Exit status is part of the process contract:
 
@@ -315,13 +320,45 @@ upgrade, and downgrade. The dependency qualification proves that relationship
 metadata survives repository generation and APT resolves both direct and
 transitive dependencies automatically.
 
+## 10,000-package benchmark snapshot
+
+The authoritative post-Phase-B measurements were collected on the exact
+committed reader at `078b62977e3cdec78fc84191172780f73468750f`. On Debian 13,
+Linux 6.12.107, a Ryzen 7 5800X (8 cores/16 logical CPUs), the 10,000-package
+control-reader oracle matched `dpkg-deb -f` with zero mismatches: 4.128 s
+in-process versus 34.589 s for the oracle loop (8.38x).
+
+A separate signed Pack sweep used benchmark-only stage instrumentation and a
+complete generation manifest; each worker count had three trials. Median wall
+times at 1/2/4/8/16 workers were 5.330/2.940/1.830/1.340/1.260 s. All 15 runs
+read 10,000 packages directly and had zero fallbacks. Eight workers is the
+practical throughput knee: 16 workers improved median wall time by 6.0% over 8,
+with 2.0% more CPU and 10.1% more peak RSS. This instrumented sweep is distinct
+from the standard, uninstrumented repository-comparison run; do not compare the
+two as identical workloads.
+
+The fresh repository comparison measured standard TPA initial generation at
+1.110 s, aptly at 339.170 s, and reprepro at 16.390 s. Update medians were
+1.160/4.710/0.290 s respectively, but update semantics differ: aptly retained
+10,100 indexed entries while TPA and reprepro each reported 10,000. The package-build
+orchestration sweep measured 85.38/36.34/19.58/11.33/12.62/9.55 s at
+1/2/4/8/16/32 workers; intermediate counts were single observations, so no
+precise optimum is established.
+
+These figures are workload- and environment-specific. Full methodology,
+validation status, caveats, and raw evidence locations are in
+[`bench/REPORT.md`](bench/REPORT.md) and [`bench/README.md`](bench/README.md).
+The unsigned manifest validator currently expects 10,004 paths where a valid
+unsigned repository has 10,003 files (no `InRelease`); this one assertion fails,
+while the inventory was independently verified against the repository. Signed
+manifest validation and APT/signature/install/dependency qualifications passed.
+
 ## Optional future work
 
 The following are optional repository-format improvements, not baseline
 requirements:
 
 - APT by-hash indexes
-- reproducible gzip timestamps
 - reproducible `Release` dates
 - detached `Release.gpg` output
 
