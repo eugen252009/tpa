@@ -1,6 +1,7 @@
 package aptpackage
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -9,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -33,8 +34,8 @@ type GenerationFile struct {
 var generationIDPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`)
 
 const (
-	maxGenerationManifestBytes = 4 << 20
-	maxGenerationFiles         = 8192
+	maxGenerationManifestBytes = 16 << 20
+	maxGenerationFiles         = 65536
 	maxGenerationPathBytes     = 4096
 	maxGenerationPathDepth     = 64
 	maxGenerationDirectories   = 65536
@@ -43,6 +44,8 @@ const (
 // CreateGenerationManifest inventories a repository tree in stable path order.
 // The caller should first build and verify the APT repository with TPA.
 func CreateGenerationManifest(root, repositoryID, generationID, parentGeneration string) (GenerationManifest, error) {
+	manifestStage := startStage(stageManifestWalk)
+	defer manifestStage()
 	if strings.TrimSpace(repositoryID) == "" || len(repositoryID) > 256 || strings.ContainsAny(repositoryID, "\r\n\x00") {
 		return GenerationManifest{}, fmt.Errorf("invalid repository identity")
 	}
@@ -61,6 +64,7 @@ func CreateGenerationManifest(root, repositoryID, generationID, parentGeneration
 		return GenerationManifest{}, fmt.Errorf("generation root must be a directory")
 	}
 	manifest := GenerationManifest{Version: 1, RepositoryID: repositoryID, GenerationID: generationID, ParentGeneration: parentGeneration, Files: []GenerationFile{}}
+	lastPath := ""
 	err = filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -89,6 +93,10 @@ func CreateGenerationManifest(root, repositoryID, generationID, parentGeneration
 		if err = validateGenerationRelativePath(rel); err != nil {
 			return err
 		}
+		if rel <= lastPath {
+			return fmt.Errorf("generation walk did not produce sorted unique paths")
+		}
+		lastPath = rel
 		if len(manifest.Files) >= maxGenerationFiles {
 			return fmt.Errorf("generation exceeds %d files", maxGenerationFiles)
 		}
@@ -102,7 +110,6 @@ func CreateGenerationManifest(root, repositoryID, generationID, parentGeneration
 	if err != nil {
 		return GenerationManifest{}, err
 	}
-	sort.Slice(manifest.Files, func(i, j int) bool { return manifest.Files[i].Path < manifest.Files[j].Path })
 	if len(manifest.Files) == 0 {
 		return GenerationManifest{}, fmt.Errorf("generation contains no files")
 	}
@@ -116,6 +123,8 @@ func CreateGenerationManifest(root, repositoryID, generationID, parentGeneration
 // and special files. It intentionally does not replace APT semantic/signature
 // verification; callers must verify the repository separately.
 func VerifyGenerationManifest(root string, manifest GenerationManifest, repositoryID string) error {
+	manifestStage := startStage(stageManifestWalk)
+	defer manifestStage()
 	if manifest.Version != 1 {
 		return fmt.Errorf("unsupported generation manifest version %d", manifest.Version)
 	}
@@ -217,14 +226,6 @@ func WriteGenerationManifest(path string, manifest GenerationManifest) error {
 	if err := validateGenerationManifestLimits(manifest); err != nil {
 		return err
 	}
-	data, err := json.MarshalIndent(manifest, "", "  ")
-	if err != nil {
-		return err
-	}
-	if len(data)+1 > maxGenerationManifestBytes {
-		return fmt.Errorf("generation manifest exceeds %d bytes", maxGenerationManifestBytes)
-	}
-	data = append(data, '\n')
 	parent := filepath.Dir(path)
 	if err := os.MkdirAll(parent, 0o755); err != nil {
 		return err
@@ -236,7 +237,7 @@ func WriteGenerationManifest(path string, manifest GenerationManifest) error {
 	name := tmp.Name()
 	defer os.Remove(name)
 	if err = tmp.Chmod(0o644); err == nil {
-		_, err = tmp.Write(data)
+		err = writeGenerationManifestJSON(&generationManifestLimitWriter{writer: tmp, remaining: maxGenerationManifestBytes}, manifest, true)
 	}
 	if err == nil {
 		err = tmp.Sync()
@@ -286,17 +287,127 @@ func validateGenerationManifestLimits(manifest GenerationManifest) error {
 			return fmt.Errorf("generation exceeds %d directories", maxGenerationDirectories)
 		}
 	}
-	data, err := json.MarshalIndent(manifest, "", "  ")
-	if err != nil {
+	return nil
+}
+
+type generationManifestLimitWriter struct {
+	writer    io.Writer
+	remaining int
+}
+
+func (writer *generationManifestLimitWriter) Write(data []byte) (int, error) {
+	if len(data) > writer.remaining {
+		return 0, fmt.Errorf("generation manifest exceeds %d bytes", maxGenerationManifestBytes)
+	}
+	n, err := writer.writer.Write(data)
+	writer.remaining -= n
+	return n, err
+}
+
+func writeGenerationManifestJSON(writer io.Writer, manifest GenerationManifest, trailingNewline bool) error {
+	write := func(text string) error { return writeGenerationManifestBytes(writer, []byte(text)) }
+	writeJSONString := func(value string) error {
+		encoded, err := json.Marshal(value)
+		if err != nil {
+			return err
+		}
+		return writeGenerationManifestBytes(writer, encoded)
+	}
+	if err := write(`{
+  "version": `); err != nil {
 		return err
 	}
-	if len(data)+1 > maxGenerationManifestBytes {
-		return fmt.Errorf("generation manifest exceeds %d bytes", maxGenerationManifestBytes)
+	if err := write(strconv.Itoa(manifest.Version)); err != nil {
+		return err
+	}
+	if err := write(`,
+  "repository_id": `); err != nil {
+		return err
+	}
+	if err := writeJSONString(manifest.RepositoryID); err != nil {
+		return err
+	}
+	if err := write(`,
+  "generation_id": `); err != nil {
+		return err
+	}
+	if err := writeJSONString(manifest.GenerationID); err != nil {
+		return err
+	}
+	if err := write(`,
+  "parent_generation": `); err != nil {
+		return err
+	}
+	if err := writeJSONString(manifest.ParentGeneration); err != nil {
+		return err
+	}
+	if err := write(`,
+  "files": [
+`); err != nil {
+		return err
+	}
+	for index, file := range manifest.Files {
+		if index > 0 {
+			if err := write(",\n"); err != nil {
+				return err
+			}
+		}
+		if err := write(`    {
+      "path": `); err != nil {
+			return err
+		}
+		if err := writeJSONString(file.Path); err != nil {
+			return err
+		}
+		if err := write(`,
+      "size": `); err != nil {
+			return err
+		}
+		if err := write(strconv.FormatInt(file.Size, 10)); err != nil {
+			return err
+		}
+		if err := write(`,
+      "sha256": `); err != nil {
+			return err
+		}
+		if err := writeJSONString(file.SHA256); err != nil {
+			return err
+		}
+		if err := write(`
+    }`); err != nil {
+			return err
+		}
+	}
+	if err := write(`
+  ]
+}`); err != nil {
+		return err
+	}
+	if trailingNewline {
+		return write("\n")
+	}
+	return nil
+}
+
+func writeGenerationManifestBytes(writer io.Writer, data []byte) error {
+	for len(data) > 0 {
+		n, err := writer.Write(data)
+		if n > 0 {
+			data = data[n:]
+		}
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return io.ErrShortWrite
+		}
 	}
 	return nil
 }
 
 func hashGenerationFile(path string) (string, int64, error) {
+	hashStage := startStage(stageManifestHash)
+	defer hashStage()
 	file, err := os.Open(path)
 	if err != nil {
 		return "", 0, err
@@ -316,5 +427,13 @@ func GenerationManifestJSON(manifest GenerationManifest) ([]byte, error) {
 	if err := validateGenerationManifestLimits(manifest); err != nil {
 		return nil, err
 	}
-	return json.MarshalIndent(manifest, "", "  ")
+	var data bytes.Buffer
+	writer := &generationManifestLimitWriter{writer: &data, remaining: maxGenerationManifestBytes}
+	if err := writeGenerationManifestJSON(writer, manifest, false); err != nil {
+		return nil, err
+	}
+	if data.Len()+1 > maxGenerationManifestBytes {
+		return nil, fmt.Errorf("generation manifest exceeds %d bytes", maxGenerationManifestBytes)
+	}
+	return data.Bytes(), nil
 }

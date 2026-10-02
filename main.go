@@ -17,6 +17,7 @@ func main() {
 }
 
 func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	defer writeStageMetrics()
 	cfg := aptpackage.Config{}
 	flags := flag.NewFlagSet("tpa", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -51,6 +52,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	flags.StringVar(&cfg.InDir, "in", ".", "Your input directory")
 	flags.StringVar(&cfg.OutDir, "out", ".", "Output directory for the .deb file")
 	flags.StringVar(&cfg.GPG, "gpg", "", "GPG Key ID or full fingerprint for signing, empty for no signing")
+	workers := flags.Int("workers", 0, "Bounded package workers for pack (0 uses GOMAXPROCS)")
 	output := flags.String("output", "", "Repository output directory (alias for -out)")
 	atomicPublish := flags.String("atomic-publish", "", "Atomically publish the repository at this path")
 	generationManifest := flags.String("generation-manifest", "", "Write a portable inventory for the verified repository generation")
@@ -102,6 +104,11 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		if *atomicPublish != "" {
 			cfg.OutDir = *atomicPublish
 		}
+		if *workers < 0 || *workers > aptpackage.MaxPackWorkers {
+			fmt.Fprintf(stderr, "tpa: -workers must be between 0 and %d\n", aptpackage.MaxPackWorkers)
+			return 2
+		}
+		cfg.Workers = *workers
 	}
 	if *noProvenance {
 		disabled := false

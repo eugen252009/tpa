@@ -1,6 +1,8 @@
 package aptpackage
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -47,6 +49,72 @@ func TestGenerationManifestIsDeterministicAndCoversTree(t *testing.T) {
 	}
 	if got := len(first.Files); got != 3 {
 		t.Fatalf("manifest file count=%d, want 3", got)
+	}
+}
+
+func TestGenerationManifestJSONMatchesCanonicalEscaping(t *testing.T) {
+	manifest := GenerationManifest{
+		Version: 1, RepositoryID: `<repository&>`, GenerationID: "gen-escape",
+		Files: []GenerationFile{{Path: "dir/quote-\"-<>&.txt", Size: 1, SHA256: strings.Repeat("a", 64)}},
+	}
+	got, err := GenerationManifestJSON(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, want) {
+		t.Fatalf("manual manifest writer changed canonical escaping:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestGenerationManifestSupportsTenThousandFiles(t *testing.T) {
+	root := t.TempDir()
+	const count = 10000
+	for index := 0; index < count; index++ {
+		path := filepath.Join(root, fmt.Sprintf("package-%05d.deb", index))
+		if err := os.WriteFile(path, []byte("package"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	manifest, err := CreateGenerationManifest(root, "repo-id", "gen-10000", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(manifest.Files) != count {
+		t.Fatalf("manifest contains %d files, want %d", len(manifest.Files), count)
+	}
+	for index := 1; index < len(manifest.Files); index++ {
+		if manifest.Files[index-1].Path >= manifest.Files[index].Path {
+			t.Fatalf("manifest paths are not strictly sorted at index %d", index)
+		}
+	}
+	want, err := GenerationManifestJSON(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	canonical, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(want, canonical) {
+		t.Fatal("manifest JSON differs from encoding/json canonical output")
+	}
+	manifestPath := filepath.Join(t.TempDir(), "generation.json")
+	if err := WriteGenerationManifest(manifestPath, manifest); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, append(want, '\n')) {
+		t.Fatal("streamed manifest encoding differs from canonical JSON")
+	}
+	if err := VerifyGenerationManifest(root, manifest, "repo-id"); err != nil {
+		t.Fatalf("10,000-file manifest did not verify: %v", err)
 	}
 }
 

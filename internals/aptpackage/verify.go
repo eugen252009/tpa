@@ -21,6 +21,10 @@ type releaseChecksum struct {
 // verifyRepository verifies the complete chain from indexed package artifacts
 // through Release and, when configured, the InRelease signature.
 func verifyRepository(cfg Config) error {
+	workers, err := packWorkerCount(cfg.Workers)
+	if err != nil {
+		return err
+	}
 	component := cfg.Repo.Components
 	if component == "" {
 		component = "main"
@@ -32,24 +36,31 @@ func verifyRepository(cfg Config) error {
 	repoRoot := cfg.OutDir
 	distDir := filepath.Join(repoRoot, "dists", codename)
 	releasePath := filepath.Join(distDir, "Release")
+	releaseParseStage := startStage(stageVerifyReleaseParse)
 	releaseData, err := os.ReadFile(releasePath)
 	if err != nil {
+		releaseParseStage()
 		return fmt.Errorf("read Release: %w", err)
 	}
 	releaseChecksums, err := parseReleaseChecksums(releaseData)
+	releaseParseStage()
 	if err != nil {
 		return fmt.Errorf("parse Release: %w", err)
 	}
 
+	releaseFilesStage := startStage(stageVerifyReleaseFiles)
 	for rel, expected := range releaseChecksums {
 		path, err := safeRepositoryPath(distDir, rel)
 		if err != nil {
+			releaseFilesStage()
 			return fmt.Errorf("invalid Release path %q: %w", rel, err)
 		}
 		if err := verifyFile(path, expected.Size, expected.SHA256); err != nil {
+			releaseFilesStage()
 			return fmt.Errorf("verify Release entry %s: %w", rel, err)
 		}
 	}
+	releaseFilesStage()
 
 	componentDir := filepath.Join(distDir, component)
 	entries, err := os.ReadDir(componentDir)
@@ -69,7 +80,7 @@ func verifyRepository(cfg Config) error {
 			}
 		}
 		packagesPath := filepath.Join(componentDir, entry.Name(), "Packages")
-		if err := verifyPackageIndex(repoRoot, packagesPath); err != nil {
+		if err := verifyPackageIndex(repoRoot, packagesPath, workers); err != nil {
 			return fmt.Errorf("verify %s: %w", filepath.ToSlash(filepath.Join(component, entry.Name(), "Packages")), err)
 		}
 	}
@@ -86,13 +97,18 @@ func verifyRepository(cfg Config) error {
 		}
 		return nil
 	}
+	keyLookupStage := startStage(stageSignKeyLookup)
 	fingerprint, err := signingFingerprint(cfg.GPG)
+	keyLookupStage()
 	if err != nil {
 		return err
 	}
+	verifySignatureStage := startStage(stageVerifySignature)
 	if err := verifyInRelease(inReleasePath, releaseData, fingerprint); err != nil {
+		verifySignatureStage()
 		return err
 	}
+	verifySignatureStage()
 	return nil
 }
 
@@ -138,19 +154,24 @@ func parseReleaseChecksums(data []byte) (map[string]releaseChecksum, error) {
 	return checksums, nil
 }
 
-func verifyPackageIndex(repoRoot, packagesPath string) error {
+func verifyPackageIndex(repoRoot, packagesPath string, workers int) error {
+	indexParseStage := startStage(stageVerifyIndexReadParse)
 	data, err := os.ReadFile(packagesPath)
 	if err != nil {
+		indexParseStage()
 		return err
 	}
 	paragraphs, err := parseControlParagraphs(data)
+	indexParseStage()
 	if err != nil {
 		return err
 	}
 	if len(paragraphs) == 0 {
 		return fmt.Errorf("Packages has no entries")
 	}
-	for index, fields := range paragraphs {
+	artifactStage := startStage(stageVerifyArtifacts)
+	err = runPackageJobs(len(paragraphs), workers, func(index int) error {
+		fields := paragraphs[index]
 		filename := fields["filename"]
 		sizeValue := fields["size"]
 		hash := fields["sha256"]
@@ -174,8 +195,10 @@ func verifyPackageIndex(repoRoot, packagesPath string) error {
 		if err := verifyFile(artifactPath, size, hash); err != nil {
 			return fmt.Errorf("entry %d artifact %s: %w", index+1, filename, err)
 		}
-	}
-	return nil
+		return nil
+	})
+	artifactStage()
+	return err
 }
 
 func parseControlParagraphs(data []byte) ([]map[string]string, error) {
@@ -237,7 +260,9 @@ func verifyFile(path string, expectedSize int64, expectedHash string) error {
 	if info.Size() != expectedSize {
 		return fmt.Errorf("size mismatch: got %d, want %d", info.Size(), expectedSize)
 	}
+	verifyHashStage := startStage(stageVerifyHash)
 	hash, err := getHash(path)
+	verifyHashStage()
 	if err != nil {
 		return err
 	}

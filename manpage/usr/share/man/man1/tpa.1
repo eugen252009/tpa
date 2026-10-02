@@ -50,9 +50,15 @@ Use this mode when replacing a repository that may be read concurrently.
 Select one GPG secret key. Full fingerprints are recommended. Empty means unsigned.
 TPA uses the caller's GPG environment, including GNUPGHOME.
 .TP
+.BI -workers " count"
+For pack, bound package inspection, source hashing during pool copy, and
+published-artifact verification concurrency. Zero (the default) uses GOMAXPROCS,
+capped at 32.
+.TP
 .BI -generation-manifest " path"
 After building and verifying a repository, write a deterministic complete-file
 inventory outside the repository tree. Requires -repository-id and -generation-id.
+Version 1 manifests are limited to 16 MiB and 65,536 files.
 .TP
 .BI -repository-id " id"
 Repository identity included in a generation manifest.

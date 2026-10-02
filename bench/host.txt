@@ -1,0 +1,10 @@
+host_kernel=Linux 6.12.107+deb13-amd64 x86_64 GNU/Linux
+host_go=go version go1.26.4 linux/amd64
+host_distro=Debian GNU/Linux 13 (trixie) (13)
+host_cpu=CPU(s):                                  16;Model name:                              AMD Ryzen 7 5800X 8-Core Processor;Thread(s) per core:                      2;Core(s) per socket:                      8;Socket(s):                               1;NUMA node0 CPU(s):                       0-15;
+host_memory=
+benchmark_fs=ext2/ext3
+benchmark_mount=/dev/nvme0n1p1 ext4 453824960 348646960  82051472   81% /
+storage_devices=NAME    ROTA   SIZE MODEL;sda        0   1,8T SanDisk SDSSDH3 2T00;nvme0n1    0 465,8G Intenso NVME;
+docker_server=29.5.2
+tpa_commit=ba99e4daeda7ad653b1178d1067de96ea3bf08d5

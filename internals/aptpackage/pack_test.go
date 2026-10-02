@@ -1,10 +1,12 @@
 package aptpackage
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestPackPreservesControlMetadataAndCreatesUnsignedRepository(t *testing.T) {
@@ -90,6 +92,43 @@ Built-Using: fixture-source (= 1.2.3)
 	}
 	if _, err := os.Stat(filepath.Join(out, "dists", "bookworm", "InRelease")); !os.IsNotExist(err) {
 		t.Errorf("unsigned repository unexpectedly has InRelease: %v", err)
+	}
+}
+
+func TestGzipFileIsDeterministicAcrossInputModificationTimes(t *testing.T) {
+	requireDebTools(t)
+	root := t.TempDir()
+	path := filepath.Join(root, "Packages")
+	if err := os.WriteFile(path, []byte("Package: stable\n\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	firstTime := time.Unix(1_700_000_000, 0)
+	if err := os.Chtimes(path, firstTime, firstTime); err != nil {
+		t.Fatal(err)
+	}
+	if err := gzipFile(path); err != nil {
+		t.Fatal(err)
+	}
+	first, err := os.ReadFile(path + ".gz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(path + ".gz"); err != nil {
+		t.Fatal(err)
+	}
+	secondTime := firstTime.Add(24 * time.Hour)
+	if err := os.Chtimes(path, secondTime, secondTime); err != nil {
+		t.Fatal(err)
+	}
+	if err := gzipFile(path); err != nil {
+		t.Fatal(err)
+	}
+	second, err := os.ReadFile(path + ".gz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(first, second) {
+		t.Fatal("gzip output changed with input modification time")
 	}
 }
 

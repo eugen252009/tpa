@@ -63,7 +63,9 @@ Package flags include `-name`, `-ver`, `-arch`, `-maintainer`, `-desc`,
 and `-postrm`.
 
 Repository flags include `-origin`, `-label`, `-suite`, `-codename`, and
-`-components`. Repository architectures are inferred from the actual `.deb`
+`-components`. The `pack` command's `-workers` option bounds package inspection,
+source hashing during pool copy, and published-artifact verification; zero (the
+default) derives the worker count from `GOMAXPROCS`, capped at 32. Repository architectures are inferred from the actual `.deb`
 artifacts; there is no architecture-list override. `-gpg` selects a signing key.
 The general path flags are `-in` and `-out`. For `pack`, `--output` is an alias
 for `-out`, while `--atomic-publish` selects atomic replacement; those two
@@ -179,9 +181,11 @@ For a completed repository, `-generation-manifest=<path>` writes a deterministic
 versioned file inventory outside the repository tree. It requires
 `-repository-id` and `-generation-id`; `-parent-generation` is optional. TPA
 hashes every regular file after repository generation and verifies the inventory
-against the final tree. The v1 contract bounds manifests to 4 MiB, 8,192 files,
-4,096-byte/64-component paths, and 65,536 directories. This inventory is
-transport metadata, not a replacement for APT's signed Release metadata.
+against the final tree. The v1 contract bounds manifests to 16 MiB, 65,536 files,
+4,096-byte/64-component paths, and 65,536 directories. The per-file inventory
+and verification maps scale with file count but remain bounded by these fixed
+limits. This inventory is transport metadata, not a replacement for APT's
+signed Release metadata.
 
 `pack` also accepts one positional JSON config file. `--output` and
 `--atomic-publish` explicitly override the output path from that file. The

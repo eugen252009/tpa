@@ -3,6 +3,7 @@ package aptpackage
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -10,10 +11,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
+
+const MaxPackWorkers = 32
 
 type repositoryPackage struct {
 	Control       Control
@@ -36,61 +41,25 @@ func Pack(cfg Config) error {
 // buildRepository materializes a repository at cfg.OutDir. AtomicPack uses it
 // directly so it can set publication permissions before final verification.
 func buildRepository(cfg Config) error {
+	workers, err := packWorkerCount(cfg.Workers)
+	if err != nil {
+		return err
+	}
+	enumerationStage := startStage(stageDirectoryEnumeration)
 	entries, err := os.ReadDir(cfg.InDir)
+	enumerationStage()
 	if err != nil {
 		return fmt.Errorf("read package directory: %w", err)
 	}
 
-	pkgs := make([]repositoryPackage, 0)
-	identities := make(map[string]repositoryPackage)
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".deb") {
-			continue
-		}
-		path := filepath.Join(cfg.InDir, entry.Name())
-		rawControl, err := readPackageControl(path)
-		if err != nil {
-			return fmt.Errorf("parse %s: %w", entry.Name(), err)
-		}
-		control, err := ParseControl(rawControl)
-		if err != nil {
-			return fmt.Errorf("parse %s: %w", entry.Name(), err)
-		}
-		stanza, err := repositoryControlStanza(rawControl)
-		if err != nil {
-			return fmt.Errorf("prepare metadata for %s: %w", entry.Name(), err)
-		}
-		info, err := os.Stat(path)
-		if err != nil {
-			return fmt.Errorf("stat %s: %w", entry.Name(), err)
-		}
-		if !info.Mode().IsRegular() {
-			return fmt.Errorf("package is not a regular file: %s", entry.Name())
-		}
-		hash, err := getHash(path)
-		if err != nil {
-			return err
-		}
-		pkg := repositoryPackage{Control: control, ControlStanza: stanza, Dist: path, Size: info.Size(), SHA256: hash}
-		identity := control.Name + "\x00" + control.Version + "\x00" + control.Architecture
-		if previous, ok := identities[identity]; ok {
-			equal, err := filesEqual(previous.Dist, pkg.Dist)
-			if err != nil {
-				return fmt.Errorf("compare duplicate package identity %s %s %s: %w", control.Name, control.Version, control.Architecture, err)
-			}
-			if !equal {
-				return fmt.Errorf("conflicting package identity %s %s %s in %s and %s", control.Name, control.Version, control.Architecture, filepath.Base(previous.Dist), entry.Name())
-			}
-			// Byte-identical retries are idempotent: retain the first filename and
-			// emit exactly one Packages entry.
-			continue
-		}
-		identities[identity] = pkg
-		pkgs = append(pkgs, pkg)
+	pkgs, err := inspectAndDeduplicate(entries, cfg.InDir, workers)
+	if err != nil {
+		return err
 	}
 	if len(pkgs) == 0 {
 		return fmt.Errorf("no .deb packages found in %s", cfg.InDir)
 	}
+	sortStage := startStage(stageSortAndGroup)
 	sort.Slice(pkgs, func(i, j int) bool {
 		if pkgs[i].Control.Architecture != pkgs[j].Control.Architecture {
 			return pkgs[i].Control.Architecture < pkgs[j].Control.Architecture
@@ -103,6 +72,7 @@ func buildRepository(cfg Config) error {
 		}
 		return filepath.Base(pkgs[i].Dist) < filepath.Base(pkgs[j].Dist)
 	})
+	sortStage()
 
 	component := cfg.Repo.Components
 	if component == "" {
@@ -117,6 +87,32 @@ func buildRepository(cfg Config) error {
 		return fmt.Errorf("create distribution directory: %w", err)
 	}
 
+	// Copy first, so a successful return always leaves a usable pool.
+	if err := runPackageJobs(len(pkgs), workers, func(index int) error {
+		pkg := pkgs[index]
+		poolDir := filepath.Join(cfg.OutDir, "pool", component,
+			string(pkg.Control.Name[0]), pkg.Control.Name)
+		poolStage := startStage(stagePoolMkdir)
+		if err := os.MkdirAll(poolDir, 0o755); err != nil {
+			poolStage()
+			return fmt.Errorf("create pool directory for %s: %w", filepath.Base(pkg.Dist), err)
+		}
+		poolStage()
+		dest := filepath.Join(poolDir, filepath.Base(pkg.Dist))
+		copyStage := startStage(stagePoolCopy)
+		hash, size, err := copyFileAndHash(pkg.Dist, dest)
+		copyStage()
+		if err != nil {
+			return fmt.Errorf("copy %s: %w", pkg.Dist, err)
+		}
+		pkgs[index].SHA256 = hash
+		pkgs[index].Size = size
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	groupStage := startStage(stageGroupArchitectures)
 	byArch := make(map[string][]repositoryPackage)
 	for _, pkg := range pkgs {
 		byArch[pkg.Control.Architecture] = append(byArch[pkg.Control.Architecture], pkg)
@@ -126,19 +122,7 @@ func buildRepository(cfg Config) error {
 		architectures = append(architectures, arch)
 	}
 	sort.Strings(architectures)
-
-	// Copy first, so a successful return always leaves a usable pool.
-	for _, pkg := range pkgs {
-		poolDir := filepath.Join(cfg.OutDir, "pool", component,
-			string(pkg.Control.Name[0]), pkg.Control.Name)
-		if err := os.MkdirAll(poolDir, 0o755); err != nil {
-			return fmt.Errorf("create pool directory: %w", err)
-		}
-		dest := filepath.Join(poolDir, filepath.Base(pkg.Dist))
-		if err := copyFile(pkg.Dist, dest); err != nil {
-			return fmt.Errorf("copy %s: %w", pkg.Dist, err)
-		}
-	}
+	groupStage()
 
 	releasePath := filepath.Join(distDir, "Release")
 	release, err := os.Create(releasePath)
@@ -160,9 +144,11 @@ func buildRepository(cfg Config) error {
 	if description == "" {
 		description = "TPA package repository"
 	}
+	releaseWriteStage := startStage(stageReleaseWrite)
 	_, err = fmt.Fprintf(release, "Origin: %s\nLabel: %s\nSuite: %s\nArchitectures: %s\nComponents: %s\nCodename: %s\nDate: %s\nDescription: %s\nSHA256:\n",
 		origin, label, suite, strings.Join(architectures, " "), component, codename,
 		time.Now().UTC().Format(time.RFC1123Z), description)
+	releaseWriteStage()
 	if err != nil {
 		_ = closeRelease()
 		return fmt.Errorf("write Release: %w", err)
@@ -180,6 +166,7 @@ func buildRepository(cfg Config) error {
 			_ = closeRelease()
 			return fmt.Errorf("create Packages: %w", err)
 		}
+		packagesWriteStage := startStage(stagePackagesWrite)
 		for _, pkg := range byArch[arch] {
 			relPath := filepath.ToSlash(filepath.Join("pool", component, string(pkg.Control.Name[0]), pkg.Control.Name, filepath.Base(pkg.Dist)))
 			if _, err = packages.Write(pkg.ControlStanza); err == nil {
@@ -192,26 +179,38 @@ func buildRepository(cfg Config) error {
 			}
 		}
 		if err := packages.Close(); err != nil {
+			packagesWriteStage()
 			_ = closeRelease()
 			return fmt.Errorf("close Packages: %w", err)
 		}
+		packagesWriteStage()
+		compressionStage := startStage(stageCompression)
 		if err := gzipFile(packagesPath); err != nil {
+			compressionStage()
 			_ = closeRelease()
 			return err
 		}
+		compressionStage()
 		for _, path := range []string{packagesPath, packagesPath + ".gz"} {
+			releaseHashStage := startStage(stageReleaseIndexHash)
 			hash, err := getHash(path)
 			if err != nil {
+				releaseHashStage()
 				_ = closeRelease()
 				return err
 			}
 			info, err := os.Stat(path)
 			if err != nil {
+				releaseHashStage()
 				_ = closeRelease()
 				return err
 			}
+			releaseHashStage()
 			rel := filepath.ToSlash(filepath.Join(component, "binary-"+arch, filepath.Base(path)))
-			if _, err = fmt.Fprintf(release, " %s %d %s\n", hash, info.Size(), rel); err != nil {
+			releaseWriteStage = startStage(stageReleaseWrite)
+			_, err = fmt.Fprintf(release, " %s %d %s\n", hash, info.Size(), rel)
+			releaseWriteStage()
+			if err != nil {
 				_ = closeRelease()
 				return fmt.Errorf("write Release hash: %w", err)
 			}
@@ -223,15 +222,20 @@ func buildRepository(cfg Config) error {
 	if cfg.GPG == "" {
 		return nil
 	}
+	keyLookupStage := startStage(stageSignKeyLookup)
 	fingerprint, err := signingFingerprint(cfg.GPG)
+	keyLookupStage()
 	if err != nil {
 		return err
 	}
 	inRelease := filepath.Join(distDir, "InRelease")
 	cmd := exec.Command("gpg", "--batch", "--yes", "--clearsign", "-u", fingerprint, "-o", inRelease, releasePath)
+	signStage := startStage(stageSignCommand)
 	if output, err := cmd.CombinedOutput(); err != nil {
+		signStage()
 		return fmt.Errorf("sign Release: %w: %s", err, strings.TrimSpace(string(output)))
 	}
+	signStage()
 	return nil
 }
 
@@ -280,28 +284,33 @@ func repositoryControlStanza(raw []byte) ([]byte, error) {
 }
 
 func gzipFile(path string) error {
-	cmd := exec.Command("gzip", "-fk", path)
+	cmd := exec.Command("gzip", "-fk", "-n", path)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("compress %s: %w: %s", path, err, strings.TrimSpace(string(output)))
 	}
 	return nil
 }
 
-func copyFile(src, dst string) error {
+func copyFileAndHash(src, dst string) (string, int64, error) {
 	source, err := os.Open(src)
 	if err != nil {
-		return err
+		return "", 0, err
 	}
 	defer source.Close()
 	dest, err := os.OpenFile(dst, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 	if err != nil {
-		return err
+		return "", 0, err
 	}
-	if _, err = io.Copy(dest, source); err != nil {
-		_ = dest.Close()
-		return err
+	hash := sha256.New()
+	size, copyErr := io.Copy(io.MultiWriter(dest, hash), source)
+	closeErr := dest.Close()
+	if copyErr != nil {
+		return "", 0, copyErr
 	}
-	return dest.Close()
+	if closeErr != nil {
+		return "", 0, closeErr
+	}
+	return hex.EncodeToString(hash.Sum(nil)), size, nil
 }
 
 func filesEqual(first, second string) (bool, error) {
@@ -357,4 +366,291 @@ func getHash(path string) (string, error) {
 		return "", fmt.Errorf("hash %s: %w", path, err)
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+type packageJobResult struct {
+	index int
+	err   error
+}
+
+type orderedInspectionResult struct {
+	packageData repositoryPackage
+	skip        bool
+	err         error
+}
+
+func packWorkerCount(requested int) (int, error) {
+	if requested < 0 || requested > MaxPackWorkers {
+		return 0, fmt.Errorf("package worker count must be between 0 and %d", MaxPackWorkers)
+	}
+	if requested == 0 {
+		requested = runtime.GOMAXPROCS(0)
+		if requested < 1 {
+			requested = 1
+		}
+		if requested > MaxPackWorkers {
+			requested = MaxPackWorkers
+		}
+	}
+	return requested, nil
+}
+
+func inspectAndDeduplicate(entries []os.DirEntry, root string, workers int) ([]repositoryPackage, error) {
+	packages := make([]repositoryPackage, 0)
+	identities := make(map[string]repositoryPackage)
+	err := runOrderedInspectionJobs(len(entries), workers, func(index int) (orderedInspectionResult, error) {
+		entry := entries[index]
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".deb") {
+			return orderedInspectionResult{skip: true}, nil
+		}
+		path := filepath.Join(root, entry.Name())
+		inspectStage := startStage(stageInspect)
+		rawControl, err := readPackageControl(path)
+		inspectStage()
+		if err != nil {
+			return orderedInspectionResult{}, fmt.Errorf("parse %s: %w", entry.Name(), err)
+		}
+		metadataStage := startStage(stageParseMetadata)
+		control, err := ParseControl(rawControl)
+		if err != nil {
+			metadataStage()
+			return orderedInspectionResult{}, fmt.Errorf("parse %s: %w", entry.Name(), err)
+		}
+		stanza, err := repositoryControlStanza(rawControl)
+		metadataStage()
+		if err != nil {
+			return orderedInspectionResult{}, fmt.Errorf("prepare metadata for %s: %w", entry.Name(), err)
+		}
+		statStage := startStage(stageStatSource)
+		info, err := os.Stat(path)
+		statStage()
+		if err != nil {
+			return orderedInspectionResult{}, fmt.Errorf("stat %s: %w", entry.Name(), err)
+		}
+		if !info.Mode().IsRegular() {
+			return orderedInspectionResult{}, fmt.Errorf("package is not a regular file: %s", entry.Name())
+		}
+		return orderedInspectionResult{packageData: repositoryPackage{
+			Control: control, ControlStanza: stanza, Dist: path, Size: info.Size(),
+		}}, nil
+	}, func(_ int, result orderedInspectionResult) error {
+		if result.skip {
+			return nil
+		}
+		pkg := result.packageData
+		identity := pkg.Control.Name + "\x00" + pkg.Control.Version + "\x00" + pkg.Control.Architecture
+		if previous, ok := identities[identity]; ok {
+			duplicateStage := startStage(stageDuplicateCompare)
+			equal, err := filesEqual(previous.Dist, pkg.Dist)
+			duplicateStage()
+			if err != nil {
+				return fmt.Errorf("compare duplicate package identity %s %s %s: %w", pkg.Control.Name, pkg.Control.Version, pkg.Control.Architecture, err)
+			}
+			if !equal {
+				return fmt.Errorf("conflicting package identity %s %s %s in %s and %s", pkg.Control.Name, pkg.Control.Version, pkg.Control.Architecture, filepath.Base(previous.Dist), filepath.Base(pkg.Dist))
+			}
+			return nil
+		}
+		identities[identity] = pkg
+		packages = append(packages, pkg)
+		return nil
+	})
+	return packages, err
+}
+
+func runOrderedInspectionJobs(count, workers int, job func(index int) (orderedInspectionResult, error), consume func(index int, result orderedInspectionResult) error) error {
+	if count == 0 {
+		return nil
+	}
+	if workers < 1 || workers > MaxPackWorkers {
+		return fmt.Errorf("invalid package worker count %d", workers)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	jobs := make(chan int, workers*2)
+	type indexedResult struct {
+		index  int
+		result orderedInspectionResult
+	}
+	results := make(chan indexedResult, workers)
+	var group sync.WaitGroup
+	group.Add(workers)
+	for worker := 0; worker < workers; worker++ {
+		go func() {
+			defer group.Done()
+			for {
+				if ctx.Err() != nil {
+					return
+				}
+				select {
+				case <-ctx.Done():
+					return
+				case index, ok := <-jobs:
+					if !ok {
+						return
+					}
+					result, err := job(index)
+					result.err = err
+					results <- indexedResult{index: index, result: result}
+					if err != nil {
+						return
+					}
+				}
+			}
+		}()
+	}
+	go func() {
+		group.Wait()
+		close(results)
+	}()
+
+	pending := make(map[int]orderedInspectionResult, workers*2)
+	next, submitted := 0, 0
+	jobsClosed := false
+	taskErrIndex := count
+	var taskErr, consumeErr error
+	dispatch := func() {
+		if jobsClosed {
+			return
+		}
+		if ctx.Err() != nil {
+			close(jobs)
+			jobsClosed = true
+			return
+		}
+		windowEnd := next + workers*2
+		for submitted < count && submitted < windowEnd {
+			jobs <- submitted
+			submitted++
+		}
+		if submitted == count {
+			close(jobs)
+			jobsClosed = true
+		}
+	}
+	dispatch()
+	for completed := range results {
+		if completed.result.err != nil && completed.index < taskErrIndex {
+			taskErrIndex = completed.index
+			taskErr = completed.result.err
+			cancel()
+		}
+		pending[completed.index] = completed.result
+		for {
+			result, ok := pending[next]
+			if !ok {
+				break
+			}
+			delete(pending, next)
+			if result.err != nil {
+				if next < taskErrIndex {
+					taskErrIndex = next
+					taskErr = result.err
+				}
+				cancel()
+			} else if next < taskErrIndex && consumeErr == nil {
+				if err := consume(next, result); err != nil {
+					consumeErr = err
+					cancel()
+				}
+			}
+			next++
+		}
+		if taskErr != nil || consumeErr != nil {
+			cancel()
+		}
+		dispatch()
+	}
+	if !jobsClosed {
+		close(jobs)
+	}
+	if consumeErr != nil {
+		return consumeErr
+	}
+	if taskErr != nil {
+		return taskErr
+	}
+	if next != count {
+		return fmt.Errorf("package inspection canceled after %d of %d entries", next, count)
+	}
+	return nil
+}
+
+// runPackageJobs executes independent indexed tasks with bounded queues. The
+// caller gathers task results by index, so worker completion order cannot
+// affect repository ordering.
+func runPackageJobs(count, workers int, job func(index int) error) error {
+	if count == 0 {
+		return nil
+	}
+	if workers < 1 || workers > MaxPackWorkers {
+		return fmt.Errorf("invalid package worker count %d", workers)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	jobs := make(chan int, workers*2)
+	results := make(chan packageJobResult, workers)
+	var group sync.WaitGroup
+	group.Add(workers)
+	for worker := 0; worker < workers; worker++ {
+		go func() {
+			defer group.Done()
+			for {
+				if ctx.Err() != nil {
+					return
+				}
+				select {
+				case <-ctx.Done():
+					return
+				case index, ok := <-jobs:
+					if !ok {
+						return
+					}
+					err := job(index)
+					results <- packageJobResult{index: index, err: err}
+					if err != nil {
+						return
+					}
+				}
+			}
+		}()
+	}
+	go func() {
+		defer close(jobs)
+		for index := 0; index < count; index++ {
+			if ctx.Err() != nil {
+				return
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case jobs <- index:
+			}
+		}
+	}()
+	go func() {
+		group.Wait()
+		close(results)
+	}()
+
+	completed := 0
+	firstErrorIndex := count
+	var firstError error
+	for result := range results {
+		completed++
+		if result.err != nil {
+			cancel()
+		}
+		if result.err != nil && result.index < firstErrorIndex {
+			firstErrorIndex = result.index
+			firstError = result.err
+		}
+	}
+	if firstError != nil {
+		return firstError
+	}
+	if completed != count {
+		return fmt.Errorf("package work canceled after %d of %d jobs", completed, count)
+	}
+	return nil
 }

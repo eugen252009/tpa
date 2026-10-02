@@ -1,0 +1,9 @@
+//go:build !tpa_bench
+
+package aptpackage
+
+func startStage(stageID) func() { return func() {} }
+
+func StageMetricsSnapshot() map[string]map[string]int64 { return nil }
+
+func WriteStageMetrics(string) error { return nil }

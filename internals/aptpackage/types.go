@@ -124,6 +124,10 @@ type Config struct {
 	InDir  string `json:"indir"`
 	OutDir string `json:"outdir"`
 	GPG    string `json:"gpg"`
+
+	// Workers limits independent package-local repository work. It is a Go/CLI
+	// execution option, not repository metadata or JSON configuration.
+	Workers int `json:"-"`
 }
 
 var knownJSONControlKeys = map[string]bool{
