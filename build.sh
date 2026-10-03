@@ -6,7 +6,7 @@ cd "$ROOT"
 
 ARCHS="amd64 riscv64 arm64"
 DESC=$(cat description.txt)
-VERSION=${TPA_VERSION:-0.4.0}
+VERSION=${TPA_VERSION:-0.5.0}
 DEPENDS="libc6,dpkg,gpg,gzip"
 HOMEPAGE="https://github.com/coffeemakerstudio/tpa"
 MAINTAINER="Coffee Maker Studio <tpa@lupricht.net>"

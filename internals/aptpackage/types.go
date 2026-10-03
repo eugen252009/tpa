@@ -64,7 +64,7 @@ export interface Repo {
     description: string;
 }
 `
-	TPAVersion = "0.4.0"
+	TPAVersion = "0.5.0"
 )
 
 type RepoConfig struct {

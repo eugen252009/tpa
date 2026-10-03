@@ -77,12 +77,27 @@ func TestNoProvenanceFlagDisablesAutomaticMetadata(t *testing.T) {
 }
 
 func TestVersionCommandReturnsProgramVersion(t *testing.T) {
+	const wantVersion = "0.5.0"
+	if aptpackage.TPAVersion != wantVersion {
+		t.Fatalf("program version = %q, want %q", aptpackage.TPAVersion, wantVersion)
+	}
 	var stdout, stderr bytes.Buffer
 	if code := run([]string{"version"}, bytes.NewReader(nil), &stdout, &stderr); code != 0 {
 		t.Fatalf("version exit code = %d, stderr=%q", code, stderr.String())
 	}
-	if got, want := stdout.String(), aptpackage.TPAVersion+"\n"; got != want {
+	if got, want := stdout.String(), wantVersion+"\n"; got != want {
 		t.Fatalf("version output = %q, want %q", got, want)
+	}
+}
+
+func TestBuildPackageDefaultMatchesProgramVersion(t *testing.T) {
+	script, err := os.ReadFile("build.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "VERSION=${TPA_VERSION:-" + aptpackage.TPAVersion + "}"
+	if !strings.Contains(string(script), want+"\n") {
+		t.Fatalf("build.sh does not default Debian package version to program version %q", aptpackage.TPAVersion)
 	}
 }
 
