@@ -7,8 +7,8 @@ import (
 )
 
 // AtomicPack builds into a sibling directory, verifies the complete repository,
-// and publishes it with a same-filesystem Linux rename exchange. Use it when a
-// live repository may be read concurrently while it is replaced.
+// and publishes it with a same-filesystem Linux rename exchange. Its sibling lock
+// serializes TPA atomic-pack and lifecycle writers for the same live path.
 func AtomicPack(cfg Config, livePath string) error {
 	if livePath == "" {
 		return fmt.Errorf("atomic publish path is empty")
@@ -21,6 +21,15 @@ func AtomicPack(cfg Config, livePath string) error {
 		return fmt.Errorf("refusing to publish over filesystem root")
 	}
 	parent := filepath.Dir(live)
+	if err := os.MkdirAll(parent, 0o755); err != nil {
+		return fmt.Errorf("create publish parent: %w", err)
+	}
+	return withRepositoryLock(live, func() error {
+		return atomicPackLocked(cfg, live, parent)
+	})
+}
+
+func atomicPackLocked(cfg Config, live, parent string) error {
 	if err := os.MkdirAll(parent, 0o755); err != nil {
 		return fmt.Errorf("create publish parent: %w", err)
 	}

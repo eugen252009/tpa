@@ -101,6 +101,153 @@ func TestBuildPackageDefaultMatchesProgramVersion(t *testing.T) {
 	}
 }
 
+func TestUnlistCommandRemovesMetadataButKeepsArtifact(t *testing.T) {
+	_, repo, artifact := makeCLILifecycleRepository(t)
+	args := []string{"unlist", "-in=" + repo, "-package=fixture", "-ver=1.0", "-arch=all"}
+	var stdout, stderr bytes.Buffer
+	if code := runWithTerminal(args, bytes.NewReader(nil), &stdout, &stderr, false); code != 0 {
+		t.Fatalf("exit=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	if _, err := os.Stat(artifact); err != nil {
+		t.Fatalf("unlist removed artifact: %v", err)
+	}
+	index, err := os.ReadFile(filepath.Join(repo, "dists", "stable", "main", "binary-all", "Packages"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(index), "Package: fixture\n") {
+		t.Fatal("unlisted package remains in Packages")
+	}
+}
+
+func TestDeleteCancellationAndNonInteractiveConfirmationAreSafe(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		interactive bool
+		input       string
+		wantCode    int
+	}{
+		{name: "interactive no", interactive: true, input: "n\n", wantCode: 0},
+		{name: "noninteractive without yes", interactive: false, input: "yes\n", wantCode: 1},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root, repo, artifact := makeCLILifecycleRepository(t)
+			before := snapshotCLILifecycleTree(t, repo)
+			args := []string{"delete", "-in=" + repo, "-package=fixture", "-ver=1.0", "-arch=all"}
+			var stdout, stderr bytes.Buffer
+			if code := runWithTerminal(args, bytes.NewBufferString(test.input), &stdout, &stderr, test.interactive); code != test.wantCode {
+				t.Fatalf("exit=%d, want %d; stdout=%q stderr=%q", code, test.wantCode, stdout.String(), stderr.String())
+			}
+			if test.interactive && !strings.Contains(stdout.String(), "Deletion cancelled") {
+				t.Fatalf("missing cancellation message: %q", stdout.String())
+			}
+			if !test.interactive && !strings.Contains(stderr.String(), "requires an interactive terminal or --yes") {
+				t.Fatalf("missing non-interactive refusal: %q", stderr.String())
+			}
+			assertCLILifecycleTreeEqual(t, repo, before)
+			if _, err := os.Stat(artifact); err != nil {
+				t.Fatalf("artifact changed after refusal: %v", err)
+			}
+			if _, err := os.Stat(filepath.Join(root, ".repo.tpa.lock")); !os.IsNotExist(err) {
+				t.Fatalf("declined delete created mutation lock: %v", err)
+			}
+		})
+	}
+}
+
+func TestDeleteAcceptsInteractiveYesAndNoninteractiveYesFlag(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		interactive bool
+		input       string
+		flag        bool
+	}{
+		{name: "interactive yes", interactive: true, input: "YeS\n"},
+		{name: "noninteractive --yes", interactive: false, flag: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			_, repo, artifact := makeCLILifecycleRepository(t)
+			args := []string{"delete", "-in=" + repo, "-package=fixture", "-ver=1.0", "-arch=all"}
+			if test.flag {
+				args = append(args, "--yes")
+			}
+			var stdout, stderr bytes.Buffer
+			if code := runWithTerminal(args, bytes.NewBufferString(test.input), &stdout, &stderr, test.interactive); code != 0 {
+				t.Fatalf("exit=%d; stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+			}
+			if _, err := os.Stat(artifact); !os.IsNotExist(err) {
+				t.Fatalf("artifact was not removed: %v", err)
+			}
+			data, err := os.ReadFile(filepath.Join(repo, "dists", "stable", "main", "binary-all", "Packages"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(data), "Package: fixture\n") {
+				t.Fatal("deleted package remains in Packages")
+			}
+		})
+	}
+}
+
+func makeCLILifecycleRepository(t *testing.T) (string, string, string) {
+	t.Helper()
+	root := t.TempDir()
+	packageRoot := filepath.Join(root, "fixture-tree")
+	archive := filepath.Join(root, "artifacts", "fixture_1.0_all.deb")
+	repo := filepath.Join(root, "repo")
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"init", "-name=fixture", "-ver=1.0", "-arch=all", "-maintainer=Fixture", "-desc=Fixture", "-out=" + packageRoot}, bytes.NewReader(nil), &stdout, &stderr); code != 0 {
+		t.Fatalf("init exit=%d stderr=%q", code, stderr.String())
+	}
+	if code := run([]string{"build", "-in=" + packageRoot, "-out=" + archive}, bytes.NewReader(nil), &stdout, &stderr); code != 0 {
+		t.Fatalf("build exit=%d stderr=%q", code, stderr.String())
+	}
+	if code := run([]string{"pack", "-in=" + filepath.Dir(archive), "-out=" + repo}, bytes.NewReader(nil), &stdout, &stderr); code != 0 {
+		t.Fatalf("pack exit=%d stderr=%q", code, stderr.String())
+	}
+	artifact := filepath.Join(repo, "pool", "main", "f", "fixture", filepath.Base(archive))
+	return root, repo, artifact
+}
+
+func snapshotCLILifecycleTree(t *testing.T, root string) map[string][]byte {
+	t.Helper()
+	files := make(map[string][]byte)
+	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		data, err := os.ReadFile(path)
+		if err == nil {
+			files[rel] = data
+		}
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return files
+}
+
+func assertCLILifecycleTreeEqual(t *testing.T, root string, expected map[string][]byte) {
+	t.Helper()
+	actual := snapshotCLILifecycleTree(t, root)
+	if len(actual) != len(expected) {
+		t.Fatalf("repository file count changed: got %d, want %d", len(actual), len(expected))
+	}
+	for path, want := range expected {
+		if got, ok := actual[path]; !ok || !bytes.Equal(got, want) {
+			t.Errorf("repository file %s changed", path)
+		}
+	}
+}
+
 func TestVersionFlagIsNotVersionCommand(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	if code := run([]string{"-version"}, bytes.NewReader(nil), &stdout, &stderr); code == 0 {

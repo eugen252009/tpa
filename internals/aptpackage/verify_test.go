@@ -1,12 +1,38 @@
 package aptpackage
 
 import (
+	"compress/gzip"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestVerifyPackagesCompressionRejectsMismatchedIndex(t *testing.T) {
+	root := t.TempDir()
+	packages := filepath.Join(root, "Packages")
+	if err := os.WriteFile(packages, []byte("Package: expected\n\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	file, err := os.Create(packages + ".gz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := gzip.NewWriter(file)
+	if _, err := writer.Write([]byte("Package: different\n\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyPackagesCompression(packages); err == nil {
+		t.Fatal("mismatched Packages.gz was accepted")
+	}
+}
 
 func TestVerifyRepositoryRequiresExpectedSigningFingerprint(t *testing.T) {
 	if _, err := exec.LookPath("gpg"); err != nil {

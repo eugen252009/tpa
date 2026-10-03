@@ -3,6 +3,7 @@ package aptpackage
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -166,8 +167,8 @@ func verifyPackageIndex(repoRoot, packagesPath string, workers int) error {
 	if err != nil {
 		return err
 	}
-	if len(paragraphs) == 0 {
-		return fmt.Errorf("Packages has no entries")
+	if err := verifyPackagesCompression(packagesPath); err != nil {
+		return fmt.Errorf("Packages.gz does not match Packages: %w", err)
 	}
 	artifactStage := startStage(stageVerifyArtifacts)
 	err = runPackageJobs(len(paragraphs), workers, func(index int) error {
@@ -236,6 +237,42 @@ func parseControlParagraphs(data []byte) ([]map[string]string, error) {
 	}
 	flush()
 	return paragraphs, nil
+}
+
+func verifyPackagesCompression(packagesPath string) error {
+	plain, err := os.Open(packagesPath)
+	if err != nil {
+		return err
+	}
+	defer plain.Close()
+	compressed, err := os.Open(packagesPath + ".gz")
+	if err != nil {
+		return err
+	}
+	defer compressed.Close()
+	reader, err := gzip.NewReader(compressed)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+	plainBuffer := make([]byte, 32*1024)
+	gzipBuffer := make([]byte, 32*1024)
+	for {
+		plainN, plainErr := plain.Read(plainBuffer)
+		gzipN, gzipErr := reader.Read(gzipBuffer)
+		if plainN != gzipN || !bytes.Equal(plainBuffer[:plainN], gzipBuffer[:gzipN]) {
+			return fmt.Errorf("decompressed bytes differ")
+		}
+		if plainErr == io.EOF && gzipErr == io.EOF {
+			return nil
+		}
+		if plainErr != nil && plainErr != io.EOF {
+			return plainErr
+		}
+		if gzipErr != nil && gzipErr != io.EOF {
+			return gzipErr
+		}
+	}
 }
 
 func safeRepositoryPath(root, relative string) (string, error) {

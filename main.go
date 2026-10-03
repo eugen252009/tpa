@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -17,6 +18,10 @@ func main() {
 }
 
 func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	return runWithTerminal(args, stdin, stdout, stderr, stdinIsTerminal())
+}
+
+func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, interactive bool) int {
 	defer writeStageMetrics()
 	cfg := aptpackage.Config{}
 	flags := flag.NewFlagSet("tpa", flag.ContinueOnError)
@@ -50,6 +55,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	flags.StringVar(&cfg.Repo.Components, "components", "main", "Components (e.g. main)")
 	flags.StringVar(&cfg.Repo.Codename, "codename", "stable", "Distribution Codename")
 	flags.StringVar(&cfg.InDir, "in", ".", "Your input directory")
+	packageName := flags.String("package", "", "Package name for unlist/delete")
 	flags.StringVar(&cfg.OutDir, "out", ".", "Output directory for the .deb file")
 	flags.StringVar(&cfg.GPG, "gpg", "", "GPG Key ID or full fingerprint for signing, empty for no signing")
 	workers := flags.Int("workers", 0, "Bounded package workers for pack (0 uses GOMAXPROCS)")
@@ -60,9 +66,10 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	generationID := flags.String("generation-id", "", "Generation identity for -generation-manifest")
 	parentGeneration := flags.String("parent-generation", "", "Expected parent generation for -generation-manifest")
 	noProvenance := flags.Bool("no-provenance", false, "Disable automatic TPA provenance metadata")
+	yes := flags.Bool("yes", false, "Confirm destructive package deletion")
 
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "Usage: tpa <init|build|parse|pack|json|schema|version>")
+		fmt.Fprintln(stderr, "Usage: tpa <init|build|parse|pack|unlist|delete|json|schema|version>")
 		flags.PrintDefaults()
 		return 2
 	}
@@ -113,6 +120,13 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if *noProvenance {
 		disabled := false
 		cfg.Provenance = &disabled
+	}
+
+	seenFlags := make(map[string]bool)
+	flags.Visit(func(f *flag.Flag) { seenFlags[f.Name] = true })
+	if seenFlags["yes"] && command != "delete" {
+		fmt.Fprintln(stderr, "tpa: --yes is only valid with delete")
+		return 2
 	}
 
 	switch command {
@@ -192,6 +206,61 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		}
 	case "schema":
 		fmt.Fprint(stdout, aptpackage.JSONSCHEMA)
+	case "unlist", "delete":
+		if len(flags.Args()) != 0 {
+			fmt.Fprintf(stderr, "tpa: %s does not accept positional arguments\n", command)
+			return 2
+		}
+		for _, name := range []string{"in", "package", "ver", "arch"} {
+			if !seenFlags[name] {
+				fmt.Fprintf(stderr, "tpa: %s requires -%s\n", command, name)
+				return 2
+			}
+		}
+		identity := aptpackage.PackageIdentity{Package: *packageName, Version: cfg.Control.Version, Architecture: cfg.Control.Architecture}
+		if command == "unlist" {
+			if err := aptpackage.Unlist(cfg, cfg.InDir, identity); err != nil {
+				fmt.Fprintf(stderr, "tpa: unlist package: %v\n", err)
+				return 1
+			}
+			fmt.Fprintf(stdout, "Unlisted package %s; artifact retained.\n", identity)
+			return 0
+		}
+		if !*yes && !interactive {
+			fmt.Fprintln(stderr, "tpa: delete requires an interactive terminal or --yes")
+			return 1
+		}
+		target, err := aptpackage.InspectDeleteTarget(cfg, cfg.InDir, identity)
+		if err != nil {
+			fmt.Fprintf(stderr, "tpa: inspect delete target: %v\n", err)
+			return 1
+		}
+		printDeleteSummary(stdout, target)
+		if !*yes {
+			fmt.Fprint(stdout, "Are you sure you want to permanently delete this package? [y/N] ")
+			line, readErr := bufio.NewReader(stdin).ReadString('\n')
+			if readErr != nil && !(readErr == io.EOF && line != "") {
+				fmt.Fprintln(stdout, "\nDeletion cancelled; no repository files were changed.")
+				return 0
+			}
+			answer := strings.ToLower(strings.TrimSpace(line))
+			if answer != "y" && answer != "yes" {
+				fmt.Fprintln(stdout, "Deletion cancelled; no repository files were changed.")
+				return 0
+			}
+		} else {
+			fmt.Fprintln(stdout, "Confirmed by --yes.")
+		}
+		result, err := aptpackage.Delete(cfg, cfg.InDir, identity)
+		if err != nil {
+			fmt.Fprintf(stderr, "tpa: delete package: %v\n", err)
+			return 1
+		}
+		if result.WasListed {
+			fmt.Fprintf(stdout, "Deleted package %s after verified unlisting.\n", identity)
+		} else {
+			fmt.Fprintf(stdout, "Deleted unlisted package artifact %s.\n", identity)
+		}
 	case "version":
 		fmt.Fprintln(stdout, aptpackage.TPAVersion)
 	default:
@@ -199,4 +268,15 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return 2
 	}
 	return 0
+}
+
+func printDeleteSummary(stdout io.Writer, target aptpackage.DeleteTarget) {
+	fmt.Fprintln(stdout, "Package:")
+	fmt.Fprintf(stdout, "  Package:      %s\n", target.Identity.Package)
+	fmt.Fprintf(stdout, "  Version:      %s\n", target.Identity.Version)
+	fmt.Fprintf(stdout, "  Architecture: %s\n", target.Identity.Architecture)
+	fmt.Fprintln(stdout, "\nThis will:")
+	fmt.Fprintln(stdout, "  - remove the package from repository metadata if it is still listed")
+	fmt.Fprintln(stdout, "  - regenerate and verify affected metadata before publication when listed")
+	fmt.Fprintf(stdout, "  - remove the physical .deb artifact (%s)\n\n", target.Filename)
 }

@@ -26,6 +26,8 @@ actual package artifacts.
 | `build` | Validates `DEBIAN/control`, fixes present maintainer-script modes, and invokes `dpkg-deb --root-owner-group --build`. |
 | `parse` | Reads plain, gzip, and xz control archives in-process; typed unsupported formats fall back to `dpkg-deb -f`, while malformed supported inputs fail directly. |
 | `pack` | Derives and verifies an APT repository from top-level `.deb` files. |
+| `unlist` | Removes one exact `Package + Version + Architecture` identity from APT metadata, verifies and atomically publishes metadata, and retains the `.deb`. |
+| `delete` | Requires terminal `y`/`yes` or explicit `--yes`, unlists if needed, verifies and publishes metadata, then removes the `.deb`. |
 | `json` | Reads configuration from standard input and initializes a package tree; it does not build an archive. |
 | `schema` | Prints the TypeScript-style configuration interface. |
 | `version` | Prints the TPA program version. |
@@ -41,8 +43,16 @@ return non-zero and write diagnostics to standard error.
   derived from the published artifact.
 - Canonical identity is `Package + Version + Architecture`.
 - Byte-identical duplicate identities are indexed once; conflicting bytes fail.
-- Package files are checked against `Packages`; indexes are checked against
-  `Release`; signed payload and expected signer are checked for `InRelease`.
+- Package files are checked against `Packages`; indexes and `Packages.gz`
+  correspondence are checked against `Release`; signed payload and expected
+  signer are checked for `InRelease`.
+- `unlist` and `delete` target exactly `Package + Version + Architecture`.
+  Metadata is verified and atomically published before artifact removal; a
+  cancelled or failed pre-publication delete leaves the repository unchanged.
+  Cleanup failure after unlisting must leave the safe unlisted state.
+- TPA has no retained-generation registry. Retention and rollback references
+  are owned by orchestration such as TPA.run; lifecycle operations affect only
+  the repository tree path they receive.
 - A fresh input set defines a fresh repository snapshot. Historical versions
   remain only when their artifacts remain in that set.
 - No persistent package metadata or hash cache is used.
@@ -87,7 +97,8 @@ go vet ./...
 ```
 
 The signed qualification requires Docker, GPG, `dpkg-deb`, and Go. It verifies
-signature acceptance and APT install, upgrade, and downgrade. The dependency
+signature acceptance, APT install/upgrade/downgrade, signed unlist/delete, and
+that an already-installed package survives unlisting. The dependency
 qualification verifies direct and transitive APT dependency resolution.
 
 Manual package smoke test:

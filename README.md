@@ -36,6 +36,8 @@ returns a non-zero status because no command was supplied.
 | `build` | Package root at `-in` | `.deb` archive or destination directory at `-out`, using `dpkg-deb --root-owner-group --build` |
 | `parse` | `.deb` archive at `-in` | Human-readable parsed control summary on standard output |
 | `pack` | Top-level `.deb` files in `-in`, or an optional JSON config path | Verified APT repository at `-out`, `--output`, or `--atomic-publish`; optionally a generation inventory |
+| `unlist` | Repository at `-in` and exact `-package`, `-ver`, `-arch` identity | Atomically removes that identity from APT metadata and retains its `.deb` |
+| `delete` | Repository at `-in` and exact `-package`, `-ver`, `-arch` identity | Confirms, unlists if needed, verifies and publishes metadata, then removes the `.deb` |
 | `json` | Configuration JSON on standard input | Initialized package root at JSON `outdir` |
 | `schema` | None | TypeScript-style configuration interface on standard output |
 | `version` | None | TPA program version on standard output |
@@ -52,7 +54,7 @@ directly rather than being hidden by fallback.
 Exit status is part of the process contract:
 
 ```text
-0        command completed successfully
+0        command completed successfully, or delete was cancelled without changes
 non-zero command failed or its invocation was invalid
 ```
 
@@ -68,7 +70,13 @@ Package flags include `-name`, `-ver`, `-arch`, `-maintainer`, `-desc`,
 and `-postrm`.
 
 Repository flags include `-origin`, `-label`, `-suite`, `-codename`, and
-`-components`. The `pack` command's `-workers` option bounds package inspection,
+`-components`. Lifecycle commands use `-package`, `-ver`, and `-arch` for the
+canonical package identity and `-in` for the existing repository tree. For a
+non-default distribution or component, set `-codename` and `-components` to
+match that tree. `delete` accepts `--yes` for explicit non-interactive approval;
+without it, deletion requires a terminal and accepts only `y` or `yes` (case
+insensitive). `-gpg` is required for a signed repository and must select its
+signer. The `pack` command's `-workers` option bounds package inspection,
 source hashing during pool copy, and published-artifact verification; zero (the
 default) derives the worker count from `GOMAXPROCS`, capped at 32. Repository architectures are inferred from the actual `.deb`
 artifacts; there is no architecture-list override. `-gpg` selects a signing key.
@@ -219,6 +227,48 @@ Package + Version + Architecture
   once.
 - Same identity and different bytes are rejected.
 
+### Unlist and delete
+
+`unlist` removes exactly one `Package + Version + Architecture` identity from
+its architecture's `Packages` index, regenerates `Packages.gz` and `Release`,
+re-signs `InRelease` when the repository is signed, verifies the complete
+candidate, and atomically publishes it. The `.deb` remains in `pool` and may
+still be directly downloaded by URL. Unlisting does not uninstall a package
+from existing client systems; it only changes what fresh APT index updates
+advertise. A later fresh `pack` from an artifact input that includes the `.deb`
+will list it again.
+
+`delete` is the confirmed destructive counterpart. It automatically performs
+the same verified unlist transition when the exact identity is listed; when
+already unlisted, it skips metadata mutation. Only after the new metadata tree
+is verified and atomically active does TPA remove the artifact. The default
+answer to the interactive prompt is no; only `y` or `yes` approves. Automation
+must pass `--yes`. If metadata generation, signing, verification, or publication
+fails, the artifact is retained and the active repository remains valid. If
+artifact cleanup fails after unlisting, the command reports that safe partial
+state: unlisted, artifact retained. TPA never deliberately leaves active
+metadata referencing a missing artifact.
+
+Lifecycle mutation uses a persistent hidden sibling lock file shared with
+`pack --atomic-publish` and publishes a complete sibling candidate with the
+existing Linux atomic directory exchange. Do not remove that lock file while
+TPA writers may be active. TPA tracks no historical repository generations;
+retention and rollback generations are owned by orchestration such as TPA.run.
+`delete` only knows the repository tree path passed to it; an orchestrator must
+ensure an artifact is not still needed by a separately retained generation.
+
+```sh
+tpa unlist -in=repo -package=foo -ver=1.2.3 -arch=amd64 \
+  -gpg=FULL_SIGNING_FINGERPRINT
+
+tpa delete -in=repo -package=foo -ver=1.2.3 -arch=amd64 \
+  -gpg=FULL_SIGNING_FINGERPRINT --yes
+```
+
+Omit `-gpg` for an unsigned repository. `unlist` fails if that exact identity
+is not listed. `delete` fails if its exact artifact cannot be found, and never
+selects a package by filename alone.
+
 ## Verification
 
 Before reporting repository-generation success, TPA verifies:
@@ -309,14 +359,16 @@ GPG key material is never copied into the repository tree.
 ## Qualification
 
 ```sh
+go test ./...
 go test -race ./...
 go vet ./...
 ./tests/qualification.sh
 ./tests/dependency-qualification.sh
 ```
 
-The signed qualification covers signature verification and APT install,
-upgrade, and downgrade. The dependency qualification proves that relationship
+The signed qualification covers signature verification, APT install, upgrade,
+and downgrade, plus signed unlist/delete against a live client that retains an
+installed package. The dependency qualification proves that relationship
 metadata survives repository generation and APT resolves both direct and
 transitive dependencies automatically.
 

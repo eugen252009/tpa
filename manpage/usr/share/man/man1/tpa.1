@@ -29,6 +29,15 @@ formats fall back to dpkg-deb; malformed supported archives are rejected.
 .B pack
 Generate and verify Packages, Packages.gz, Release, and optionally InRelease.
 .TP
+.B unlist
+Remove one exact package identity from its Packages index, regenerate and
+verify repository metadata, and atomically publish the result. The .deb remains
+in the pool.
+.TP
+.B delete
+Require explicit confirmation, unlist the exact package if necessary, verify
+and atomically publish metadata, then remove its physical .deb artifact.
+.TP
 .B json
 Read package initialization configuration from standard input.
 .TP
@@ -53,7 +62,23 @@ Use this mode when replacing a repository that may be read concurrently.
 .TP
 .BI -gpg " selector"
 Select one GPG secret key. Full fingerprints are recommended. Empty means unsigned.
-TPA uses the caller's GPG environment, including GNUPGHOME.
+For lifecycle commands on a signed repository, supply the key that verifies its
+current InRelease. TPA uses the caller's GPG environment, including GNUPGHOME.
+.TP
+.BI -package " name"
+Package name for unlist or delete. Combine with -ver and -arch to select one exact identity.
+.TP
+.BI -ver " version"
+Exact package version for unlist or delete.
+.TP
+.BI -arch " architecture"
+Exact package architecture for unlist or delete; required even when the same
+Package and Version exist for other architectures.
+.TP
+.B --yes
+For delete only, explicitly approve permanent deletion in non-interactive use.
+Without --yes, delete requires a terminal and only y or yes (case-insensitive)
+approves; the default answer is no.
 .TP
 .BI -workers " count"
 For pack, bound package inspection, source hashing during pool copy, and
@@ -143,11 +168,37 @@ The input artifact directory is the desired repository snapshot. An artifact inc
 a fresh input snapshot is included in the generated repository; an omitted artifact is
 absent. Historical versions remain available only while their .deb artifacts remain in
 that input set. Use a new or empty direct output path for exact snapshot generation.
+.SH PACKAGE LIFECYCLE
+.B unlist
+removes exactly one Package+Version+Architecture identity from the selected
+component and architecture index. It regenerates Packages.gz and Release,
+re-signs InRelease when applicable, verifies the complete candidate repository,
+and atomically publishes it. The .deb remains physically present in pool and
+may still be directly downloaded. Unlisting does not uninstall packages from
+existing client systems.
+.PP
+.B delete
+is the confirmed destructive operation. When the identity is listed, TPA first
+performs the same verified unlist transition. When it is already unlisted, TPA
+skips metadata mutation. In both cases the .deb is removed only after metadata
+has been verified and safely published. If metadata generation, signing,
+verification, or publication fails, the artifact remains. If physical cleanup
+fails after unlisting, the repository remains valid and unlisted while the
+artifact remains. TPA does not track retained historical generations; that
+retention boundary belongs to an orchestrator such as TPA.run.
+.PP
+Use -in for the repository tree, -package, -ver, and -arch for the exact
+identity, and -codename/-components when the repository does not use stable/main.
+Signed repositories require -gpg with the current signing key; omit it for an
+unsigned repository. A fresh pack from an input artifact set that includes an
+unlisted .deb will list it again.
 .SH ATOMIC PUBLICATION
 Atomic publication uses a fresh sibling staging directory, complete generation and
-verification, a Linux rename exchange, and replaced-tree cleanup. Failure before exchange
-leaves the previous live repository unchanged. Repository data is published readable but
-not writable by readers; GPG key material is not stored in the repository tree.
+verification, a Linux rename exchange, and replaced-tree cleanup. A persistent hidden
+sibling lock file serializes TPA atomic writers and lifecycle changes; do not remove it
+while TPA writers may be active. Failure before exchange leaves the previous live
+repository unchanged. Repository data is published readable but not writable by readers;
+GPG key material is not stored in the repository tree.
 .SH EXAMPLES
 .nf
 tpa init -name=meta -ver=1.0 -arch=all \
@@ -158,10 +209,17 @@ tpa build -in=build/meta -out=dist/meta_1.0_all.deb
 
 tpa pack -in=dist -atomic-publish=/srv/apt/example \
   -gpg=FULL_SIGNING_FINGERPRINT
+
+tpa unlist -in=/srv/apt/example -package=foo -ver=1.2.3 -arch=amd64 \
+  -gpg=FULL_SIGNING_FINGERPRINT
+
+tpa delete -in=/srv/apt/example -package=foo -ver=1.2.3 -arch=amd64 \
+  -gpg=FULL_SIGNING_FINGERPRINT --yes
 .fi
 .SH EXIT STATUS
-Zero indicates success. Invalid input, unknown commands, build failures, verification
-failures, and signing failures return non-zero. Diagnostics are written to standard error.
+Zero indicates success or a confirmed no-op cancellation of delete. Invalid input,
+unknown commands, build failures, verification failures, and signing failures return
+non-zero. Diagnostics are written to standard error.
 .SH SEE ALSO
 .BR dpkg-deb (1),
 .BR apt-get (8),
