@@ -13,8 +13,79 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/eugen252009/tpa/internal/version"
 	"github.com/eugen252009/tpa/internals/aptpackage"
 )
+
+type commandDescription struct{ Name, Description string }
+
+type verifyJSONDocument struct {
+	Valid        bool   `json:"valid"`
+	SupportEmail string `json:"supportEmail,omitempty"`
+	aptpackage.RepositoryReport
+	Error string `json:"error,omitempty"`
+}
+
+var publicCommands = []commandDescription{
+	{"init", "Initialize a package tree"},
+	{"build", "Build a Debian package"},
+	{"parse", "Read package metadata"},
+	{"pack", "Build an APT repository"},
+	{"inspect", "Inspect an existing repository"},
+	{"verify", "Verify an existing repository"},
+	{"unlist", "Remove a package from repository metadata"},
+	{"delete", "Unlist and permanently remove a package artifact"},
+	{"json", "Build from JSON configuration"},
+	{"schema", "Print the configuration schema"},
+	{"version", "Print the TPA version"},
+}
+
+func writeIdentityHeader(output io.Writer) {
+	fmt.Fprintf(output, "%s %s - %s\n%s\nSupport / bug reports: %s\n", version.ProductName, version.Version, version.ProductDescription, version.ProjectURL, version.SupportEmail)
+}
+
+func writeGeneralHelp(output io.Writer) {
+	writeIdentityHeader(output)
+	fmt.Fprintln(output, "\nUsage:\n  tpa <command> [options]\n\nCommands:")
+	for _, item := range publicCommands {
+		fmt.Fprintf(output, "  %-8s %s\n", item.Name, item.Description)
+	}
+	fmt.Fprintln(output, "\nOptions:\n  -h, --help     Show this help\n  -version, --version  Show the TPA version\n\nSee the tpa(1) manual for command options.")
+}
+
+func isPublicCommand(name string) bool {
+	for _, item := range publicCommands {
+		if item.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func hasHelpFlag(args []string) bool {
+	for _, arg := range args {
+		if arg == "-h" || arg == "--help" {
+			return true
+		}
+	}
+	return false
+}
+
+func usageError(output io.Writer, message string) int {
+	fmt.Fprintf(output, "error: %s\nTPA version: %s\nRun 'tpa --help' for usage.\nSupport / bug reports: %s\n", message, version.Version, version.SupportEmail)
+	return 2
+}
+
+func commandFailure(output io.Writer, message string) int {
+	fmt.Fprintf(output, "error: %s\nTPA version: %s\nSupport / bug reports: %s\n", message, version.Version, version.SupportEmail)
+	return 1
+}
+
+func unknownCommand(output io.Writer, command string) int {
+	writeIdentityHeader(output)
+	fmt.Fprintf(output, "\nerror: unknown command %q\n\nUsage:\n  tpa <command> [options]\n\nRun 'tpa --help' for more information.\n", command)
+	return 2
+}
 
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
@@ -26,9 +97,29 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 
 func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, interactive bool) int {
 	defer writeStageMetrics()
+	if len(args) == 0 {
+		writeGeneralHelp(stdout)
+		return 2
+	}
+	if args[0] == "--help" || args[0] == "-h" || args[0] == "help" || hasHelpFlag(args[1:]) {
+		writeGeneralHelp(stdout)
+		return 0
+	}
+	if args[0] == "--version" || args[0] == "-version" {
+		if len(args) != 1 {
+			return usageError(stderr, "version option does not accept arguments")
+		}
+		fmt.Fprintf(stdout, "tpa %s\n", version.Version)
+		return 0
+	}
+	command := args[0]
+	if !isPublicCommand(command) {
+		return unknownCommand(stderr, command)
+	}
 	cfg := aptpackage.Config{}
 	flags := flag.NewFlagSet("tpa", flag.ContinueOnError)
-	flags.SetOutput(stderr)
+	flags.SetOutput(io.Discard)
+	flags.Usage = func() {}
 	flags.StringVar(&cfg.Control.Name, "name", "myNewAPTPackage", "Name of the package")
 	flags.StringVar(&cfg.Control.Version, "ver", "0.0.1", "Version of the package")
 	flags.StringVar(&cfg.Control.Maintainer, "maintainer", "No Maintainer", "Maintainer contact info")
@@ -75,12 +166,6 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 	fingerprint := flags.String("fingerprint", "", "Expected full OpenPGP signer fingerprint")
 	requireSigned := flags.Bool("require-signed", false, "Require a valid signed InRelease")
 
-	if len(args) == 0 {
-		fmt.Fprintln(stderr, "Usage: tpa <init|build|parse|pack|inspect|verify|unlist|delete|json|schema|version>")
-		flags.PrintDefaults()
-		return 2
-	}
-	command := args[0]
 	flagArgs := args[1:]
 	// The standard flag package stops at the first positional argument. Move
 	// pack's optional config path behind flags so `pack config.json --output`
@@ -92,27 +177,23 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 		flagArgs = moveRepositoryLocator(flagArgs)
 	}
 	if err := flags.Parse(flagArgs); err != nil {
-		return 2
+		return usageError(stderr, err.Error())
 	}
 	if command == "pack" {
 		if *output != "" && *atomicPublish != "" {
-			fmt.Fprintln(stderr, "tpa: --output and --atomic-publish are mutually exclusive")
-			return 2
+			return usageError(stderr, "--output and --atomic-publish are mutually exclusive")
 		}
 		positional := flags.Args()
 		if len(positional) > 1 {
-			fmt.Fprintln(stderr, "tpa: pack accepts at most one JSON config path")
-			return 2
+			return usageError(stderr, "pack accepts at most one JSON config path")
 		}
 		if len(positional) == 1 {
 			data, err := os.ReadFile(positional[0])
 			if err != nil {
-				fmt.Fprintf(stderr, "tpa: read config: %v\n", err)
-				return 2
+				return usageError(stderr, fmt.Sprintf("read config: %v", err))
 			}
 			if err := json.Unmarshal(data, &cfg); err != nil {
-				fmt.Fprintf(stderr, "tpa: parse config: %v\n", err)
-				return 2
+				return usageError(stderr, fmt.Sprintf("parse config: %v", err))
 			}
 		}
 		if *output != "" {
@@ -122,8 +203,7 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 			cfg.OutDir = *atomicPublish
 		}
 		if *workers < 0 || *workers > aptpackage.MaxPackWorkers {
-			fmt.Fprintf(stderr, "tpa: -workers must be between 0 and %d\n", aptpackage.MaxPackWorkers)
-			return 2
+			return usageError(stderr, fmt.Sprintf("-workers must be between 0 and %d", aptpackage.MaxPackWorkers))
 		}
 		cfg.Workers = *workers
 	}
@@ -135,14 +215,12 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 	seenFlags := make(map[string]bool)
 	flags.Visit(func(f *flag.Flag) { seenFlags[f.Name] = true })
 	if seenFlags["yes"] && command != "delete" {
-		fmt.Fprintln(stderr, "tpa: --yes is only valid with delete")
-		return 2
+		return usageError(stderr, "--yes is only valid with delete")
 	}
 	if command != "inspect" && command != "verify" {
 		for _, name := range []string{"json", "keyring", "fingerprint", "require-signed"} {
 			if seenFlags[name] {
-				fmt.Fprintf(stderr, "tpa: -%s is only valid with inspect or verify\n", name)
-				return 2
+				return usageError(stderr, fmt.Sprintf("-%s is only valid with inspect or verify", name))
 			}
 		}
 	}
@@ -151,21 +229,18 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 	case "init":
 		fmt.Fprintf(stdout, "Initializing package '%s' in: %s\n", cfg.Control.Name, cfg.OutDir)
 		if err := aptpackage.InitPackage(cfg); err != nil {
-			fmt.Fprintf(stderr, "initialize package: %v\n", err)
-			return 1
+			return commandFailure(stderr, fmt.Sprintf("initialize package: %v", err))
 		}
 		fmt.Fprintf(stdout, "Package structure for '%s' created.\n", cfg.InDir+"/"+cfg.Control.Name)
 	case "build":
 		if err := aptpackage.Build(cfg); err != nil {
-			fmt.Fprintf(stderr, "build package: %v\n", err)
-			return 1
+			return commandFailure(stderr, fmt.Sprintf("build package: %v", err))
 		}
 		fmt.Fprintln(stdout, "Package successfully created!")
 	case "parse":
 		pkg, err := aptpackage.ParsePackage(cfg.InDir)
 		if err != nil {
-			fmt.Fprintf(stderr, "parse package: %v\n", err)
-			return 1
+			return commandFailure(stderr, fmt.Sprintf("parse package: %v", err))
 		}
 		fmt.Fprintln(stdout, pkg)
 	case "pack":
@@ -176,20 +251,17 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 			err = aptpackage.Pack(cfg)
 		}
 		if err != nil {
-			fmt.Fprintf(stderr, "Build failed: %v\n", err)
-			return 1
+			return commandFailure(stderr, fmt.Sprintf("repository build failed: %v", err))
 		}
 		if *generationManifest != "" {
 			manifestPath, pathErr := filepath.Abs(*generationManifest)
 			rootPath, rootErr := filepath.Abs(cfg.OutDir)
 			if pathErr != nil || rootErr != nil {
-				fmt.Fprintln(stderr, "tpa: resolve generation manifest path failed")
-				return 1
+				return commandFailure(stderr, "resolve generation manifest path failed")
 			}
 			rel, relErr := filepath.Rel(rootPath, manifestPath)
 			if relErr != nil || rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))) {
-				fmt.Fprintln(stderr, "tpa: generation manifest must be outside the repository tree")
-				return 2
+				return usageError(stderr, "generation manifest must be outside the repository tree")
 			}
 			manifest, manifestErr := aptpackage.CreateGenerationManifest(cfg.OutDir, *repositoryID, *generationID, *parentGeneration)
 			if manifestErr == nil {
@@ -199,53 +271,44 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 				manifestErr = aptpackage.WriteGenerationManifest(manifestPath, manifest)
 			}
 			if manifestErr != nil {
-				fmt.Fprintf(stderr, "tpa: create generation manifest: %v\n", manifestErr)
-				return 1
+				return commandFailure(stderr, fmt.Sprintf("create generation manifest: %v", manifestErr))
 			}
 		}
 		fmt.Fprintln(stdout, "Repo build complete!")
 	case "json":
 		data, err := io.ReadAll(stdin)
 		if err != nil {
-			fmt.Fprintf(stderr, "read JSON: %v\n", err)
-			return 1
+			return commandFailure(stderr, fmt.Sprintf("read JSON: %v", err))
 		}
 		if err = json.Unmarshal(data, &cfg); err != nil {
-			fmt.Fprintf(stderr, "parse JSON: %v\n", err)
-			return 2
+			return usageError(stderr, fmt.Sprintf("parse JSON: %v", err))
 		}
 		if *noProvenance {
 			disabled := false
 			cfg.Provenance = &disabled
 		}
 		if err = aptpackage.JSONBuild(cfg); err != nil {
-			fmt.Fprintf(stderr, "build JSON package: %v\n", err)
-			return 1
+			return commandFailure(stderr, fmt.Sprintf("build JSON package: %v", err))
 		}
 	case "inspect", "verify":
 		allowed := map[string]bool{"package": true, "ver": true, "arch": true, "codename": true, "workers": true, "json": true, "keyring": true, "fingerprint": true, "require-signed": true}
 		for name := range seenFlags {
 			if !allowed[name] {
-				fmt.Fprintf(stderr, "tpa: -%s is not valid with %s\n", name, command)
-				return 2
+				return usageError(stderr, fmt.Sprintf("-%s is not valid with %s", name, command))
 			}
 		}
 		positional := flags.Args()
 		if len(positional) != 1 {
-			fmt.Fprintf(stderr, "Usage: tpa %s [options] <repository-path-or-URL>\n", command)
-			return 2
+			return usageError(stderr, fmt.Sprintf("usage: tpa %s [options] <repository-path-or-URL>", command))
 		}
 		if command == "inspect" && (seenFlags["package"] || seenFlags["ver"] || seenFlags["arch"]) && !(seenFlags["package"] && seenFlags["ver"] && seenFlags["arch"]) {
-			fmt.Fprintln(stderr, "tpa: exact inspect lookup requires -package, -ver, and -arch")
-			return 2
+			return usageError(stderr, "exact inspect lookup requires -package, -ver, and -arch")
 		}
 		if command == "verify" && (seenFlags["package"] || seenFlags["ver"] || seenFlags["arch"]) {
-			fmt.Fprintln(stderr, "tpa: verify checks the entire repository; exact package lookup is available with inspect")
-			return 2
+			return usageError(stderr, "verify checks the entire repository; exact package lookup is available with inspect")
 		}
 		if *workers < 0 || *workers > aptpackage.MaxPackWorkers {
-			fmt.Fprintf(stderr, "tpa: -workers must be between 0 and %d\n", aptpackage.MaxPackWorkers)
-			return 2
+			return usageError(stderr, fmt.Sprintf("-workers must be between 0 and %d", aptpackage.MaxPackWorkers))
 		}
 		locator, err := aptpackage.ParseRepositoryLocator(positional[0])
 		if err != nil {
@@ -277,13 +340,14 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 		}
 		if *jsonOutput {
 			if command == "verify" {
-				result := aptpackage.RepositoryVerifyResult{Valid: err == nil, RepositoryReport: report}
+				result := verifyJSONDocument{Valid: err == nil, RepositoryReport: report}
 				if err != nil {
 					result.Error = err.Error()
+					result.SupportEmail = version.SupportEmail
 				}
 				_ = json.NewEncoder(stdout).Encode(result)
 			} else if err != nil {
-				_ = json.NewEncoder(stdout).Encode(map[string]string{"error": err.Error()})
+				_ = json.NewEncoder(stdout).Encode(map[string]string{"error": err.Error(), "supportEmail": version.SupportEmail})
 			} else {
 				_ = json.NewEncoder(stdout).Encode(report)
 			}
@@ -291,7 +355,7 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 			printRepositoryReport(stdout, command, positional[0], report)
 		}
 		if err != nil && !*jsonOutput {
-			fmt.Fprintf(stderr, "tpa: %s repository: %v\n", command, err)
+			return commandFailure(stderr, fmt.Sprintf("%s repository: %v", command, err))
 		}
 		if err != nil {
 			return 1
@@ -300,32 +364,27 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 		fmt.Fprint(stdout, aptpackage.JSONSCHEMA)
 	case "unlist", "delete":
 		if len(flags.Args()) != 0 {
-			fmt.Fprintf(stderr, "tpa: %s does not accept positional arguments\n", command)
-			return 2
+			return usageError(stderr, fmt.Sprintf("%s does not accept positional arguments", command))
 		}
 		for _, name := range []string{"in", "package", "ver", "arch"} {
 			if !seenFlags[name] {
-				fmt.Fprintf(stderr, "tpa: %s requires -%s\n", command, name)
-				return 2
+				return usageError(stderr, fmt.Sprintf("%s requires -%s", command, name))
 			}
 		}
 		identity := aptpackage.PackageIdentity{Package: *packageName, Version: cfg.Control.Version, Architecture: cfg.Control.Architecture}
 		if command == "unlist" {
 			if err := aptpackage.Unlist(cfg, cfg.InDir, identity); err != nil {
-				fmt.Fprintf(stderr, "tpa: unlist package: %v\n", err)
-				return 1
+				return commandFailure(stderr, fmt.Sprintf("unlist package: %v", err))
 			}
 			fmt.Fprintf(stdout, "Unlisted package %s; artifact retained.\n", identity)
 			return 0
 		}
 		if !*yes && !interactive {
-			fmt.Fprintln(stderr, "tpa: delete requires an interactive terminal or --yes")
-			return 1
+			return commandFailure(stderr, "delete requires an interactive terminal or --yes")
 		}
 		target, err := aptpackage.InspectDeleteTarget(cfg, cfg.InDir, identity)
 		if err != nil {
-			fmt.Fprintf(stderr, "tpa: inspect delete target: %v\n", err)
-			return 1
+			return commandFailure(stderr, fmt.Sprintf("inspect delete target: %v", err))
 		}
 		printDeleteSummary(stdout, target)
 		if !*yes {
@@ -345,8 +404,7 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 		}
 		result, err := aptpackage.Delete(cfg, cfg.InDir, identity)
 		if err != nil {
-			fmt.Fprintf(stderr, "tpa: delete package: %v\n", err)
-			return 1
+			return commandFailure(stderr, fmt.Sprintf("delete package: %v", err))
 		}
 		if result.WasListed {
 			fmt.Fprintf(stdout, "Deleted package %s after verified unlisting.\n", identity)
@@ -354,10 +412,12 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 			fmt.Fprintf(stdout, "Deleted unlisted package artifact %s.\n", identity)
 		}
 	case "version":
-		fmt.Fprintln(stdout, aptpackage.TPAVersion)
+		if len(flags.Args()) != 0 || len(seenFlags) != 0 {
+			return usageError(stderr, "version does not accept arguments or flags")
+		}
+		fmt.Fprintln(stdout, version.Version)
 	default:
-		fmt.Fprintf(stderr, "Unknown command: %s\n", command)
-		return 2
+		return unknownCommand(stderr, command)
 	}
 	return 0
 }
@@ -406,12 +466,12 @@ func readLimitedFile(filename string, maximum int64) ([]byte, error) {
 func repositoryCommandError(command string, jsonOutput bool, stdout, stderr io.Writer, err error) int {
 	if jsonOutput {
 		if command == "verify" {
-			_ = json.NewEncoder(stdout).Encode(aptpackage.RepositoryVerifyResult{Valid: false, Error: err.Error()})
+			_ = json.NewEncoder(stdout).Encode(verifyJSONDocument{Valid: false, Error: err.Error(), SupportEmail: version.SupportEmail})
 		} else {
-			_ = json.NewEncoder(stdout).Encode(map[string]string{"error": err.Error()})
+			_ = json.NewEncoder(stdout).Encode(map[string]string{"error": err.Error(), "supportEmail": version.SupportEmail})
 		}
 	} else {
-		fmt.Fprintf(stderr, "tpa: %s repository: %v\n", command, err)
+		fmt.Fprintf(stderr, "error: %s repository: %v\nTPA version: %s\nSupport / bug reports: %s\n", command, err, version.Version, version.SupportEmail)
 	}
 	return 1
 }

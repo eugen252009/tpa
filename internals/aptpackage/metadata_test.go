@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/eugen252009/tpa/internal/version"
 )
 
 func TestExtensibleControlMetadataBuildsRealDeb(t *testing.T) {
@@ -48,7 +50,7 @@ func TestExtensibleControlMetadataBuildsRealDeb(t *testing.T) {
 		"Mema-Schema: 11\n",
 		"Mema-Service: tparun\n",
 		"Future-Totally-Unknown-Field: works\n",
-		"TPA-Version: " + TPAVersion + "\n",
+		"TPA-Version: " + version.Version + "\n",
 	} {
 		if !strings.Contains(text, field) {
 			t.Errorf("control file missing %q:\n%s", field, text)
@@ -200,7 +202,7 @@ func TestGeneratedProvenanceIsInjected(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(control, "TPA-Version: "+TPAVersion+"\n") {
+	if !strings.Contains(control, "TPA-Version: "+version.Version+"\n") {
 		t.Fatalf("missing generated TPA-Version:\n%s", control)
 	}
 	if strings.Contains(control, "Created-With:") {

@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/eugen252009/tpa/internal/version"
 )
 
 type RepositoryLocatorKind string
@@ -249,7 +251,7 @@ func (r *httpRepositoryReader) Open(ctx context.Context, relative string) (io.Re
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "TPA/"+TPAVersion)
+	req.Header.Set("User-Agent", "TPA/"+version.Version)
 	response, err := r.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fetch repository file %s: %w", relative, err)

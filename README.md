@@ -19,14 +19,21 @@ package database or metadata cache.
 - Linux and a filesystem supporting `renameat2(RENAME_EXCHANGE)` for replacing
   an existing repository atomically
 
-Build TPA with:
+Build a development binary with:
 
 ```sh
 go build -o tpa .
+./tpa version  # dev
 ```
 
-Run `tpa` without a command to print the command synopsis and all flags. It
-returns a non-zero status because no command was supplied.
+The authoritative runtime version defaults to `dev`. `build.sh` injects the
+single `TPA_VERSION` value into the host and packaged binaries and uses that
+same value for Debian `Version`; automatic `TPA-Version` provenance and help
+output read the injected runtime value. Set `TPA_VERSION` for release builds.
+
+`tpa --help` and `tpa -h` show the command list and project/support identity;
+`tpa --version` prints `tpa <version>`. Running `tpa` without a command prints
+the same help and returns status 2.
 
 ## CLI contract
 
@@ -44,9 +51,10 @@ returns a non-zero status because no command was supplied.
 | `schema` | None | TypeScript-style configuration interface on standard output |
 | `version` | None | TPA program version on standard output |
 
-The program version command is `tpa version`. It is distinct from
-`tpa -version`, which is not an alias for the version command and is rejected
-as an invalid command.
+`tpa version` prints only the version for scripts. `tpa --version` (also
+`tpa -version`) prints `tpa <version>`. Help identifies the project as
+https://github.com/eugen252009/tpa and lists support / bug reports at
+`tpa@lupricht.net`.
 
 `parse` and repository generation normally read control metadata in process for
 plain, gzip-compressed, and xz-compressed control archives. Unsupported archive

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/eugen252009/tpa/internal/version"
 )
 
 const (
@@ -64,7 +66,6 @@ export interface Repo {
     description: string;
 }
 `
-	TPAVersion = "0.5.0"
 )
 
 type RepoConfig struct {
@@ -251,7 +252,7 @@ func (c Control) Render() (string, error) {
 func (c Control) RenderWithProvenance(now time.Time) (string, error) {
 	metadata := cloneMetadata(c.Metadata)
 	if !hasMetadataField(metadata, "TPA-Version") {
-		metadata["tpaVersion"] = TPAVersion
+		metadata["tpaVersion"] = version.Version
 	}
 	if !hasMetadataField(metadata, "Created-At") {
 		metadata["createdAt"] = now.UTC().Format(time.RFC3339)

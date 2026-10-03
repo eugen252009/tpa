@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/eugen252009/tpa/internal/version"
 	"github.com/eugen252009/tpa/internals/aptpackage"
 )
 
@@ -77,27 +78,41 @@ func TestNoProvenanceFlagDisablesAutomaticMetadata(t *testing.T) {
 }
 
 func TestVersionCommandReturnsProgramVersion(t *testing.T) {
-	const wantVersion = "0.5.0"
-	if aptpackage.TPAVersion != wantVersion {
-		t.Fatalf("program version = %q, want %q", aptpackage.TPAVersion, wantVersion)
-	}
 	var stdout, stderr bytes.Buffer
 	if code := run([]string{"version"}, bytes.NewReader(nil), &stdout, &stderr); code != 0 {
 		t.Fatalf("version exit code = %d, stderr=%q", code, stderr.String())
 	}
-	if got, want := stdout.String(), wantVersion+"\n"; got != want {
+	if got, want := stdout.String(), version.Version+"\n"; got != want {
 		t.Fatalf("version output = %q, want %q", got, want)
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := run([]string{"--version"}, bytes.NewReader(nil), &stdout, &stderr); code != 0 || stdout.String() != "tpa "+version.Version+"\n" {
+		t.Fatalf("--version exit=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := run([]string{"-version"}, bytes.NewReader(nil), &stdout, &stderr); code != 0 || stdout.String() != "tpa "+version.Version+"\n" {
+		t.Fatalf("-version exit=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
 	}
 }
 
-func TestBuildPackageDefaultMatchesProgramVersion(t *testing.T) {
+func TestBuildScriptUsesOneInjectedVersionForBinaryAndPackage(t *testing.T) {
 	script, err := os.ReadFile("build.sh")
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "VERSION=${TPA_VERSION:-" + aptpackage.TPAVersion + "}"
-	if !strings.Contains(string(script), want+"\n") {
-		t.Fatalf("build.sh does not default Debian package version to program version %q", aptpackage.TPAVersion)
+	text := string(script)
+	for _, fragment := range []string{
+		"VERSION=${TPA_VERSION:-0.0.0~dev}",
+		"LDFLAGS=\"-X github.com/eugen252009/tpa/internal/version.Version=$VERSION\"",
+		"go build -ldflags \"$LDFLAGS\" -o tpa .",
+		"go build -ldflags \"$LDFLAGS\" -o \"$work_dir/usr/local/bin/tpa\" .",
+		"-ver=\"$VERSION\"",
+	} {
+		if !strings.Contains(text, fragment) {
+			t.Errorf("build.sh is missing version-coupling fragment %q", fragment)
+		}
 	}
 }
 
@@ -248,10 +263,45 @@ func assertCLILifecycleTreeEqual(t *testing.T, root string, expected map[string]
 	}
 }
 
-func TestVersionFlagIsNotVersionCommand(t *testing.T) {
+func TestHelpNoCommandUnknownCommandAndFlagErrorUX(t *testing.T) {
+	for _, args := range [][]string{{"--help"}, {"-h"}, {"help"}} {
+		var stdout, stderr bytes.Buffer
+		if code := run(args, bytes.NewReader(nil), &stdout, &stderr); code != 0 {
+			t.Fatalf("%v exit=%d stderr=%q", args, code, stderr.String())
+		}
+		text := stdout.String()
+		for _, expected := range []string{version.ProductName + " " + version.Version, version.ProductDescription, version.ProjectURL, version.SupportEmail, "Usage:", "init", "build", "parse", "pack", "inspect", "verify", "unlist", "delete", "json", "schema", "version"} {
+			if !strings.Contains(text, expected) {
+				t.Errorf("%v help is missing %q:\n%s", args, expected, text)
+			}
+		}
+	}
 	var stdout, stderr bytes.Buffer
-	if code := run([]string{"-version"}, bytes.NewReader(nil), &stdout, &stderr); code == 0 {
-		t.Fatalf("-version unexpectedly succeeded as version command: stdout=%q stderr=%q", stdout.String(), stderr.String())
+	if code := run(nil, bytes.NewReader(nil), &stdout, &stderr); code != 2 || !strings.Contains(stdout.String(), version.SupportEmail) {
+		t.Fatalf("no-command exit=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := run([]string{"foobar"}, bytes.NewReader(nil), &stdout, &stderr); code != 2 {
+		t.Fatalf("unknown command exit=%d", code)
+	}
+	for _, expected := range []string{`unknown command "foobar"`, version.Version, version.ProjectURL, version.SupportEmail, "tpa --help"} {
+		if !strings.Contains(stderr.String(), expected) {
+			t.Errorf("unknown command error missing %q: %s", expected, stderr.String())
+		}
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := run([]string{"build", "--definitely-invalid"}, bytes.NewReader(nil), &stdout, &stderr); code != 2 {
+		t.Fatalf("invalid flag exit=%d", code)
+	}
+	for _, expected := range []string{version.Version, version.SupportEmail, "Run 'tpa --help'"} {
+		if !strings.Contains(stderr.String(), expected) {
+			t.Errorf("flag error missing %q: %s", expected, stderr.String())
+		}
+	}
+	if len(stderr.String()) > 500 {
+		t.Fatalf("flag error printed an unexpectedly large help dump: %s", stderr.String())
 	}
 }
 

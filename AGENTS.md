@@ -32,7 +32,7 @@ actual package artifacts.
 | `delete` | Requires terminal `y`/`yes` or explicit `--yes`, unlists if needed, verifies and publishes metadata, then removes the `.deb`. |
 | `json` | Reads configuration from standard input and initializes a package tree; it does not build an archive. |
 | `schema` | Prints the TypeScript-style configuration interface. |
-| `version` | Prints the TPA program version. |
+| `version` | Prints the canonical runtime version; `--version` prints the human-readable identity. |
 
 All successful commands return zero. Invalid invocations and failed operations
 return non-zero and write diagnostics to standard error.
@@ -97,6 +97,7 @@ are normalized into `Config.Scripts`.
 go build -o tpa .
 go test -race ./...
 go vet ./...
+./tests/version-qualification.sh
 ./tests/qualification.sh
 ./tests/dependency-qualification.sh
 ```
@@ -118,9 +119,13 @@ Manual package smoke test:
 
 ## Release Build
 
-`build.sh` uses `TPA_VERSION` when set and otherwise version `1`. It builds a
-static Linux binary for each configured architecture and packages it through
-TPA.
+`internal/version.Version` is the sole runtime/provenance version source and
+defaults to `dev`. `build.sh` injects `TPA_VERSION` (default `0.0.0~dev`,
+validated by dpkg) into its host and target binaries, and uses that same value
+as Debian `Version`. It produces static Linux binaries for the configured
+architectures and packages them through TPA. Run
+`tests/version-qualification.sh` to check package/runtime/provenance/help
+consistency.
 
 ```sh
 ./build.sh
@@ -134,7 +139,6 @@ manpage artifacts.
 - Prefer the Go standard library and explicit error handling.
 - Keep control files readable (`0644`) and maintainer scripts executable
   (`0755`).
-- Run gofmt, race tests, vet, and both qualification scripts after repository
-  format or publication changes.
+- Run gofmt, race tests, vet, and all three qualification scripts after relevant changes.
 - Treat `.deb` archives and APT metadata as externally consumed formats.
 - Do not weaken verification or artifact-derived hashing for performance.

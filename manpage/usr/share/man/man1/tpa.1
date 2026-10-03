@@ -7,6 +7,12 @@ tpa \- build Debian packages and verified APT repository trees
 .RI [ options ]
 .SH DESCRIPTION
 .B tpa
+identifies itself as TPA (Tool for Package Automation). A normal source build
+reports version dev. Official builds inject one Debian-valid TPA_VERSION into
+the CLI and package provenance. General help includes
+https://github.com/eugen252009/tpa and support contact tpa@lupricht.net.
+.PP
+.B tpa
 creates Debian package directory trees, uses
 .BR dpkg-deb (1)
 to build package archives, and derives APT repository metadata from actual .deb
@@ -51,9 +57,13 @@ Read package initialization configuration from standard input.
 Print the TypeScript-style JSON configuration interface.
 .TP
 .B version
-Print the TPA program version. This command is distinct from the invalid
-.B -version
-invocation; the latter is not an alias.
+Print only the TPA program version, suitable for scripts.
+.TP
+.B --version
+Print the human-readable program identity and version. The legacy -version spelling is also accepted.
+.TP
+.B --help
+Print general help, command descriptions, project URL, and support contact. The aliases -h and help are also accepted. Invoking tpa with no command prints the same help and returns a usage status.
 .SH IMPORTANT OPTIONS
 .TP
 .BI -in " path"
