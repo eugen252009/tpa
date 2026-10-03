@@ -15,7 +15,7 @@ package database or metadata cache.
 
 - `dpkg-deb` for package building and fallback inspection of unsupported `.deb` formats
 - `gzip` for compressed package indexes
-- `gpg` when signing repositories
+- `gpg` when signing repositories or verifying `InRelease` signatures
 - Linux and a filesystem supporting `renameat2(RENAME_EXCHANGE)` for replacing
   an existing repository atomically
 
@@ -36,6 +36,8 @@ returns a non-zero status because no command was supplied.
 | `build` | Package root at `-in` | `.deb` archive or destination directory at `-out`, using `dpkg-deb --root-owner-group --build` |
 | `parse` | `.deb` archive at `-in` | Human-readable parsed control summary on standard output |
 | `pack` | Top-level `.deb` files in `-in`, or an optional JSON config path | Verified APT repository at `-out`, `--output`, or `--atomic-publish`; optionally a generation inventory |
+| `inspect` | Local repository path or read-only HTTP(S)/SSH locator | Release metadata and rich package-index entries; optionally exact `-package`, `-ver`, `-arch` lookup |
+| `verify` | Local repository path or read-only HTTP(S)/SSH locator | Verifies Release/index integrity, signatures when present, and every indexed `.deb` artifact |
 | `unlist` | Repository at `-in` and exact `-package`, `-ver`, `-arch` identity | Atomically removes that identity from APT metadata and retains its `.deb` |
 | `delete` | Repository at `-in` and exact `-package`, `-ver`, `-arch` identity | Confirms, unlists if needed, verifies and publishes metadata, then removes the `.deb` |
 | `json` | Configuration JSON on standard input | Initialized package root at JSON `outdir` |
@@ -73,7 +75,9 @@ Repository flags include `-origin`, `-label`, `-suite`, `-codename`, and
 `-components`. Lifecycle commands use `-package`, `-ver`, and `-arch` for the
 canonical package identity and `-in` for the existing repository tree. For a
 non-default distribution or component, set `-codename` and `-components` to
-match that tree. `delete` accepts `--yes` for explicit non-interactive approval;
+match that tree. Read-only `inspect` and `verify` take one repository locator
+positionally and use `-codename` (default `stable`) to select the distribution.
+`delete` accepts `--yes` for explicit non-interactive approval;
 without it, deletion requires a terminal and accepts only `y` or `yes` (case
 insensitive). `-gpg` is required for a signed repository and must select its
 signer. The `pack` command's `-workers` option bounds package inspection,
@@ -87,6 +91,54 @@ output overrides cannot be used together. For hosted prebuilt publication,
 inventory after repository verification; `-parent-generation` binds the expected
 active parent. Use a server-issued repository ID and a fresh 32-character
 lowercase-hex generation ID when publishing to TPA.run.
+
+### Read-only repository inspection and verification
+
+`inspect` and `verify` operate on an existing APT tree without modifying it.
+Locators may be a local directory, `http://` or `https://` URL, or an absolute
+`ssh://[user@]host[:port]/path` URL. A no-scheme host-like locator defaults to
+HTTPS (`example.invalid/apt`). Absolute paths and explicit `./` or `../` paths
+are local. An existing relative directory is also treated as local. HTTP(S)
+redirects are bounded and HTTPS redirects may not downgrade to HTTP. SSH reads
+use the system `ssh` client in batch mode and require a trusted host key; no
+remote command other than reading the requested file is run.
+
+`inspect` reads `Release`/`InRelease` and the plain, gzip, or xz `Packages`
+indexes advertised by Release, checks each index's Release SHA256/size, and returns all Debian control
+fields. It does not download `.deb` files. If `InRelease` exists but no public
+keyring is provided, output explicitly marks its signature as present but
+unverified; a standalone `InRelease` without a corresponding `Release` needs a
+keyring so its payload can be verified and read. Exact lookup requires the
+complete canonical identity:
+
+```sh
+tpa inspect --json -codename=bookworm \\
+  -package=example -ver=1.2.3 -arch=amd64 https://apt.example.invalid
+```
+
+`verify` checks all listed packages, including artifact size, SHA256, and the
+identity inside each `.deb`. An `InRelease` signature is always verified when
+present; `-require-signed` also rejects unsigned repositories. Supply an
+exported **public** OpenPGP keyring with `-keyring`; TPA rejects secret-key
+material. `-fingerprint` optionally pins the full expected signer fingerprint.
+For example:
+
+```sh
+gpg --batch --armor --export "$APT_FINGERPRINT" > apt-public-keys.asc
+tpa verify --json -keyring=apt-public-keys.asc \\
+  -fingerprint="$APT_FINGERPRINT" https://apt.example.invalid
+```
+
+A valid `InRelease` can be verified without trusting the user's ambient GPG
+keyring; only the supplied public key material is imported in an isolated
+temporary keyring. Detached `Release.gpg` signatures are not currently
+supported. `--json` emits one JSON document to standard output; verification
+failures are included in the JSON response and return non-zero. Human output is
+default. Release metadata is bounded to 32 MiB, package indexes to 256 MiB, the
+public key input to 1 MiB, and the report to 100,000 package identities. Each
+verified archive is limited to 16 GiB; concurrent temporary archive storage is
+budgeted to 2 GiB (a larger single archive is processed exclusively). Temporary
+files are removed when the command finishes.
 
 ## Package creation
 

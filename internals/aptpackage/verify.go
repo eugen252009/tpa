@@ -1,7 +1,6 @@
 package aptpackage
 
 import (
-	"bufio"
 	"bytes"
 	"compress/gzip"
 	"encoding/hex"
@@ -10,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
@@ -114,45 +112,8 @@ func verifyRepository(cfg Config) error {
 }
 
 func parseReleaseChecksums(data []byte) (map[string]releaseChecksum, error) {
-	checksums := make(map[string]releaseChecksum)
-	scanner := bufio.NewScanner(bytes.NewReader(data))
-	inSHA256 := false
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "SHA256:" {
-			inSHA256 = true
-			continue
-		}
-		if !inSHA256 {
-			continue
-		}
-		if len(line) == 0 || line[0] != ' ' {
-			inSHA256 = false
-			continue
-		}
-		fields := strings.Fields(line)
-		if len(fields) != 3 {
-			return nil, fmt.Errorf("invalid SHA256 entry %q", line)
-		}
-		if !validSHA256(fields[0]) {
-			return nil, fmt.Errorf("invalid SHA256 digest %q", fields[0])
-		}
-		size, err := strconv.ParseInt(fields[1], 10, 64)
-		if err != nil || size < 0 {
-			return nil, fmt.Errorf("invalid size %q", fields[1])
-		}
-		if _, exists := checksums[fields[2]]; exists {
-			return nil, fmt.Errorf("duplicate SHA256 entry %s", fields[2])
-		}
-		checksums[fields[2]] = releaseChecksum{SHA256: fields[0], Size: size}
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	if len(checksums) == 0 {
-		return nil, fmt.Errorf("Release has no SHA256 entries")
-	}
-	return checksums, nil
+	_, checksums, err := parseRepositoryRelease(data)
+	return checksums, err
 }
 
 func verifyPackageIndex(repoRoot, packagesPath string, workers int) error {
@@ -162,7 +123,8 @@ func verifyPackageIndex(repoRoot, packagesPath string, workers int) error {
 		indexParseStage()
 		return err
 	}
-	paragraphs, err := parseControlParagraphs(data)
+	architecture := strings.TrimPrefix(filepath.Base(filepath.Dir(packagesPath)), "binary-")
+	entries, err := parseRepositoryPackages(data, architecture)
 	indexParseStage()
 	if err != nil {
 		return err
@@ -171,72 +133,19 @@ func verifyPackageIndex(repoRoot, packagesPath string, workers int) error {
 		return fmt.Errorf("Packages.gz does not match Packages: %w", err)
 	}
 	artifactStage := startStage(stageVerifyArtifacts)
-	err = runPackageJobs(len(paragraphs), workers, func(index int) error {
-		fields := paragraphs[index]
-		filename := fields["filename"]
-		sizeValue := fields["size"]
-		hash := fields["sha256"]
-		if filename == "" || sizeValue == "" || hash == "" {
-			return fmt.Errorf("entry %d is missing Filename, Size, or SHA256", index+1)
-		}
-		if !strings.HasPrefix(filename, "pool/") {
-			return fmt.Errorf("entry %d has non-pool Filename %q", index+1, filename)
-		}
-		size, err := strconv.ParseInt(sizeValue, 10, 64)
-		if err != nil || size < 0 {
-			return fmt.Errorf("entry %d has invalid Size %q", index+1, sizeValue)
-		}
-		if !validSHA256(hash) {
-			return fmt.Errorf("entry %d has invalid SHA256 %q", index+1, hash)
-		}
-		artifactPath, err := safeRepositoryPath(repoRoot, filename)
+	err = runPackageJobs(len(entries), workers, func(index int) error {
+		entry := entries[index]
+		artifactPath, err := safeRepositoryPath(repoRoot, entry.Filename)
 		if err != nil {
 			return fmt.Errorf("entry %d has invalid Filename: %w", index+1, err)
 		}
-		if err := verifyFile(artifactPath, size, hash); err != nil {
-			return fmt.Errorf("entry %d artifact %s: %w", index+1, filename, err)
+		if err := verifyFile(artifactPath, entry.Size, entry.SHA256); err != nil {
+			return fmt.Errorf("entry %d artifact %s: %w", index+1, entry.Filename, err)
 		}
 		return nil
 	})
 	artifactStage()
 	return err
-}
-
-func parseControlParagraphs(data []byte) ([]map[string]string, error) {
-	scanner := bufio.NewScanner(bytes.NewReader(data))
-	scanner.Buffer(make([]byte, 64*1024), 16*1024*1024)
-	paragraphs := make([]map[string]string, 0)
-	fields := make(map[string]string)
-	flush := func() {
-		if len(fields) != 0 {
-			paragraphs = append(paragraphs, fields)
-			fields = make(map[string]string)
-		}
-	}
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			flush()
-			continue
-		}
-		if line[0] == ' ' || line[0] == '\t' {
-			continue
-		}
-		colon := strings.IndexByte(line, ':')
-		if colon <= 0 {
-			return nil, fmt.Errorf("invalid field %q", line)
-		}
-		name := strings.ToLower(line[:colon])
-		if _, duplicate := fields[name]; duplicate {
-			return nil, fmt.Errorf("duplicate field %s", line[:colon])
-		}
-		fields[name] = strings.TrimSpace(line[colon+1:])
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	flush()
-	return paragraphs, nil
 }
 
 func verifyPackagesCompression(packagesPath string) error {

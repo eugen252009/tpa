@@ -29,6 +29,12 @@ formats fall back to dpkg-deb; malformed supported archives are rejected.
 .B pack
 Generate and verify Packages, Packages.gz, Release, and optionally InRelease.
 .TP
+.B inspect
+Read repository Release metadata and Packages indexes from a local path or read-only HTTP(S)/SSH locator. Supports human or JSON output and exact package identity lookup.
+.TP
+.B verify
+Verify repository Release/index checksums, optional InRelease signature, and each indexed .deb artifact's size, digest, and package identity.
+.TP
 .B unlist
 Remove one exact package identity from its Packages index, regenerate and
 verify repository metadata, and atomically publish the result. The .deb remains
@@ -74,6 +80,21 @@ Exact package version for unlist or delete.
 .BI -arch " architecture"
 Exact package architecture for unlist or delete; required even when the same
 Package and Version exist for other architectures.
+.TP
+.BI -keyring " path"
+For inspect/verify, provide an exported public OpenPGP keyring for InRelease verification. Secret-key material is rejected.
+.TP
+.BI -fingerprint " fingerprint"
+For inspect/verify, require the specified full signer fingerprint.
+.TP
+.B --require-signed
+For inspect/verify, require and cryptographically verify a signed InRelease.
+.TP
+.B --json
+For inspect/verify, emit one JSON document to standard output; errors remain machine-readable and return non-zero.
+.TP
+.BI -codename " name"
+Select the distribution under dists/ for inspect/verify; default is stable.
 .TP
 .B --yes
 For delete only, explicitly approve permanent deletion in non-interactive use.
@@ -168,6 +189,17 @@ The input artifact directory is the desired repository snapshot. An artifact inc
 a fresh input snapshot is included in the generated repository; an omitted artifact is
 absent. Historical versions remain available only while their .deb artifacts remain in
 that input set. Use a new or empty direct output path for exact snapshot generation.
+.SH READ-ONLY INSPECTION AND VERIFICATION
+.B inspect
+and
+.B verify
+take one positional repository locator. Local directories, HTTP(S) URLs, and absolute ssh:// URLs are supported; a no-scheme host-like locator defaults to HTTPS. Existing relative directories and explicit ./ or ../ paths are local. HTTPS redirects cannot downgrade to HTTP. SSH reads use the system ssh client in batch mode with host-key checking enabled and only cat the requested repository file.
+.PP
+.B inspect
+checks Release-declared plain, gzip, or xz Packages index sizes and SHA256 values and reports every Debian control field. It does not fetch .deb archives. A present InRelease signature is reported as unverified unless -keyring is supplied. Exact lookup requires -package, -ver, and -arch together.
+.PP
+.B verify
+checks all listed package artifacts, including indexed size, SHA256, and the package identity parsed from each .deb. A present InRelease must verify against supplied public keys; -require-signed also rejects unsigned repositories. -fingerprint optionally pins the signer. Detached Release.gpg signatures are unsupported. Release files are limited to 32 MiB, indexes to 256 MiB, keyrings to 1 MiB, and reports to 100,000 package identities. Each .deb is limited to 16 GiB; concurrent temporary archive storage is budgeted to 2 GiB, with a larger single archive processed exclusively. Temporary files are removed after verification.
 .SH PACKAGE LIFECYCLE
 .B unlist
 removes exactly one Package+Version+Architecture identity from the selected

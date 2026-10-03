@@ -26,6 +26,8 @@ actual package artifacts.
 | `build` | Validates `DEBIAN/control`, fixes present maintainer-script modes, and invokes `dpkg-deb --root-owner-group --build`. |
 | `parse` | Reads plain, gzip, and xz control archives in-process; typed unsupported formats fall back to `dpkg-deb -f`, while malformed supported inputs fail directly. |
 | `pack` | Derives and verifies an APT repository from top-level `.deb` files. |
+| `inspect` | Reads local, HTTP(S), or SSH repository metadata/indexes without mutation; supports JSON and exact identity lookup. |
+| `verify` | Verifies Release/index hashes, public-key InRelease signatures, artifact bytes, and package identity. |
 | `unlist` | Removes one exact `Package + Version + Architecture` identity from APT metadata, verifies and atomically publishes metadata, and retains the `.deb`. |
 | `delete` | Requires terminal `y`/`yes` or explicit `--yes`, unlists if needed, verifies and publishes metadata, then removes the `.deb`. |
 | `json` | Reads configuration from standard input and initializes a package tree; it does not build an archive. |
@@ -46,6 +48,9 @@ return non-zero and write diagnostics to standard error.
 - Package files are checked against `Packages`; indexes and `Packages.gz`
   correspondence are checked against `Release`; signed payload and expected
   signer are checked for `InRelease`.
+- `inspect` and `verify` share bounded repository readers and strict Release/Packages
+  parsing across local, HTTP(S), and SSH sources. They are read-only; signatures
+  are cryptographically verified only against explicitly supplied public keys.
 - `unlist` and `delete` target exactly `Package + Version + Architecture`.
   Metadata is verified and atomically published before artifact removal; a
   cancelled or failed pre-publication delete leaves the repository unchanged.
