@@ -82,12 +82,13 @@ command internally builds multiple packages concurrently.
 Correctness and qualification: `Packages` and `Packages.gz` matched across the
 worker sweep; the 10,004-path signed manifest verified; signed APT update and
 package download, signed install/upgrade/downgrade, and dependency resolution
-passed. The unsigned repository correctly contains 10,003 files because it has
-no `InRelease`; `bench/validate-results.sh` nevertheless expects 10,004 paths
-for that unsigned inventory and exits nonzero at that final assertion. The
-unsigned inventory was independently checked as 10,003 unique paths matching
-the repository. The validator and benchmark results were not changed to conceal
-this mismatch.
+passed. The unsigned manifest-scale repository has 10,003 files: 10,000 package
+artifacts, `Release`, `Packages`, and `Packages.gz`, with no `InRelease` or
+`Release.gpg`. The validator now derives its expected count from those emitted
+files and separately requires signed repository checks to contain a verifiable
+`InRelease`. The original post-Phase-B run's hard-coded count failure is
+historical; its retained evidence is unchanged. The corrected full validator
+passed against an isolated copy of that comparison result set.
 
 ## Reproducing measurements safely
 

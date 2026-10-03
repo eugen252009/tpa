@@ -65,11 +65,12 @@ All 15 signed Pack trials read 10,000 packages directly with zero metadata
 fallbacks. `Packages` and `Packages.gz` matched across worker counts. The
 10,004-path signed manifest, signature/index checks, APT download, install,
 upgrade/downgrade, and dependency qualification passed. The unsigned repository
-has 10,003 files (no `InRelease`); `bench/validate-results.sh` expects 10,004
-paths for its unsigned-manifest assertion and exits nonzero there. The unsigned
-inventory was independently confirmed to contain 10,003 unique paths matching
-the repository. This validator mismatch is disclosed, not hidden or represented
-as a passing check.
+has 10,003 files (no `InRelease`); the original post-Phase-B validator run
+incorrectly expected 10,004 paths and failed at that final assertion. The
+validator now derives the unsigned count from package files and required
+metadata, and separately verifies signed `InRelease` files. Re-running it
+against an isolated copy of the retained post-Phase-B comparison results passed;
+the original run artifacts were not changed.
 
 No source optimization, documentation change, deployment, publication, or push
 was part of the measurement run. Do not compare these results directly with

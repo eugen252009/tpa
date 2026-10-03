@@ -348,10 +348,10 @@ precise optimum is established.
 These figures are workload- and environment-specific. Full methodology,
 validation status, caveats, and raw evidence locations are in
 [`bench/REPORT.md`](bench/REPORT.md) and [`bench/README.md`](bench/README.md).
-The unsigned manifest validator currently expects 10,004 paths where a valid
-unsigned repository has 10,003 files (no `InRelease`); this one assertion fails,
-while the inventory was independently verified against the repository. Signed
-manifest validation and APT/signature/install/dependency qualifications passed.
+The corrected validator distinguishes the unsigned manifest-scale fixture
+from signed repository checks: the unsigned inventory has no signing artifact,
+while signed cases require and verify `InRelease`. The complete recheck passed
+against an isolated copy of the retained comparison results.
 
 ## Optional future work
 
