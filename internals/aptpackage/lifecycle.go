@@ -569,6 +569,9 @@ func publishUnlistedCandidate(root string, cfg Config, identity PackageIdentity,
 	if err := rewriteLifecycleRelease(cfg, staging); err != nil {
 		return lifecycleArtifact{}, err
 	}
+	if err := writeRepositoryBrowserFiles(staging, cfg.Repo); err != nil {
+		return lifecycleArtifact{}, err
+	}
 	if err := signLifecycleCandidate(cfg, staging, codename); err != nil {
 		return lifecycleArtifact{}, err
 	}

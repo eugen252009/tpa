@@ -2,6 +2,7 @@ package aptpackage
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -167,6 +168,13 @@ func TestUnlistLastPackageLeavesValidEmptyIndexAndRetainsArtifact(t *testing.T) 
 	if len(data) != 0 {
 		t.Fatalf("last identity remains in Packages: %q", data)
 	}
+	browserData, err := os.ReadFile(filepath.Join(repository, "repository.json"))
+	if err != nil {
+		t.Fatalf("read updated root package index: %v", err)
+	}
+	if !strings.Contains(string(browserData), `"packages": []`) {
+		t.Fatalf("root package index still lists the unlisted package: %s", browserData)
+	}
 	cfg.OutDir = repository
 	if err := verifyRepository(cfg); err != nil {
 		t.Fatalf("empty but valid index failed repository verification: %v", err)
@@ -275,6 +283,19 @@ func TestDeleteListedPackageUnlistsThenRemovesArtifact(t *testing.T) {
 	_, stanzas := readLifecycleIndex(t, repository, "amd64")
 	if containsLifecycleIdentity(stanzas, target) {
 		t.Fatal("deleted package remains listed")
+	}
+	browserData, err := os.ReadFile(filepath.Join(repository, "repository.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var browser repositoryBrowserIndex
+	if err := json.Unmarshal(browserData, &browser); err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range browser.Packages {
+		if entry.Metadata["Package"] == target.Package && entry.Metadata["Version"] == target.Version && entry.Metadata["Architecture"] == target.Architecture {
+			t.Fatal("deleted package remains in repository.json")
+		}
 	}
 	cfg.OutDir = repository
 	if err := verifyRepository(cfg); err != nil {

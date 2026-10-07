@@ -219,24 +219,23 @@ func buildRepository(cfg Config) error {
 	if err := closeRelease(); err != nil {
 		return fmt.Errorf("close Release: %w", err)
 	}
-	if cfg.GPG == "" {
-		return nil
-	}
-	keyLookupStage := startStage(stageSignKeyLookup)
-	fingerprint, err := signingFingerprint(cfg.GPG)
-	keyLookupStage()
-	if err != nil {
-		return err
-	}
-	inRelease := filepath.Join(distDir, "InRelease")
-	cmd := exec.Command("gpg", "--batch", "--yes", "--clearsign", "-u", fingerprint, "-o", inRelease, releasePath)
-	signStage := startStage(stageSignCommand)
-	if output, err := cmd.CombinedOutput(); err != nil {
+	if cfg.GPG != "" {
+		keyLookupStage := startStage(stageSignKeyLookup)
+		fingerprint, err := signingFingerprint(cfg.GPG)
+		keyLookupStage()
+		if err != nil {
+			return err
+		}
+		inRelease := filepath.Join(distDir, "InRelease")
+		cmd := exec.Command("gpg", "--batch", "--yes", "--clearsign", "-u", fingerprint, "-o", inRelease, releasePath)
+		signStage := startStage(stageSignCommand)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			signStage()
+			return fmt.Errorf("sign Release: %w: %s", err, strings.TrimSpace(string(output)))
+		}
 		signStage()
-		return fmt.Errorf("sign Release: %w: %s", err, strings.TrimSpace(string(output)))
 	}
-	signStage()
-	return nil
+	return writeRepositoryBrowserFiles(cfg.OutDir, cfg.Repo)
 }
 
 // repositoryControlStanza preserves the control metadata emitted by dpkg-deb

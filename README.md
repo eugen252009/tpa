@@ -239,12 +239,27 @@ For the default codename and component, output has this form:
 
 ```text
 repo/
+├── index.html                             # generic browser for the repository
+├── repository.json                        # machine-readable package metadata
 ├── dists/stable/Release
 ├── dists/stable/InRelease                 # only when signed
 ├── dists/stable/main/binary-<arch>/Packages
 ├── dists/stable/main/binary-<arch>/Packages.gz
 └── pool/main/<initial>/<package>/<original-archive-name>.deb
 ```
+
+Opening the repository root in a browser serves a static package listing.
+The static page and JSON inventory work under an arbitrary repository URL,
+including paths such as `https://tpa.run/r/tparun/bootstrap/`; package links are
+repository-relative. `repository.json` has `format: "tpa-repository-index"`,
+`version: 1`, and a `packages` array sorted lexically by Package, Version,
+Architecture, then artifact Filename. Each entry has a `metadata` object
+preserving Debian control fields (including unknown/custom
+fields) and an `artifact` object with `filename`, numeric `size`, and `sha256`.
+The browser renders all metadata without requiring JavaScript. Lifecycle
+`unlist` operations regenerate both views from the updated APT indexes. These
+root-level browsing files are convenience sidecars; APT's signed `Release`
+metadata continues to cover the APT indexes as before.
 
 `-out` and `--output` select direct, non-atomic output. Use a new or empty path
 when the result must be an exact snapshot. Direct output remains useful for
