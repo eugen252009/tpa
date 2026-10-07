@@ -76,6 +76,57 @@ func TestInspectAndVerifyRepositoryLocalAndHTTP(t *testing.T) {
 	}
 }
 
+func TestInspectAndVerifyUnsignedRepositoryOverSSH(t *testing.T) {
+	root := t.TempDir()
+	input := filepath.Join(root, "packages")
+	buildTestDeb(t, input, "ssh-fixture_1_all.deb", basicControl("ssh-fixture", "1", "all"), "ssh")
+	repo := filepath.Join(root, "repo")
+	if err := Pack(Config{InDir: input, OutDir: repo}); err != nil {
+		t.Fatal(err)
+	}
+	bin := filepath.Join(root, "bin")
+	if err := os.Mkdir(bin, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	fakeSSH := filepath.Join(bin, "ssh")
+	script := `#!/bin/sh
+set -eu
+last=
+for arg do last=$arg; done
+case "$last" in
+  "LC_ALL=C cat -- "*) eval "$last" ;;
+  *) echo "unexpected SSH command: $last" >&2; exit 2 ;;
+esac
+`
+	if err := os.WriteFile(fakeSSH, []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	locator, err := ParseRepositoryLocator("ssh://reader@example.invalid" + filepath.ToSlash(repo))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader, err := OpenRepositoryReader(locator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+	inspected, err := InspectRepository(context.Background(), reader, RepositoryOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inspected.PackageCount != 1 {
+		t.Fatalf("SSH inspect package count=%d", inspected.PackageCount)
+	}
+	verified, err := VerifyRepository(context.Background(), reader, RepositoryOptions{Workers: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if verified.PackageCount != 1 {
+		t.Fatalf("SSH verify package count=%d", verified.PackageCount)
+	}
+}
+
 func TestInspectSupportsXZOnlyPackageIndexes(t *testing.T) {
 	root := t.TempDir()
 	input := filepath.Join(root, "packages")

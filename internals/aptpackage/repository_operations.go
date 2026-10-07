@@ -153,7 +153,7 @@ func readRepository(ctx context.Context, reader RepositoryReader, options Reposi
 			return RepositoryReport{}, fmt.Errorf("repository has only InRelease; supply --keyring to inspect its signed payload")
 		}
 	} else {
-		if _, err := reader.Open(ctx, path.Join(dist, "Release.gpg")); err == nil {
+		if _, err := readRepositoryFile(ctx, reader, path.Join(dist, "Release.gpg"), maxRepositorySignatureSize); err == nil {
 			return RepositoryReport{}, fmt.Errorf("detached Release.gpg signatures are not supported; use InRelease")
 		} else if !isRepositoryNotFound(err) {
 			return RepositoryReport{}, fmt.Errorf("inspect Release.gpg: %w", err)
