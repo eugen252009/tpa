@@ -447,6 +447,29 @@ installed package. The dependency qualification proves that relationship
 metadata survives repository generation and APT resolves both direct and
 transitive dependencies automatically.
 
+## CI package qualification and production boundary
+
+GitHub Actions in [`.github/workflows/build-deb.yml`](.github/workflows/build-deb.yml)
+runs tests and qualification for pull requests and pushes to `main`, then calls
+`./build.sh` to build amd64, arm64, and riscv64 packages. It verifies package
+metadata, native runtime/version output, checksums, and a disposable local
+repository before uploading only the `.deb` files and `SHA256SUMS.txt` as a
+workflow artifact. The temporary repository and qualification signing keys are
+removed; neither is uploaded.
+
+Ordinary runs use a non-release `0.0.0~ci.<run-number>` version. A manual run
+may supply an explicit Debian version, but that still creates only a
+versioned CI artifact: the workflow does not create tags or authorize a
+release. GitHub Actions has read-only repository permissions and no production
+credentials, production signing key, or VServer access.
+
+Production publication remains exclusively with the trusted VServer runner. It
+clones the canonical source, independently runs the same `./build.sh` entry
+point and qualification scripts, creates or updates the actual managed
+repository, signs with the authorized production key, and updates tpa.run. CI
+success and CI artifacts do not publish to or mutate that repository and do
+not authorize publication.
+
 ## 10,000-package benchmark snapshot
 
 The authoritative post-Phase-B measurements were collected on the exact

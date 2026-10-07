@@ -19,7 +19,7 @@ import (
 	"github.com/ulikunitz/xz"
 )
 
-func TestInspectAndVerifyRepositoryLocalAndHTTP(t *testing.T) {
+func TestInspectAndVerifyRepositoryLocalHTTPAndHTTPS(t *testing.T) {
 	root := t.TempDir()
 	input := filepath.Join(root, "packages")
 	buildTestDeb(t, input, "inspect-fixture_1.2_all.deb", basicControl("inspect-fixture", "1.2", "all")+"Depends: base-package\n", "inspect")
@@ -64,6 +64,32 @@ func TestInspectAndVerifyRepositoryLocalAndHTTP(t *testing.T) {
 	}
 	defer httpReader.Close()
 	if _, err := VerifyRepository(context.Background(), httpReader, RepositoryOptions{Codename: "bookworm", Workers: 2}); err != nil {
+		t.Fatal(err)
+	}
+
+	httpsServer := httptest.NewTLSServer(http.FileServer(http.Dir(repo)))
+	defer httpsServer.Close()
+	httpsLocator, err := ParseRepositoryLocator(httpsServer.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	httpsReader, err := OpenRepositoryReader(httpsLocator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Trust only this httptest server's ephemeral certificate while retaining
+	// the production reader's timeout and HTTPS downgrade policy.
+	httpsHTTPReader, ok := httpsReader.(*httpRepositoryReader)
+	if !ok {
+		t.Fatalf("HTTPS reader has type %T", httpsReader)
+	}
+	httpsHTTPReader.client.Transport = httpsServer.Client().Transport
+	defer httpsReader.Close()
+	httpsReport, err := InspectRepository(context.Background(), httpsReader, RepositoryOptions{Codename: "bookworm"})
+	if err != nil || httpsReport.PackageCount != 1 {
+		t.Fatalf("HTTPS inspect report=%+v error=%v", httpsReport, err)
+	}
+	if _, err := VerifyRepository(context.Background(), httpsReader, RepositoryOptions{Codename: "bookworm", Workers: 2}); err != nil {
 		t.Fatal(err)
 	}
 

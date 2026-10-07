@@ -1,0 +1,122 @@
+name: Build and qualify Debian packages
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Optional Debian version; omitted runs a non-release qualification build
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-deb:
+    name: Test and build TPA packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.3'
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Check local qualification tools
+        run: |
+          set -euo pipefail
+          for tool in docker gpg dpkg dpkg-deb gzip python3 sha256sum; do
+            command -v "$tool" >/dev/null || { echo "missing required tool: $tool" >&2; exit 1; }
+          done
+          docker info >/dev/null
+
+      - name: Select package version
+        id: version
+        shell: bash
+        env:
+          VERSION_INPUT: ${{ github.event.inputs.version || '' }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch && -n "$VERSION_INPUT" ]]; then
+            version="$VERSION_INPUT"
+            kind=explicit-versioned-not-release
+            description='explicitly versioned build; not a release'
+          else
+            version="0.0.0~ci.${GITHUB_RUN_NUMBER}"
+            kind=qualification
+            description='non-release qualification build'
+          fi
+          if ! dpkg --validate-version "$version" >/dev/null 2>&1; then
+            echo "invalid Debian version: $version" >&2
+            exit 1
+          fi
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+          printf 'kind=%s\n' "$kind" >> "$GITHUB_OUTPUT"
+          {
+            printf '### TPA package build\n\n'
+            printf -- '- Type: %s\n' "$description"
+            printf -- '- Debian version: `%s`\n' "$version"
+            printf -- '- Source commit: `%s`\n' "$GITHUB_SHA"
+            printf -- '- Publication: none; artifacts are for qualification/inspection only.\n'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Test
+        run: go test ./...
+
+      - name: Race test
+        run: go test -race ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Check patch whitespace
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "$BASE_SHA" && "$BASE_SHA" != 0000000000000000000000000000000000000000 ]]; then
+            git diff --check "$BASE_SHA"...HEAD
+          else
+            git diff --check HEAD^ HEAD
+          fi
+
+      - name: Version qualification
+        run: ./tests/version-qualification.sh
+
+      - name: Signed repository and lifecycle qualification
+        run: ./tests/qualification.sh
+
+      - name: Dependency qualification
+        run: ./tests/dependency-qualification.sh
+
+      - name: Build all supported Debian architectures
+        env:
+          TPA_VERSION: ${{ steps.version.outputs.version }}
+        run: ./build.sh
+
+      - name: Verify packages, checksums, and disposable repository
+        env:
+          TPA_VERSION: ${{ steps.version.outputs.version }}
+        run: ./tests/verify-deb-artifacts.sh "$TPA_VERSION" dist "$RUNNER_TEMP/tpa-deb-artifacts"
+
+      - name: Upload qualified Debian packages
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tpa-deb-${{ steps.version.outputs.kind }}-${{ github.run_number }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/tpa-deb-artifacts/
+          if-no-files-found: error
+          retention-days: 14
