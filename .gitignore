@@ -3,3 +3,9 @@
 dist
 # CocoIndex Code (ccc)
 /.cocoindex_code/
+
+# Generated benchmark inputs and local run evidence; keep harnesses/reports tracked.
+/bench/corpus/
+/bench/final-qualification/
+/bench/*-results/
+/bench/results/
