@@ -35,6 +35,7 @@ var publicCommands = []commandDescription{
 	{"pack", "Build an APT repository"},
 	{"inspect", "Inspect an existing repository"},
 	{"capabilities", "Print machine-readable TPA capabilities"},
+	{"completion", "Print shell completion for bash, zsh, or fish"},
 	{"verify", "Verify an existing repository"},
 	{"unlist", "Remove a package from repository metadata"},
 	{"delete", "Unlist and permanently remove a package artifact"},
@@ -210,6 +211,15 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 	command := args[0]
 	if !isPublicCommand(command) {
 		return unknownCommand(stderr, command)
+	}
+	if command == "completion" {
+		if len(args) != 2 || (args[1] != "bash" && args[1] != "zsh" && args[1] != "fish") {
+			return usageError(stderr, "usage: tpa completion bash|zsh|fish")
+		}
+		if err := writeCompletion(stdout, args[1]); err != nil {
+			return commandFailure(stderr, fmt.Sprintf("write completion: %v", err))
+		}
+		return 0
 	}
 	if command == "capabilities" {
 		if len(args) != 1 {

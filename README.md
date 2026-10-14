@@ -36,6 +36,35 @@ output read the injected runtime value. Set `TPA_VERSION` for release builds.
 `tpa --version` prints `tpa <version>`. Running `tpa` without a command prints
 the same help and returns status 2.
 
+## Shell completion
+
+Debian packages built by `build.sh` automatically install completion for Bash,
+Zsh, and Fish. No user profiles are modified. Open a new shell after installing
+or upgrading, then use Tab to complete commands, command-specific options,
+local paths, and common values such as architectures.
+
+Bash needs the `bash-completion` framework, which the package recommends and
+APT installs by default. If you install with `--no-install-recommends`, install
+`bash-completion` separately. Zsh needs its normal completion system enabled
+(`compinit`); Fish loads vendor completions automatically. Completion does not
+query remote repositories or run package operations.
+
+For standalone binaries, generate a script with `tpa completion bash`,
+`tpa completion zsh`, or `tpa completion fish`. For example, in Bash:
+
+```sh
+mkdir -p ~/.local/share/bash-completion/completions
+tpa completion bash > ~/.local/share/bash-completion/completions/tpa
+```
+
+The packaged files are:
+
+```text
+/usr/share/bash-completion/completions/tpa
+/usr/share/zsh/vendor-completions/_tpa
+/usr/share/fish/vendor_completions.d/tpa.fish
+```
+
 ## CLI contract
 
 | Command | Input | Output |
@@ -53,6 +82,7 @@ the same help and returns status 2.
 | `schema` | None | TypeScript-style configuration interface on standard output |
 | `version` | None | TPA program version on standard output |
 | `capabilities` | None | Versioned machine-readable capability and repository-format contract |
+| `completion` | `bash`, `zsh`, or `fish` | Shell completion script on standard output |
 
 `tpa version` prints only the version for scripts. `tpa --version` (also
 `tpa -version`) prints `tpa <version>`. Help identifies the project as

@@ -29,7 +29,7 @@ for arch in $ARCHS; do
     mkdir -p "$work_dir/usr/local/bin"
 
     ./tpa init \
-        -name=tpa -ver="$VERSION" -depends="$DEPENDS" \
+        -name=tpa -ver="$VERSION" -depends="$DEPENDS" -recommends=bash-completion \
         -desc="$DESC" -homepage="$HOMEPAGE" -maintainer="$MAINTAINER" \
         -section="$SECTION" -out="$work_dir" -arch="$arch"
     # TPA init creates empty compatibility scripts; the package needs none.
@@ -43,6 +43,17 @@ for arch in $ARCHS; do
         gzip -cn manpage/usr/share/man/man1/tpa.1 >"$work_dir/usr/share/man/man1/tpa.1.gz"
         chmod 0644 "$work_dir/usr/share/man/man1/tpa.1.gz"
     fi
+    # Vendor paths are discovered by each shell; no profile edits or postinst
+    # shell execution are needed. Generate with the host binary for all targets.
+    mkdir -p "$work_dir/usr/share/bash-completion/completions" \
+        "$work_dir/usr/share/zsh/vendor-completions" \
+        "$work_dir/usr/share/fish/vendor_completions.d"
+    ./tpa completion bash >"$work_dir/usr/share/bash-completion/completions/tpa"
+    ./tpa completion zsh >"$work_dir/usr/share/zsh/vendor-completions/_tpa"
+    ./tpa completion fish >"$work_dir/usr/share/fish/vendor_completions.d/tpa.fish"
+    chmod 0644 "$work_dir/usr/share/bash-completion/completions/tpa" \
+        "$work_dir/usr/share/zsh/vendor-completions/_tpa" \
+        "$work_dir/usr/share/fish/vendor_completions.d/tpa.fish"
     ./tpa build -in="$work_dir" -out="dist/tpa-$arch.deb"
     rm -rf "$work_dir"
 done

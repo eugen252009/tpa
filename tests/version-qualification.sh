@@ -37,11 +37,21 @@ for arch in amd64 arm64 riscv64; do
     test "$provenance_version" = "$VERSION"
     test "$maintainer" = 'TPA Project <tpa@lupricht.net>'
     test "$homepage" = 'https://github.com/eugen252009/tpa'
+    test "$(dpkg-deb -f "$deb" Recommends)" = bash-completion
     printf '%s: Debian Version=%s TPA-Version=%s\n' "$arch" "$package_version" "$provenance_version"
+    extracted="$TMP/extracted-$arch"
+    mkdir -p "$extracted"
+    dpkg-deb -x "$deb" "$extracted"
+    for completion in usr/share/bash-completion/completions/tpa \
+        usr/share/zsh/vendor-completions/_tpa \
+        usr/share/fish/vendor_completions.d/tpa.fish; do
+        test -s "$extracted/$completion"
+        test "$(stat -c '%a' "$extracted/$completion")" = 644
+        if [ "$arch" != amd64 ]; then
+            cmp "$TMP/extracted-amd64/$completion" "$extracted/$completion"
+        fi
+    done
     if [ "$arch" = "$HOST_ARCH" ]; then
-        extracted="$TMP/extracted-$arch"
-        mkdir -p "$extracted"
-        dpkg-deb -x "$deb" "$extracted"
         binary="$extracted/usr/local/bin/tpa"
         test "$("$binary" version)" = "$VERSION"
         test "$("$binary" --version)" = "tpa $VERSION"
@@ -49,6 +59,15 @@ for arch in amd64 arm64 riscv64; do
         printf '%s\n' "$help" | grep -Fqx "TPA $VERSION - Tool for Package Automation"
         printf '%s\n' "$help" | grep -Fq 'https://github.com/eugen252009/tpa'
         printf '%s\n' "$help" | grep -Fq 'tpa@lupricht.net'
-        echo "runtime/help surfaces match package version for $arch"
+        for shell in bash zsh fish; do
+            case "$shell" in
+                bash) completion=usr/share/bash-completion/completions/tpa ;;
+                zsh) completion=usr/share/zsh/vendor-completions/_tpa ;;
+                fish) completion=usr/share/fish/vendor_completions.d/tpa.fish ;;
+            esac
+            "$binary" completion "$shell" > "$TMP/generated-$shell"
+            cmp "$TMP/generated-$shell" "$extracted/$completion"
+        done
+        echo "runtime/help/completion surfaces match package version for $arch"
     fi
 done

@@ -79,11 +79,31 @@ Print only the TPA program version, suitable for scripts.
 Print the versioned JSON capability and repository-format contract for
 machine consumers.
 .TP
+.B completion bash|zsh|fish
+Print a shell completion script to standard output. Unsupported shells or
+extra arguments return a usage error.
+.TP
 .B --version
 Print the human-readable program identity and version. The legacy -version spelling is also accepted.
 .TP
 .B --help
 Print general help, command descriptions, project URL, and support contact. The aliases -h and help are also accepted. Invoking tpa with no command prints the same help and returns a usage status.
+.SH SHELL COMPLETION
+Debian packages install Bash, Zsh, and Fish completion files automatically in
+/usr/share/bash-completion/completions/tpa,
+/usr/share/zsh/vendor-completions/_tpa, and
+/usr/share/fish/vendor_completions.d/tpa.fish.
+No shell profiles are modified. Open a new shell after installation or upgrade.
+.PP
+Bash requires the recommended bash-completion package, normally installed by
+APT. When using --no-install-recommends, install bash-completion separately.
+Zsh requires its normal completion system (compinit) to be enabled.
+Fish discovers vendor completion files automatically.
+.PP
+Completion suggests commands, command-specific options, local paths, and
+common architecture/policy values. It does not contact remote repositories
+or perform package operations. Standalone installations can generate the same
+scripts with tpa completion bash, tpa completion zsh, or tpa completion fish.
 .SH IMPORTANT OPTIONS
 .TP
 .BI -in " path"
