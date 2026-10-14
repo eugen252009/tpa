@@ -109,7 +109,9 @@ func TestReadDefinitionsFormatsAndBounds(t *testing.T) {
 	}
 	dir := filepath.Join(root, "defs")
 	os.Mkdir(dir, 0755)
-	os.WriteFile(filepath.Join(dir, "b.json"), encodedB, 0644)
+	nested := filepath.Join(dir, "nested")
+	os.Mkdir(nested, 0755)
+	os.WriteFile(filepath.Join(nested, "b.json"), encodedB, 0644)
 	os.WriteFile(filepath.Join(dir, "a.json"), encodedA, 0644)
 	for _, path := range []string{single, lines, dir} {
 		defs, err := ReadDefinitions(path)
@@ -187,6 +189,8 @@ func TestComposeFailureCleanupAndMemoryFallback(t *testing.T) {
 	good := directFixture("good-fixture")
 	bad := directFixture("good-fixture")
 	bad.Control.Description = "conflict"
+	badScript := good
+	badScript.Scripts.PostInst = "echo no interpreter\n"
 	for _, test := range []struct {
 		name string
 		defs []Config
@@ -194,6 +198,7 @@ func TestComposeFailureCleanupAndMemoryFallback(t *testing.T) {
 		cfg  Config
 	}{
 		{name: "conflict", defs: []Config{good, bad}},
+		{name: "script", defs: []Config{badScript}},
 		{name: "metadata", defs: []Config{directFixture("UPPER")}},
 		{name: "filesystem", defs: []Config{good, directFixture(strings.Repeat("a", 300))}, opts: DirectOptions{Workers: 2}},
 		{name: "budget", defs: []Config{good}, opts: DirectOptions{MemoryBytes: 1}},

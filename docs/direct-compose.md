@@ -157,7 +157,7 @@ This is not a general crash-recovery or hostile concurrent-writer guarantee.
 checks dpkg/TPA parsing, compares directory/JSONL outputs across worker counts,
 verifies the public-key InRelease, and installs/upgrades versions 1.0 → 2.0 in
 a disposable Debian Docker container. Both versions remain indexed. It also
-checks script execution, browser isolation, tamper rejection and failed-signing
+checks direct/transitive dependency installation, script execution, browser isolation, tamper rejection and failed-signing
 cleanup. It never installs on the host or publishes/deploys.
 
 Unit/race tests cover archive modes/ownership, deterministic bytes, custom

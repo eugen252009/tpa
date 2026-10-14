@@ -83,7 +83,7 @@ def main():
                     (args.output / "measurements.json").write_text(json.dumps(results, indent=2) + "\n")
                     print(json.dumps(result), flush=True)
         with (args.output / "measurements.csv").open("w") as stream:
-            writer = csv.DictWriter(stream, fieldnames=list(results[0]))
+            writer = csv.DictWriter(stream, fieldnames=list(results[0]), lineterminator="\n")
             writer.writeheader()
             writer.writerows(results)
         metadata = {"platform": platform.platform(), "cpu_count": os.cpu_count(), "go": subprocess.check_output(["go", "version"], text=True).strip(), "dpkg_deb": subprocess.check_output(["dpkg-deb", "--version"], text=True).splitlines()[0], "workers": 8, "memory_budget_mib": 128, "source_date_epoch": 0, "sampling_interval_seconds": 0.01, "filesystem_syscall_counts": "not measured (strace unavailable); package_trees and dpkg_deb_processes are explicit path counts", "signing": "unsigned for both; signed compatibility tested separately", "compression": "existing dpkg defaults (xz); direct Go gzip; identical metadata and four scripts, no payload"}

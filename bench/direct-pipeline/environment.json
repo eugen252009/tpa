@@ -1,0 +1,16 @@
+{
+  "source_commit": "dc267c25958e39ce1170f8cf5b11cc97053a6a26",
+  "cpu_model": "AMD Ryzen 7 5800X 8-Core Processor",
+  "temporary_input_output_filesystem": "tmpfs (/tmp)",
+  "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+  "cpu_count": 16,
+  "go": "go version go1.26.4 linux/amd64",
+  "dpkg_deb": "Debian \u00bbdpkg-deb\u00ab Paketarchiv-Backend Version 1.22.22 (amd64).",
+  "workers": 8,
+  "memory_budget_mib": 128,
+  "source_date_epoch": 0,
+  "sampling_interval_seconds": 0.01,
+  "filesystem_syscall_counts": "not measured (strace unavailable); package_trees and dpkg_deb_processes are explicit path counts",
+  "signing": "unsigned for both; signed compatibility tested separately",
+  "compression": "existing dpkg defaults (xz); direct Go gzip; identical metadata and four scripts, no payload"
+}

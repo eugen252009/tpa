@@ -16,8 +16,12 @@ root=pathlib.Path(sys.argv[1]);(root/'definitions').mkdir()
 records=[]
 for n in (1,2):
     version=f'{n}.0'
-    records.append({'control':{'name':'tpa-direct-fixture','version':version,'architecture':'all','maintainer':'Fixture <fixture@example.invalid>','description':'Synthetic metadata-only package'},'scripts':{'postinst':f'#!/bin/sh\nset -e\nprintf "{version}\\n" > /var/lib/tpa-direct-fixture-version\n'}})
+    records.append({'control':{'name':'tpa-direct-fixture','version':version,'architecture':'all','maintainer':'Fixture <fixture@example.invalid>','description':'Synthetic metadata-only package','depends':'tpa-direct-dependency (>= 1.0)'},'scripts':{'postinst':f'#!/bin/sh\nset -e\nprintf "{version}\\n" > /var/lib/tpa-direct-fixture-version\n'}})
     (root/'definitions'/f'{n}.json').write_text(json.dumps(records[-1])+'\n')
+for name,depends in [('tpa-direct-dependency','tpa-direct-leaf (>= 1.0)'),('tpa-direct-leaf','')]:
+    record={'control':{'name':name,'version':'1.0','architecture':'all','maintainer':'Fixture','description':'Metadata-only dependency','depends':depends}}
+    records.append(record)
+    (root/'definitions'/f'{name}.json').write_text(json.dumps(record)+'\n')
 (root/'definitions.jsonl').write_text(''.join(json.dumps(r)+'\n' for r in records))
 PY
 "$TMP/tpa-utils" check package tpa-direct-fixture
@@ -37,15 +41,15 @@ find "$TMP/repo" -type f -exec sha256sum '{}' \; | sort >"$TMP/tree-before.txt"
 "$TMP/tpa-utils" repo html --out="$TMP/web" --base-url=https://repository.example.invalid/ --keyring="$TMP/fixture.gpg" "$TMP/repo"
 find "$TMP/repo" -type f -exec sha256sum '{}' \; | sort >"$TMP/tree-after.txt"
 cmp "$TMP/tree-before.txt" "$TMP/tree-after.txt"
-for deb in "$TMP/repo"/pool/main/t/tpa-direct-fixture/*.deb; do
+for deb in "$TMP/repo"/pool/main/t/*/*.deb; do
  dpkg-deb --info "$deb" >/dev/null
  test -z "$(dpkg-deb --contents "$deb")"
 done
 python3 - "$TMP/verification.json" "$TMP/web/repository.json" <<'PY'
 import json,sys
-r=json.load(open(sys.argv[1]));assert r['valid'] and r['signatureVerified'] and r['packageCount']==2,r
+r=json.load(open(sys.argv[1]));assert r['valid'] and r['signatureVerified'] and r['packageCount']==4,r
 view=json.load(open(sys.argv[2]));assert view['format']=='tpa-utils-repository-browser' and view['version']==1
-assert len(view['repository']['packages'])==2
+assert len(view['repository']['packages'])==4
 PY
 docker run --rm -v "$TMP:/fixtures:ro" debian:bookworm-slim sh -eu -c '
  cp /fixtures/fixture.gpg /usr/share/keyrings/direct-fixture.gpg
@@ -56,6 +60,8 @@ docker run --rm -v "$TMP:/fixtures:ro" debian:bookworm-slim sh -eu -c '
  apt-get install -y tpa-direct-fixture=1.0
  test "$(dpkg-query -W -f='\''${Version}'\'' tpa-direct-fixture)" = 1.0
  test "$(cat /var/lib/tpa-direct-fixture-version)" = 1.0
+ test "$(dpkg-query -W -f='\''${Version}'\'' tpa-direct-dependency)" = 1.0
+ test "$(dpkg-query -W -f='\''${Version}'\'' tpa-direct-leaf)" = 1.0
  apt-get upgrade -y
  test "$(dpkg-query -W -f='\''${Version}'\'' tpa-direct-fixture)" = 2.0
  test "$(cat /var/lib/tpa-direct-fixture-version)" = 2.0
@@ -67,4 +73,4 @@ printf corrupt >"$TMP/tampered/pool/main/t/tpa-direct-fixture/tpa-direct-fixture
 if "$TMP/tpa" verify --json -keyring="$TMP/fixture.gpg" "$TMP/tampered" >"$TMP/tampered.json"; then echo 'accepted tampered artifact' >&2; exit 1; fi
 if "$TMP/tpa" compose -in="$TMP/definitions.jsonl" -out="$TMP/failed" -gpg=absent-direct-signing-fixture >"$TMP/failed.log" 2>&1; then echo 'accepted absent signer' >&2; exit 1; fi
 test ! -e "$TMP/failed"
-echo 'Direct metadata-only DEB, directory/JSONL determinism, signed APT install/upgrade, browser isolation, and tamper qualification PASS'
+echo 'Direct metadata-only DEB, directory/JSONL determinism, signed APT dependency install/upgrade, browser isolation, and tamper qualification PASS'
