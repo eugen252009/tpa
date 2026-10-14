@@ -75,6 +75,9 @@ type RepositoryReport struct {
 	PackageCount      int                 `json:"packageCount"`
 	Indexes           []RepositoryIndex   `json:"indexes"`
 	Packages          []RepositoryPackage `json:"packages"`
+	Diagnostics       []Diagnostic        `json:"diagnostics,omitempty"`
+	Skipped           []string            `json:"skipped,omitempty"`
+	ArtifactsChecked  int                 `json:"artifactsChecked"`
 }
 
 type RepositoryVerifyResult struct {
@@ -93,6 +96,12 @@ func InspectRepository(ctx context.Context, reader RepositoryReader, options Rep
 // size, digest, and Debian control identity.
 func VerifyRepository(ctx context.Context, reader RepositoryReader, options RepositoryOptions) (RepositoryReport, error) {
 	report, err := readRepository(ctx, reader, options, true)
+	if err != nil {
+		report.Diagnostics = ErrorDiagnostics(err)
+		if report.ArtifactsChecked == 0 {
+			report.Skipped = append(report.Skipped, "artifact verification: a prerequisite failed; no artifact success is implied")
+		}
+	}
 	return report, err
 }
 
@@ -189,24 +198,27 @@ func readRepository(ctx context.Context, reader RepositoryReader, options Reposi
 	}
 
 	packagesByIdentity := make(map[string]RepositoryPackage)
+	var indexErrors []error
 	for _, index := range indexes {
 		if err := ctx.Err(); err != nil {
 			return report, err
 		}
 		indexBytes, indexInfo, err := readPackageIndex(ctx, reader, dist, index, checksums)
 		if err != nil {
-			return report, fmt.Errorf("index %s: %w", index, err)
+			indexErrors = append(indexErrors, fmt.Errorf("index %s: %w", index.path, err))
+			continue
 		}
 		entries, err := parseRepositoryPackages(indexBytes, index.architecture)
 		if err != nil {
-			return report, fmt.Errorf("parse %s: %w", indexInfo.Path, err)
+			indexErrors = append(indexErrors, fmt.Errorf("parse %s: %w", indexInfo.Path, err))
+			continue
 		}
 		report.Indexes = append(report.Indexes, indexInfo)
 		for _, entry := range entries {
 			identity := strings.Join([]string{entry.Package, entry.Version, entry.Architecture}, "\x00")
 			if previous, exists := packagesByIdentity[identity]; exists {
 				if previous.Filename != entry.Filename || previous.Size != entry.Size || previous.SHA256 != entry.SHA256 || !sameControlFields(previous.Control, entry.Control) {
-					return report, fmt.Errorf("conflicting repository entries for %s %s %s", entry.Package, entry.Version, entry.Architecture)
+					indexErrors = append(indexErrors, fmt.Errorf("conflicting repository entries for %s %s %s; different bytes require a new version", entry.Package, entry.Version, entry.Architecture))
 				}
 				continue
 			}
@@ -244,14 +256,37 @@ func readRepository(ctx context.Context, reader RepositoryReader, options Reposi
 		report.Packages = filtered
 	}
 	report.PackageCount = len(packagesByIdentity)
+	if len(indexErrors) > 0 {
+		return report, errors.Join(indexErrors...)
+	}
 	if verify {
 		workers, err := packWorkerCount(options.Workers)
 		if err != nil {
 			return report, err
 		}
-		if err := runPackageJobs(len(allPackages), workers, func(index int) error {
-			return verifyRepositoryArtifact(ctx, reader, allPackages[index])
-		}); err != nil {
+		artifactErrors := make([]error, len(allPackages))
+		checked := make([]bool, len(allPackages))
+		jobErr := runPackageJobs(len(allPackages), workers, func(index int) error {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			entry := allPackages[index]
+			if err := verifyRepositoryArtifact(ctx, reader, entry); err != nil {
+				artifactErrors[index] = fmt.Errorf("artifact %s: %w", entry.Filename, err)
+			}
+			checked[index] = true
+			return nil // Independent artifacts continue; never cancel on a data failure.
+		})
+		for _, completed := range checked {
+			if completed {
+				report.ArtifactsChecked++
+			}
+		}
+		if jobErr != nil {
+			report.Skipped = append(report.Skipped, "remaining artifact checks: verification interrupted")
+			return report, errors.Join(jobErr, errors.Join(artifactErrors...))
+		}
+		if err := errors.Join(artifactErrors...); err != nil {
 			return report, err
 		}
 	}
@@ -448,31 +483,40 @@ func parseRepositoryPackages(data []byte, indexArchitecture string) ([]Repositor
 		return nil, err
 	}
 	entries := make([]RepositoryPackage, 0, len(paragraphs))
+	var problems []error
 	for index, fields := range paragraphs {
+		var stanzaErrors []error
+		if err := ValidateControl(controlFromFields(fields)); err != nil {
+			stanzaErrors = append(stanzaErrors, err)
+		}
+		add := func(field, message string) {
+			stanzaErrors = append(stanzaErrors, Diagnostic{field, message, "https://github.com/eugen252009/tpa/blob/main/docs/repository-format-v1.md"})
+		}
 		lookup := make(map[string]string, len(fields))
 		for key, value := range fields {
 			lookup[strings.ToLower(key)] = value
 		}
 		name, version, architecture := lookup["package"], lookup["version"], lookup["architecture"]
 		filename, sizeText, digest := lookup["filename"], lookup["size"], strings.ToLower(lookup["sha256"])
-		if !validIdentityField(name) || !validIdentityField(version) || !validIdentityField(architecture) {
-			return nil, fmt.Errorf("stanza %d has an invalid package identity", index+1)
-		}
 		if architecture != indexArchitecture && architecture != "all" {
-			return nil, fmt.Errorf("stanza %d architecture %s is invalid for binary-%s", index+1, architecture, indexArchitecture)
+			add("Architecture", fmt.Sprintf("architecture %s is invalid for binary-%s; rebuild the index from the intended artifacts", architecture, indexArchitecture))
 		}
 		if !strings.HasPrefix(filename, "pool/") {
-			return nil, fmt.Errorf("stanza %d Filename is outside pool", index+1)
+			add("Filename", "Filename is outside pool; regenerate the repository from artifacts")
 		}
 		if _, err := repositoryRelativePath(filename); err != nil {
-			return nil, fmt.Errorf("stanza %d has unsafe Filename: %w", index+1, err)
+			add("Filename", fmt.Sprintf("unsafe Filename: %v", err))
 		}
 		size, err := strconv.ParseInt(sizeText, 10, 64)
-		if err != nil || size < 0 {
-			return nil, fmt.Errorf("stanza %d has invalid Size", index+1)
+		if err != nil || size <= 0 {
+			add("Size", "invalid Size; use the actual positive artifact byte count")
 		}
 		if !validSHA256(digest) {
-			return nil, fmt.Errorf("stanza %d has invalid SHA256", index+1)
+			add("SHA256", "invalid SHA256; regenerate the digest from the artifact bytes")
+		}
+		if err := errors.Join(stanzaErrors...); err != nil {
+			problems = append(problems, fmt.Errorf("stanza %d: %w", index+1, err))
+			continue
 		}
 		control := make(map[string]string, len(fields))
 		for key, value := range fields {
@@ -480,7 +524,7 @@ func parseRepositoryPackages(data []byte, indexArchitecture string) ([]Repositor
 		}
 		entries = append(entries, RepositoryPackage{Package: name, Version: version, Architecture: architecture, Filename: filename, Size: size, SHA256: digest, Control: control})
 	}
-	return entries, nil
+	return entries, errors.Join(problems...)
 }
 
 func parseRepositoryParagraphs(data []byte, required bool) ([]map[string]string, error) {

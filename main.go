@@ -30,6 +30,7 @@ type verifyJSONDocument struct {
 var publicCommands = []commandDescription{
 	{"init", "Initialize a package tree"},
 	{"build", "Build a Debian package"},
+	{"check", "Check package-tree metadata without modification"},
 	{"parse", "Read package metadata"},
 	{"pack", "Build an APT repository"},
 	{"inspect", "Inspect an existing repository"},
@@ -79,6 +80,9 @@ func usageError(output io.Writer, message string) int {
 }
 
 func commandFailure(output io.Writer, message string) int {
+	if !strings.Contains(message, "https://") {
+		message += "\nSee: https://github.com/eugen252009/tpa#readme"
+	}
 	fmt.Fprintf(output, "error: %s\nTPA version: %s\nSupport / bug reports: %s\n", message, version.Version, version.SupportEmail)
 	return 1
 }
@@ -222,7 +226,7 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 	flags := flag.NewFlagSet("tpa", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	flags.Usage = func() {}
-	flags.StringVar(&cfg.Control.Name, "name", "myNewAPTPackage", "Name of the package")
+	flags.StringVar(&cfg.Control.Name, "name", "my-new-apt-package", "Debian package name (lowercase letters, digits, +, -, .)")
 	flags.StringVar(&cfg.Control.Version, "ver", "0.0.1", "Version of the package")
 	flags.StringVar(&cfg.Control.Maintainer, "maintainer", "No Maintainer", "Maintainer contact info")
 	flags.StringVar(&cfg.Control.Description, "desc", "No Description", "Short description")
@@ -267,7 +271,7 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 	parentGeneration := flags.String("parent-generation", "", "Expected parent generation for -generation-manifest")
 	noProvenance := flags.Bool("no-provenance", false, "Disable automatic TPA provenance metadata")
 	yes := flags.Bool("yes", false, "Confirm destructive package deletion")
-	jsonOutput := flags.Bool("json", false, "Write inspect/verify output as JSON")
+	jsonOutput := flags.Bool("json", false, "Write check/inspect/verify output as JSON")
 	keyringPath := flags.String("keyring", "", "Public OpenPGP key export for repository signature verification")
 	fingerprint := flags.String("fingerprint", "", "Expected full OpenPGP signer fingerprint")
 	requireSigned := flags.Bool("require-signed", false, "Require a valid signed InRelease")
@@ -279,7 +283,7 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 	if command == "pack" && len(flagArgs) > 0 && !strings.HasPrefix(flagArgs[0], "-") {
 		flagArgs = append(append([]string{}, flagArgs[1:]...), flagArgs[0])
 	}
-	if command == "inspect" || command == "verify" {
+	if command == "inspect" || command == "verify" || command == "check" {
 		flagArgs = moveRepositoryLocator(flagArgs)
 	}
 	if err := flags.Parse(flagArgs); err != nil {
@@ -362,13 +366,33 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 	}
 	if command != "inspect" && command != "verify" {
 		for _, name := range []string{"json", "keyring", "fingerprint", "require-signed"} {
-			if seenFlags[name] {
+			if seenFlags[name] && !(command == "check" && name == "json") {
 				return usageError(stderr, fmt.Sprintf("-%s is only valid with inspect or verify", name))
 			}
 		}
 	}
 
 	switch command {
+	case "check":
+		if len(flags.Args()) > 1 || (len(flags.Args()) == 1 && seenFlags["in"]) {
+			return usageError(stderr, "check accepts one package tree, positionally or with -in")
+		}
+		if len(flags.Args()) == 1 {
+			cfg.InDir = flags.Args()[0]
+		}
+		report, err := aptpackage.CheckPackage(cfg.InDir)
+		if *jsonOutput {
+			if encodeErr := json.NewEncoder(stdout).Encode(report); encodeErr != nil {
+				return commandFailure(stderr, encodeErr.Error())
+			}
+		} else if err != nil {
+			return commandFailure(stderr, err.Error())
+		} else {
+			fmt.Fprintln(stdout, "Package checks passed (supported metadata checks only; not a full Debian Policy or runtime audit).")
+		}
+		if err != nil {
+			return 1
+		}
 	case "init":
 		fmt.Fprintf(stdout, "Initializing package '%s' in: %s\n", cfg.Control.Name, cfg.OutDir)
 		if err := aptpackage.InitPackage(cfg); err != nil {
@@ -523,6 +547,7 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 				result := verifyJSONDocument{Valid: err == nil, RepositoryReport: report}
 				if err != nil {
 					result.Error = err.Error()
+					result.Diagnostics = aptpackage.ErrorDiagnostics(err)
 					result.SupportEmail = version.SupportEmail
 				}
 				_ = json.NewEncoder(stdout).Encode(result)
@@ -535,7 +560,14 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 			printRepositoryReport(stdout, command, positional[0], report)
 		}
 		if err != nil && !*jsonOutput {
-			return commandFailure(stderr, fmt.Sprintf("%s repository: %v", command, err))
+			messages := make([]string, 0)
+			for _, diagnostic := range aptpackage.ErrorDiagnostics(err) {
+				messages = append(messages, diagnostic.Error())
+			}
+			for _, skipped := range report.Skipped {
+				messages = append(messages, "Skipped: "+skipped)
+			}
+			return commandFailure(stderr, fmt.Sprintf("%s repository: %s", command, strings.Join(messages, "\n")))
 		}
 		if err != nil {
 			return 1
@@ -603,7 +635,7 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 }
 
 func moveRepositoryLocator(args []string) []string {
-	valueFlags := map[string]bool{"package": true, "ver": true, "arch": true, "codename": true, "workers": true, "keyring": true, "fingerprint": true}
+	valueFlags := map[string]bool{"in": true, "package": true, "ver": true, "arch": true, "codename": true, "workers": true, "keyring": true, "fingerprint": true}
 	var options, positional []string
 	for index := 0; index < len(args); index++ {
 		arg := args[index]
@@ -646,12 +678,12 @@ func readLimitedFile(filename string, maximum int64) ([]byte, error) {
 func repositoryCommandError(command string, jsonOutput bool, stdout, stderr io.Writer, err error) int {
 	if jsonOutput {
 		if command == "verify" {
-			_ = json.NewEncoder(stdout).Encode(verifyJSONDocument{Valid: false, Error: err.Error(), SupportEmail: version.SupportEmail})
+			_ = json.NewEncoder(stdout).Encode(verifyJSONDocument{Valid: false, Error: err.Error(), SupportEmail: version.SupportEmail, RepositoryReport: aptpackage.RepositoryReport{Diagnostics: aptpackage.ErrorDiagnostics(err), Skipped: []string{"repository verification: input or prerequisite unavailable"}}})
 		} else {
 			_ = json.NewEncoder(stdout).Encode(map[string]string{"error": err.Error(), "supportEmail": version.SupportEmail})
 		}
 	} else {
-		fmt.Fprintf(stderr, "error: %s repository: %v\nTPA version: %s\nSupport / bug reports: %s\n", command, err, version.Version, version.SupportEmail)
+		return commandFailure(stderr, fmt.Sprintf("%s repository: %v", command, err))
 	}
 	return 1
 }

@@ -8,6 +8,9 @@ import (
 )
 
 func Build(c Config) error {
+	if _, err := CheckPackage(c.InDir); err != nil {
+		return err
+	}
 	DEBIANpath := fmt.Sprintf("%s/DEBIAN", c.InDir)
 	controlpath := fmt.Sprintf("%s/control", DEBIANpath)
 	controlStage := startStage(stageBuildControlParse)

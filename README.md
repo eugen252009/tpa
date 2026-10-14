@@ -40,7 +40,8 @@ the same help and returns status 2.
 
 | Command | Input | Output |
 | --- | --- | --- |
-| `init` | Package metadata flags | Package root at `-out`, including `DEBIAN/control`, maintainer scripts, and `usr/local/bin` |
+| `init` | Package metadata flags | Package root at `-out` with `DEBIAN/control` and maintainer scripts only; create payload directories yourself |
+| `check` | `-in` package tree, optional `--json` | Read-only metadata diagnostics with documentation links; nonzero on errors |
 | `build` | Package root at `-in` | `.deb` archive or destination directory at `-out`, using `dpkg-deb --root-owner-group --build` |
 | `parse` | `.deb` archive at `-in` | Human-readable parsed control summary on standard output |
 | `pack` | Top-level `.deb` files in `-in`, an optional JSON config path, or `--empty` | Verified APT repository at local or SSH/SFTP `--output`, or local `--atomic-publish`; optionally a generation inventory |
@@ -165,6 +166,19 @@ files are removed when the command finishes.
 
 ## Package creation
 
+Run `tpa check -in=build/hello-tpa` before building, or
+`tpa check --json build/hello-tpa` for structured diagnostics.
+Checks collect independent supported metadata errors without modifying files.
+The same validator runs during initialization, archive parsing/building, and
+repository indexing/verification. Edited control files are checked again, not
+trusted because an earlier check passed.
+
+`verify --json` includes `diagnostics`, `skipped`, and `artifactsChecked`.
+Verification collects independent index/artifact failures. Invalid signatures or
+unusable indexes block dependent artifact checks; skipped checks are not passes.
+Neither command is a complete Debian Policy audit or a replacement for Lintian.
+See [diagnostics](docs/diagnostics.md) for coverage and limitations.
+
 Relationship flags include `-depends`, `-pre-depends`, `-recommends`,
 `-suggests`, `-provides`, `-conflicts`, `-breaks`, and `-replaces`.
 Maintainer scripts are separate from control metadata. CLI script flags are
@@ -184,6 +198,11 @@ tpa build -in=build/hello-tpa -out=dist/hello-tpa_1.0.0_all.deb
 `tpa json` performs the same initialization from standard input. Omitted fields
 retain the CLI defaults. The JSON uses the field names printed by `tpa schema`.
 The `json` command initializes a package tree only; it does not build a `.deb`.
+
+`init` and `json` reject invalid package names before creating files. Names must
+have at least two characters, start with a lowercase letter or digit, and use
+only lowercase letters, digits, `+`, `-`, or `.` (for example,
+`my-new-apt-package`). See [Debian Policy §5.6.1](https://www.debian.org/doc/debian-policy/ch-controlfields.html#package).
 
 The preferred JSON structure separates control metadata from maintainer scripts:
 

@@ -7,17 +7,6 @@ import (
 )
 
 func InitPackage(cfg Config) error {
-	dirs := []string{
-		cfg.OutDir + "/DEBIAN",
-		cfg.OutDir + "/usr/local/bin",
-	}
-
-	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return err
-		}
-	}
-
 	var control string
 	var err error
 	if cfg.Provenance != nil && !*cfg.Provenance {
@@ -26,6 +15,9 @@ func InitPackage(cfg Config) error {
 		control, err = cfg.Control.RenderWithProvenance(time.Now().UTC())
 	}
 	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Join(cfg.OutDir, "DEBIAN"), 0o755); err != nil {
 		return err
 	}
 	if err := os.WriteFile(filepath.Join(cfg.OutDir, "DEBIAN", "control"), []byte(control), 0o644); err != nil {

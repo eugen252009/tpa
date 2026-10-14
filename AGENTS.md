@@ -22,7 +22,8 @@ actual package artifacts.
 
 | Command | Behavior |
 | --- | --- |
-| `init` | Creates `DEBIAN/`, `usr/local/bin/`, control metadata, and executable maintainer scripts. |
+| `init` | Creates `DEBIAN/`, control metadata, and executable maintainer scripts; payload directories are user-managed. |
+| `check` | Read-only package-tree metadata checks with aggregated, linked human/JSON diagnostics. |
 | `build` | Validates `DEBIAN/control`, fixes present maintainer-script modes, and invokes `dpkg-deb --root-owner-group --build`. |
 | `parse` | Reads plain, gzip, and xz control archives in-process; typed unsupported formats fall back to `dpkg-deb -f`, while malformed supported inputs fail directly. |
 | `pack` | Derives and verifies an APT repository from top-level `.deb` files; `--empty` is the canonical empty workflow. Local and SSH/SFTP output are supported; remote output is new-destination-only. |

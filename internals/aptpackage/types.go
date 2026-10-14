@@ -4,6 +4,7 @@ package aptpackage
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -268,7 +269,7 @@ func (c Control) render(metadata map[string]any) (string, error) {
 	if metadata == nil {
 		metadata = c.Metadata
 	}
-	if err := validateMetadataKeys(metadata); err != nil {
+	if err := errors.Join(ValidateControl(c), validateMetadataKeys(metadata)); err != nil {
 		return "", err
 	}
 	var b strings.Builder
@@ -286,7 +287,19 @@ func (c Control) render(metadata map[string]any) (string, error) {
 	}
 	for _, field := range known {
 		if field.Value != "" {
-			fmt.Fprintf(&b, "%s: %s\n", field.Label, field.Value)
+			value := field.Value
+			if field.Label == "Description" {
+				lines := strings.Split(value, "\n")
+				for i := 1; i < len(lines); i++ {
+					line := strings.TrimLeft(lines[i], " \t")
+					if line == "" {
+						line = "."
+					}
+					lines[i] = " " + line
+				}
+				value = strings.Join(lines, "\n")
+			}
+			fmt.Fprintf(&b, "%s: %s\n", field.Label, value)
 		}
 	}
 
@@ -379,23 +392,33 @@ func validateMetadataValue(key string, value any) error {
 
 func validateMetadataKeys(metadata map[string]any) error {
 	seen := make(map[string]string, len(metadata))
-	for key, value := range metadata {
+	keys := make([]string, 0, len(metadata))
+	for key := range metadata {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	var problems []error
+	add := func(key, message string) {
+		problems = append(problems, Diagnostic{key, message, controlPolicyURL + "#syntax-of-control-files"})
+	}
+	for _, key := range keys {
 		field, err := metadataFieldName(key)
 		if err != nil {
-			return fmt.Errorf("invalid control metadata key %q: %w", key, err)
+			add(key, fmt.Sprintf("invalid control metadata key %q: %v", key, err))
+			continue
 		}
 		if reservedControlFields[field] {
-			return fmt.Errorf("control metadata key %q would override standard field %q", key, field)
+			add(key, fmt.Sprintf("control metadata key %q would override standard field %q; use the modeled field instead", key, field))
 		}
 		if previous, exists := seen[field]; exists {
-			return fmt.Errorf("control metadata keys %q and %q normalize to the same field %q", previous, key, field)
+			add(key, fmt.Sprintf("control metadata keys %q and %q normalize to the same field %q; specify it only once", previous, key, field))
 		}
 		seen[field] = key
-		if err := validateMetadataValue(key, value); err != nil {
-			return err
+		if err := validateMetadataValue(key, metadata[key]); err != nil {
+			add(key, err.Error())
 		}
 	}
-	return nil
+	return errors.Join(problems...)
 }
 
 func metadataFieldName(key string) (string, error) {

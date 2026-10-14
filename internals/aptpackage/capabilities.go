@@ -67,6 +67,7 @@ type CapabilityOutputBackend struct {
 func GetCapabilities() Capabilities {
 	operations := []string{
 		"package.build.v1",
+		"package.check.v1",
 		"package.init.v1",
 		"package.parse.v1",
 		"repository.delete.v1",

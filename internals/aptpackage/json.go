@@ -1,24 +1,9 @@
 package aptpackage
 
-import "fmt"
+import "errors"
 
 func validJSONKeys(c Control) error {
-	if c.Name == "" {
-		return fmt.Errorf("invalid JSON schema: name is required")
-	}
-	if c.Version == "" {
-		return fmt.Errorf("invalid JSON schema: version is required")
-	}
-	if c.Architecture == "" {
-		return fmt.Errorf("invalid JSON schema: architecture is required")
-	}
-	if c.Maintainer == "" {
-		return fmt.Errorf("invalid JSON schema: maintainer is required")
-	}
-	if c.Description == "" {
-		return fmt.Errorf("invalid JSON schema: description is required")
-	}
-	return validateMetadataKeys(c.Metadata)
+	return errors.Join(ValidateControl(c), validateMetadataKeys(c.Metadata))
 }
 
 func JSONBuild(cfg Config) error {
