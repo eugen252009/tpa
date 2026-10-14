@@ -83,9 +83,9 @@ func TestCompletionCatalogMatchesParser(t *testing.T) {
 		}
 		index := 0
 		switch method.Sel.Name {
-		case "StringVar", "BoolVar", "IntVar":
+		case "StringVar", "BoolVar", "IntVar", "Int64Var":
 			index = 1
-		case "String", "Bool", "Int":
+		case "String", "Bool", "Int", "Int64":
 		default:
 			return true
 		}
@@ -187,6 +187,8 @@ func TestFishCompletionBehavior(t *testing.T) {
 		{"tpa completion f", "fish"}, {"tpa init --arch ar", "arm64"},
 		{"tpa delete --y", "--yes"},
 		{"tpa pack --gpg ", ""}, {"tpa pack --workers ", ""},
+		{"tpa co", "compose"}, {"tpa compose --mem", "--memory-mib"},
+		{"tpa compose --memory-mib ", ""}, {"tpa compose --epoch ", ""},
 	} {
 		cmd := exec.Command(fish, "--no-config", "-c", `source $argv[1]; complete -C $argv[2]`, path, test.line)
 		var stdout, stderr bytes.Buffer

@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -31,6 +32,7 @@ var publicCommands = []commandDescription{
 	{"init", "Initialize a package tree"},
 	{"build", "Build a Debian package"},
 	{"check", "Check package-tree metadata without modification"},
+	{"compose", "Build a new repository directly from metadata-only JSON definitions"},
 	{"parse", "Read package metadata"},
 	{"pack", "Build an APT repository"},
 	{"inspect", "Inspect an existing repository"},
@@ -271,7 +273,9 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 	packageName := flags.String("package", "", "Package name for unlist/delete or exact inspect lookup")
 	flags.StringVar(&cfg.OutDir, "out", ".", "Output directory for the .deb file")
 	flags.StringVar(&cfg.GPG, "gpg", "", "GPG Key ID or full fingerprint for signing, empty for no signing")
-	workers := flags.Int("workers", 0, "Bounded package workers for pack (0 uses GOMAXPROCS)")
+	workers := flags.Int("workers", 0, "Bounded package workers for pack/compose (0 uses GOMAXPROCS)")
+	memoryMiB := flags.Int64("memory-mib", 64, "Compose archive-worker scratch memory budget in MiB")
+	epoch := flags.Int64("epoch", 0, "Compose reproducible package and Release Unix timestamp")
 	output := flags.String("output", "", "Repository output path or SSH destination (alias for -out)")
 	atomicPublish := flags.String("atomic-publish", "", "Atomically publish the repository at this path")
 	sshConfig := flags.String("ssh-config", "", "OpenSSH client config for SSH/SFTP output")
@@ -382,7 +386,37 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 		}
 	}
 
+	if command != "compose" && (seenFlags["memory-mib"] || seenFlags["epoch"]) {
+		return usageError(stderr, "-memory-mib and -epoch are only valid with compose")
+	}
 	switch command {
+	case "compose":
+		allowed := map[string]bool{"in": true, "out": true, "workers": true, "memory-mib": true, "epoch": true, "gpg": true, "origin": true, "label": true, "suite": true, "codename": true, "components": true, "repo-description": true}
+		for flag := range seenFlags {
+			if !allowed[flag] {
+				return usageError(stderr, fmt.Sprintf("-%s is not supported by compose; package fields/provenance/scripts belong in the input JSON definitions", flag))
+			}
+		}
+		if len(flags.Args()) != 0 {
+			return usageError(stderr, "compose requires -in definitions.json, definitions.jsonl or a directory")
+		}
+		if !seenFlags["out"] || seenFlags["output"] || seenFlags["atomic-publish"] || seenFlags["generation-manifest"] {
+			return usageError(stderr, "compose requires -out with a new local destination; replacement/remote/manifest options are not supported")
+		}
+		if *memoryMiB < 1 || *memoryMiB > 4096 {
+			return usageError(stderr, "-memory-mib must be between 1 and 4096")
+		}
+		if !seenFlags["epoch"] && os.Getenv("SOURCE_DATE_EPOCH") != "" {
+			value, err := strconv.ParseInt(os.Getenv("SOURCE_DATE_EPOCH"), 10, 64)
+			if err != nil {
+				return usageError(stderr, "invalid SOURCE_DATE_EPOCH")
+			}
+			*epoch = value
+		}
+		if err := aptpackage.Compose(context.Background(), cfg, cfg.InDir, aptpackage.DirectOptions{Workers: *workers, MemoryBytes: *memoryMiB << 20, Epoch: *epoch}); err != nil {
+			return commandFailure(stderr, fmt.Sprintf("compose repository: %v", err))
+		}
+		fmt.Fprintln(stdout, "Direct repository built and independently verified.")
 	case "check":
 		if len(flags.Args()) > 1 || (len(flags.Args()) == 1 && seenFlags["in"]) {
 			return usageError(stderr, "check accepts one package tree, positionally or with -in")

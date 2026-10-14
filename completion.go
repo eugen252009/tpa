@@ -30,6 +30,11 @@ var completionOptions = map[string][]completionOption{
 	},
 	"build": {{"in", "dir", "Package tree"}, {"out", "file", "Output archive or directory"}},
 	"check": {{"in", "dir", "Package tree"}, {"json", "bool", "JSON diagnostics"}},
+	"compose": {
+		{"in", "file", "JSON, JSONL or directory of definitions"}, {"out", "dir", "New local repository"},
+		{"workers", "text", "Build worker count"}, {"memory-mib", "text", "Worker scratch budget in MiB"}, {"epoch", "text", "Reproducible Unix timestamp"},
+		{"gpg", "text", "Signing identity"}, {"origin", "text", "Repository origin"}, {"label", "text", "Repository label"}, {"suite", "text", "Suite"}, {"codename", "text", "Codename"}, {"components", "text", "Component"}, {"repo-description", "text", "Repository description"},
+	},
 	"parse": {{"in", "file", "Debian archive"}},
 	"pack": {
 		{"in", "dir", "Package input directory"}, {"out", "dir", "Repository output"},

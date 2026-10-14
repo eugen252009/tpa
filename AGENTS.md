@@ -28,6 +28,7 @@ actual package artifacts.
 | `check` | Read-only package-tree metadata checks with aggregated, linked human/JSON diagnostics. |
 | `build` | Validates `DEBIAN/control`, fixes present maintainer-script modes, and invokes `dpkg-deb --root-owner-group --build`. |
 | `parse` | Reads plain, gzip, and xz control archives in-process; typed unsupported formats fall back to `dpkg-deb -f`, while malformed supported inputs fail directly. |
+| `compose` | Builds metadata-only definitions (JSON/JSONL/directory) directly into reproducible DEBs and a verified, optionally signed new local APT tree; see `docs/direct-compose.md`. |
 | `pack` | Derives and verifies an APT repository from top-level `.deb` files; `--empty` is the canonical empty workflow. Local and SSH/SFTP output are supported; remote output is new-destination-only. |
 | `capabilities` | Prints the versioned machine-readable TPA capability/repository-format contract. |
 | `inspect` | Reads local, HTTP(S), or SSH repository metadata/indexes without mutation; supports JSON and exact identity lookup. |
@@ -65,6 +66,7 @@ return non-zero and write diagnostics to standard error.
 - A fresh input set defines a fresh repository snapshot. Historical versions
   remain only when their artifacts remain in that set.
 - No persistent package metadata or hash cache is used.
+- Direct composition never builds per-package filesystem trees or falls back to them. Worker scratch and definition input are bounded separately. It uses the shared renderer, repository writer, selected signer and independent verification, and refuses existing output paths.
 - Supported `.deb` control archive formats (plain, gzip, xz) are read in process;
   only explicitly unsupported formats use the bounded `dpkg-deb -f` fallback.
   Keep malformed-supported-input rejection distinct from fallback behavior.

@@ -57,6 +57,7 @@ private signing material to TPA.
 
 | Operation | Request meaning | Success result | Important failure boundary |
 | --- | --- | --- | --- |
+| `repository.compose-metadata.v1` | `tpa compose -in` metadata-only JSON/JSONL/directory, `-out` new local destination, explicit repository metadata/signer and resource/epoch options | Independently verified v1 tree containing in-process metadata-only DEBs and canonical sidecars | New destination only; no payload files, remote activation, hosted account, managed key creation or replacement; see `direct-compose.md` |
 | `repository.pack-empty.v1` | `tpa pack --empty`, no package input, repository Release metadata (defaults: suite/codename `stable`, component `main`), optional architecture list and signer | Verified empty v1 tree with empty indexes and paired sidecars | Refuses every pre-existing destination; no live tree is replaced |
 | `repository.pack.v1` | Normal `tpa pack` with a fresh `.deb` artifact set and repository metadata | Verified snapshot derived from artifacts | Empty artifact input fails; duplicate identity with conflicting bytes fails |
 | `repository.publish-ssh-new.v1` | Verified local candidate plus an SSH/SFTP destination | Remote tree read back and verified, then renamed to a new path | Existing remote destinations are refused; activation semantics depend on the SFTP server and the remote parent must exclude out-of-band writers |

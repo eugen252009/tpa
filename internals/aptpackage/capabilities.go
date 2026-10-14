@@ -70,6 +70,7 @@ func GetCapabilities() Capabilities {
 		"package.check.v1",
 		"package.init.v1",
 		"package.parse.v1",
+		"repository.compose-metadata.v1",
 		"repository.delete.v1",
 		"repository.inspect.v1",
 		"repository.pack-empty.v1",

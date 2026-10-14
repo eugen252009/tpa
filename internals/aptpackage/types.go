@@ -134,6 +134,7 @@ type Config struct {
 	// emptyRepositoryArchitectures is set only by InitializeRepository. It is
 	// deliberately not part of the package/JSON configuration contract.
 	emptyRepositoryArchitectures []string
+	releaseDate                  string // direct builds pin Release time without changing process environment
 }
 
 var knownJSONControlKeys = map[string]bool{

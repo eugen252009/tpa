@@ -36,6 +36,16 @@ output read the injected runtime value. Set `TPA_VERSION` for release builds.
 `tpa --version` prints `tpa <version>`. Running `tpa` without a command prints
 the same help and returns status 2.
 
+## Direct metadata-only repositories
+
+[`tpa compose`](docs/direct-compose.md) is an opt-in JSON/JSONL/directory-to-APT
+pipeline for metadata-only packages and optional maintainer scripts. It builds
+DEBs in process with bounded contiguous-range workers, derives ordinary APT
+metadata and canonical sidecars, uses the selected existing GPG signer, then
+independently verifies and activates only a **new** local destination. Existing
+`json`, `build` and `pack` behavior is unchanged. It is not a payload-file format
+or a replacement/publication service. See the [measured comparison](bench/DIRECT_PIPELINE_REPORT.md).
+
 ## Standalone utilities
 
 [`tpa-utils`](docs/tpa-utils.md) is a separately buildable CLI and Go library
@@ -81,6 +91,7 @@ The packaged files are:
 | `check` | `-in` package tree, optional `--json` | Read-only metadata diagnostics with documentation links; nonzero on errors |
 | `build` | Package root at `-in` | `.deb` archive or destination directory at `-out`, using `dpkg-deb --root-owner-group --build` |
 | `parse` | `.deb` archive at `-in` | Human-readable parsed control summary on standard output |
+| `compose` | Metadata-only JSON, JSONL or directory at `-in` | New local repository at `-out`, direct reproducible DEBs, optional existing GPG signer; no package trees |
 | `pack` | Top-level `.deb` files in `-in`, an optional JSON config path, or `--empty` | Verified APT repository at local or SSH/SFTP `--output`, or local `--atomic-publish`; optionally a generation inventory |
 | `inspect` | Local repository path or read-only HTTP(S)/SSH locator | Release metadata and rich package-index entries; optionally exact `-package`, `-ver`, `-arch` lookup |
 | `verify` | Local repository path or read-only HTTP(S)/SSH locator | Verifies Release/index integrity, signatures when present, and every indexed `.deb` artifact |

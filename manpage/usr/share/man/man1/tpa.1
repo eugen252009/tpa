@@ -44,6 +44,16 @@ Read control metadata from a .deb package. Plain, gzip-compressed, and
 xz-compressed control archives are read in process. Explicitly unsupported
 formats fall back to dpkg-deb; malformed supported archives are rejected.
 .TP
+.B compose
+Build metadata-only packages from one JSON object, JSONL, or a recursively sorted
+directory of JSON definitions at -in. Write reproducible DEBs directly into a
+new local repository at -out, without temporary package trees or per-package
+dpkg-deb processes. Optional scripts require an explicit shebang. Existing
+outputs and external payloads are refused. Use -gpg to select the existing
+signing key; an empty selector is deliberately unsigned. Validation and
+independent artifact/signature verification precede exclusive activation.
+See docs/direct-compose.md for schema, duplicate and resource bounds.
+.TP
 .B pack
 Generate and verify Packages, Packages.gz, Release, and optionally InRelease.
 Use --empty for the canonical empty-repository workflow. --output accepts a
@@ -110,7 +120,8 @@ scripts with tpa completion bash, tpa completion zsh, or tpa completion fish.
 Input package tree, .deb path, or directory of .deb artifacts, depending on the command.
 .TP
 .BI -out " path"
-Non-atomic local output path. Direct pack requires a new or empty directory;
+Compose requires a new destination and uses exclusive candidate activation.
+For other applicable commands, local output path. Direct pack requires a new or empty directory;
 use --output for SSH/SFTP destinations.
 .TP
 .BI --output " destination"
@@ -136,6 +147,18 @@ One repository component; pack --empty defaults to main.
 .TP
 .B --empty
 For pack, initialize an empty verified repository instead of indexing package artifacts. Existing outputs are refused.
+.TP
+.BI -memory-mib " number"
+Compose archive-worker scratch budget (default 64 MiB), separate from bounded
+retained definitions/indexes and Go runtime overhead; not a hard total RSS cap.
+Concurrency is reduced to fit. If one worker cannot fit, fail without a
+candidate; never fall back to temporary package trees.
+.TP
+.BI -epoch " seconds"
+Compose artifact/provenance/Release Unix timestamp (0..4294967295). Defaults to
+SOURCE_DATE_EPOCH if present, otherwise zero. GPG signature bytes/time are not
+guaranteed reproducible. Define provenance:false per JSON record to disable
+automatic provenance; explicit custom metadata is preserved.
 .TP
 .BI -repo-description " text"
 Optional Release description.

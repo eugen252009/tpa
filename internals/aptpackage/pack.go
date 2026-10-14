@@ -43,7 +43,9 @@ func Pack(cfg Config) error {
 
 // buildRepository materializes a repository at cfg.OutDir. AtomicPack uses it
 // directly so it can set publication permissions before final verification.
-func buildRepository(cfg Config) error {
+func buildRepository(cfg Config) error { return buildRepositoryRecords(cfg, nil, false) }
+
+func buildRepositoryRecords(cfg Config, pkgs []repositoryPackage, ready bool) error {
 	workers, err := packWorkerCount(cfg.Workers)
 	if err != nil {
 		return err
@@ -82,11 +84,13 @@ func buildRepository(cfg Config) error {
 		}
 	}
 	releaseDate, err := repositoryReleaseDate()
+	if cfg.releaseDate != "" {
+		releaseDate, err = cfg.releaseDate, nil
+	}
 	if err != nil {
 		return err
 	}
-	var pkgs []repositoryPackage
-	if len(cfg.emptyRepositoryArchitectures) == 0 {
+	if !ready && len(cfg.emptyRepositoryArchitectures) == 0 {
 		enumerationStage := startStage(stageDirectoryEnumeration)
 		entries, err := os.ReadDir(cfg.InDir)
 		enumerationStage()
@@ -100,8 +104,10 @@ func buildRepository(cfg Config) error {
 		if len(pkgs) == 0 {
 			return fmt.Errorf("no .deb packages found in %s", cfg.InDir)
 		}
-	} else if err := validateEmptyRepository(cfg, cfg.emptyRepositoryArchitectures); err != nil {
-		return err
+	} else if !ready {
+		if err := validateEmptyRepository(cfg, cfg.emptyRepositoryArchitectures); err != nil {
+			return err
+		}
 	}
 	sortStage := startStage(stageSortAndGroup)
 	sort.Slice(pkgs, func(i, j int) bool {
@@ -127,30 +133,31 @@ func buildRepository(cfg Config) error {
 	}
 
 	// Copy first, so a successful return always leaves a usable pool.
-	if err := runPackageJobs(len(pkgs), workers, func(index int) error {
-		pkg := pkgs[index]
-		poolDir := filepath.Join(cfg.OutDir, "pool", component,
-			string(pkg.Control.Name[0]), pkg.Control.Name)
-		poolStage := startStage(stagePoolMkdir)
-		if err := os.MkdirAll(poolDir, 0o755); err != nil {
+	if !ready {
+		if err := runPackageJobs(len(pkgs), workers, func(index int) error {
+			pkg := pkgs[index]
+			poolDir := filepath.Join(cfg.OutDir, "pool", component,
+				string(pkg.Control.Name[0]), pkg.Control.Name)
+			poolStage := startStage(stagePoolMkdir)
+			if err := os.MkdirAll(poolDir, 0o755); err != nil {
+				poolStage()
+				return fmt.Errorf("create pool directory for %s: %w", filepath.Base(pkg.Dist), err)
+			}
 			poolStage()
-			return fmt.Errorf("create pool directory for %s: %w", filepath.Base(pkg.Dist), err)
+			dest := filepath.Join(poolDir, filepath.Base(pkg.Dist))
+			copyStage := startStage(stagePoolCopy)
+			hash, size, err := copyFileAndHash(pkg.Dist, dest)
+			copyStage()
+			if err != nil {
+				return fmt.Errorf("copy %s: %w", pkg.Dist, err)
+			}
+			pkgs[index].SHA256 = hash
+			pkgs[index].Size = size
+			return nil
+		}); err != nil {
+			return err
 		}
-		poolStage()
-		dest := filepath.Join(poolDir, filepath.Base(pkg.Dist))
-		copyStage := startStage(stagePoolCopy)
-		hash, size, err := copyFileAndHash(pkg.Dist, dest)
-		copyStage()
-		if err != nil {
-			return fmt.Errorf("copy %s: %w", pkg.Dist, err)
-		}
-		pkgs[index].SHA256 = hash
-		pkgs[index].Size = size
-		return nil
-	}); err != nil {
-		return err
 	}
-
 	groupStage := startStage(stageGroupArchitectures)
 	byArch := make(map[string][]repositoryPackage)
 	for _, architecture := range cfg.emptyRepositoryArchitectures {

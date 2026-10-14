@@ -169,10 +169,11 @@ func uniqueJSONKeys(data []byte) error {
 				if !ok {
 					return fmt.Errorf("invalid JSON key")
 				}
-				if keys[s] {
-					return fmt.Errorf("duplicate JSON key %q", s)
+				folded := strings.ToLower(s)
+				if keys[folded] {
+					return fmt.Errorf("duplicate or case-conflicting JSON key %q", s)
 				}
-				keys[s] = true
+				keys[folded] = true
 				if err := value(depth + 1); err != nil {
 					return err
 				}
