@@ -1,0 +1,335 @@
+#!/usr/bin/env bash
+# Trusted VServer release path for TPA. No publication occurs without --publish
+# and two interactive confirmations (this runner, then tparun).
+set -Eeuo pipefail
+umask 077
+
+readonly SOURCE_URL='https://github.com/eugen252009/tpa.git'
+readonly DEFAULT_REPOSITORY='https://tpa.run/r/tparun/bootstrap'
+readonly RELEASE_ARCHES=(amd64 arm64 riscv64)
+
+VERSION=''
+REF=''
+PUBLISH=0
+REPOSITORY=${TPA_RELEASE_REPOSITORY:-$DEFAULT_REPOSITORY}
+KEYRING=${TPA_RELEASE_KEYRING:-}
+FINGERPRINT=${TPA_RELEASE_FINGERPRINT:-}
+PUBLISHER_BIN=${TPA_RELEASE_PUBLISHER_BIN:-tpa}
+STATE_ROOT=${TPA_RELEASE_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/tpa-release}
+
+usage() {
+    cat <<'EOF'
+Usage: release-tpa --version VERSION --ref COMMIT [--publish]
+
+Always performs an isolated source checkout, mandatory qualification, package
+build, metadata/hash checks, and a local repository-generation smoke test.
+Without --publish it has no TPA.run/publication effects.
+
+--publish additionally requires a terminal, --keyring FILE, --fingerprint HEX,
+and a TPA.run server advertising the qualified repository-browser capability.
+It stages in a private per-run workspace, prints the manifest, and requires an
+explicit confirmation here and again in tparun's publication plan.
+
+Options:
+  --version VERSION       Exact Debian package version to build
+  --ref COMMIT            Exact 40-hex commit reachable from authorized origin/main
+  --publish               Enable staged TPA.run publication after all checks
+  --repository URL        Repository URL (default: the public TPA bootstrap)
+  --keyring FILE          Public-only signer keyring for independent verification
+  --fingerprint HEX       Expected full signer fingerprint
+  --publisher-bin PATH    TPA binary configured in TPA.run (default: tpa)
+  --state-dir DIR         Private run/evidence directory
+  -h, --help              Show this help
+EOF
+}
+
+fail() { printf 'release-tpa: %s\n' "$*" >&2; exit 1; }
+
+while (($#)); do
+    case "$1" in
+        --version|--ref|--repository|--keyring|--fingerprint|--publisher-bin|--state-dir)
+            (($# >= 2)) || fail "missing value for $1"
+            name=$1 value=$2
+            shift 2
+            case "$name" in
+                --version) VERSION=$value ;;
+                --ref) REF=$value ;;
+                --repository) REPOSITORY=$value ;;
+                --keyring) KEYRING=$value ;;
+                --fingerprint) FINGERPRINT=$value ;;
+                --publisher-bin) PUBLISHER_BIN=$value ;;
+                --state-dir) STATE_ROOT=$value ;;
+            esac
+            ;;
+        --publish) PUBLISH=1; shift ;;
+        -h|--help) usage; exit 0 ;;
+        *) fail "unknown option: $1" ;;
+    esac
+done
+
+[[ -n "$VERSION" && -n "$REF" ]] || { usage >&2; fail '--version and --ref are required'; }
+[[ "$REF" =~ ^[0-9a-f]{40}$ ]] || fail '--ref must be a full lowercase 40-hex commit ID'
+dpkg --validate-version "$VERSION" >/dev/null 2>&1 || fail "invalid Debian version: $VERSION"
+
+for tool in git go dpkg dpkg-deb sha256sum tar python3 flock; do
+    command -v "$tool" >/dev/null 2>&1 || fail "missing required tool: $tool"
+done
+if ((PUBLISH)); then
+    [[ -t 0 && -t 1 ]] || fail '--publish requires an interactive terminal'
+    for tool in tparun curl gpg; do
+        command -v "$tool" >/dev/null 2>&1 || fail "missing required publication tool: $tool"
+    done
+    [[ -n "$KEYRING" && -f "$KEYRING" && ! -L "$KEYRING" ]] || fail '--publish requires a regular --keyring file'
+    [[ "$FINGERPRINT" =~ ^([0-9A-Fa-f]{40}|[0-9A-Fa-f]{64})$ ]] || fail '--publish requires a full --fingerprint'
+fi
+
+repo_info=$(python3 - "$REPOSITORY" <<'PY'
+import sys
+from urllib.parse import urlsplit
+u = urlsplit(sys.argv[1])
+if u.scheme not in ('https', 'http') or not u.netloc or u.username or u.password or u.query or u.fragment:
+    raise SystemExit('repository URL must be an HTTP(S) repository URL without credentials, query, or fragment')
+parts = [p for p in u.path.split('/') if p]
+if len(parts) != 3 or parts[0] != 'r':
+    raise SystemExit('repository URL must have the form https://host/r/owner/name')
+print(f'{u.scheme}://{u.netloc}')
+PY
+) || fail 'invalid --repository URL'
+SERVER_ORIGIN=$repo_info
+REPOSITORY=${REPOSITORY%/}
+
+if ((PUBLISH)); then
+    mkdir -p "$STATE_ROOT/runs"
+    chmod 0700 "$STATE_ROOT" "$STATE_ROOT/runs"
+    exec 9>"$STATE_ROOT/release.lock"
+    flock -n 9 || fail 'another local TPA release run is active'
+fi
+
+RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)-${VERSION//[^A-Za-z0-9.+:~_-]/_}-${REF:0:12}"
+mkdir -p "$STATE_ROOT/runs"
+chmod 0700 "$STATE_ROOT" "$STATE_ROOT/runs"
+RUN_DIR=$(mktemp -d "$STATE_ROOT/runs/${RUN_ID}.XXXXXX")
+chmod 0700 "$RUN_DIR"
+mkdir -m 0700 "$RUN_DIR/logs"
+printf '%s\n' "run_dir=$RUN_DIR" "version=$VERSION" "source_ref=$REF" "repository=$REPOSITORY" "publish_requested=$PUBLISH" >"$RUN_DIR/run.txt"
+
+run_step() {
+    local label=$1
+    shift
+    printf '\n== %s ==\n' "$label"
+    (cd "$SOURCE_DIR" && umask 022 && "$@") 2>&1 | tee "$RUN_DIR/logs/$label.log"
+}
+
+SOURCE_DIR="$RUN_DIR/source"
+printf 'Fetching authorized source: %s\n' "$SOURCE_URL"
+GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=/bin/false \
+    git clone --no-tags --single-branch --branch main --no-checkout "$SOURCE_URL" "$SOURCE_DIR" \
+    2>&1 | tee "$RUN_DIR/logs/git-clone.log"
+GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null git -C "$SOURCE_DIR" fetch --no-tags origin main \
+    2>&1 | tee "$RUN_DIR/logs/git-fetch.log"
+origin_main=$(git -C "$SOURCE_DIR" rev-parse --verify 'refs/remotes/origin/main^{commit}')
+git -C "$SOURCE_DIR" cat-file -e "$REF^{commit}" || fail "authorized origin/main does not contain commit $REF"
+git -C "$SOURCE_DIR" merge-base --is-ancestor "$REF" refs/remotes/origin/main || fail "commit $REF is not reachable from authorized origin/main"
+git -C "$SOURCE_DIR" checkout --detach "$REF" 2>&1 | tee "$RUN_DIR/logs/git-checkout.log"
+[[ "$(git -C "$SOURCE_DIR" rev-parse HEAD)" == "$REF" ]] || fail 'checkout did not resolve to the requested commit'
+[[ -z "$(git -C "$SOURCE_DIR" status --porcelain --untracked-files=all)" ]] || fail 'fresh source checkout is not clean'
+printf 'authorized_origin_main=%s\n' "$origin_main" >>"$RUN_DIR/run.txt"
+printf 'source_commit=%s\n' "$REF" >>"$RUN_DIR/run.txt"
+
+run_step go-test-race go test -race ./...
+run_step go-vet go vet ./...
+run_step version-qualification ./tests/version-qualification.sh
+run_step package-qualification ./tests/qualification.sh
+run_step dependency-qualification ./tests/dependency-qualification.sh
+run_step release-build env TPA_VERSION="$VERSION" ./build.sh
+
+[[ -z "$(git -C "$SOURCE_DIR" status --porcelain --untracked-files=all)" ]] || fail 'qualification/build modified tracked or unignored source files'
+
+HOST_ARCH=$(dpkg --print-architecture)
+[[ " ${RELEASE_ARCHES[*]} " == *" $HOST_ARCH "* ]] || fail "unsupported release host architecture: $HOST_ARCH"
+mkdir -m 0700 "$RUN_DIR/extracted"
+for arch in "${RELEASE_ARCHES[@]}"; do
+    deb="$SOURCE_DIR/dist/tpa-$arch.deb"
+    [[ -f "$deb" && ! -L "$deb" ]] || fail "missing regular package artifact: $deb"
+    package=$(dpkg-deb -f "$deb" Package)
+    version=$(dpkg-deb -f "$deb" Version)
+    package_arch=$(dpkg-deb -f "$deb" Architecture)
+    provenance=$(dpkg-deb -f "$deb" TPA-Version)
+    [[ "$package" == tpa && "$version" == "$VERSION" && "$package_arch" == "$arch" && "$provenance" == "$VERSION" ]] || \
+        fail "Debian metadata mismatch for $deb"
+    sha256sum "$deb" >>"$RUN_DIR/SHA256SUMS.txt"
+    printf '%s\t%s\t%s\t%s\t%s\n' "$package" "$version" "$package_arch" "$(stat -c %s "$deb")" "$(sha256sum "$deb" | awk '{print $1}')" \
+        >>"$RUN_DIR/packages.tsv"
+done
+package_count=$(find "$SOURCE_DIR/dist" -maxdepth 1 -type f -name 'tpa-*.deb' | wc -l)
+[[ "$package_count" == 3 ]] || fail "expected exactly three release .deb files, found $package_count"
+
+HOST_DEB="$SOURCE_DIR/dist/tpa-$HOST_ARCH.deb"
+dpkg-deb -x "$HOST_DEB" "$RUN_DIR/extracted"
+TPA_BINARY="$RUN_DIR/extracted/usr/local/bin/tpa"
+[[ -x "$TPA_BINARY" ]] || fail 'host architecture package has no executable TPA binary'
+[[ "$("$TPA_BINARY" version)" == "$VERSION" ]] || fail 'packaged tpa version command mismatch'
+[[ "$("$TPA_BINARY" --version)" == "tpa $VERSION" ]] || fail 'packaged tpa --version mismatch'
+"$TPA_BINARY" --help | grep -Fq "TPA $VERSION - Tool for Package Automation" || fail 'packaged TPA help version mismatch'
+
+SMOKE_INPUT="$RUN_DIR/smoke/input"
+SMOKE_REPO="$RUN_DIR/smoke/repository"
+mkdir -m 0700 -p "$SMOKE_INPUT"
+cp -- "$HOST_DEB" "$SMOKE_INPUT/"
+"$TPA_BINARY" pack -in="$SMOKE_INPUT" --atomic-publish="$SMOKE_REPO" 2>&1 | tee "$RUN_DIR/logs/source-browser-smoke.log"
+[[ -s "$SMOKE_REPO/index.html" && -s "$SMOKE_REPO/repository.json" ]] || fail 'built TPA does not generate both browser sidecars'
+"$TPA_BINARY" verify --json "$SMOKE_REPO" >"$RUN_DIR/source-browser-verify.json" || fail 'built TPA failed to verify its smoke repository'
+python3 - "$RUN_DIR/source-browser-verify.json" "$VERSION" "$SMOKE_REPO/repository.json" <<'PY'
+import json, sys
+report = json.load(open(sys.argv[1], encoding='utf-8'))
+assert report.get('valid') is True, report
+assert any(p.get('package') == 'tpa' and p.get('version') == sys.argv[2] for p in report.get('packages', [])), report
+view = json.load(open(sys.argv[3], encoding='utf-8'))
+assert view.get('format') == 'tpa-repository-index' and view.get('version') == 1, view
+assert any(p.get('metadata', {}).get('Package') == 'tpa' and p.get('metadata', {}).get('Version') == sys.argv[2] for p in view.get('packages', [])), view
+PY
+
+if ((PUBLISH)); then
+    publisher_path=$(command -v -- "$PUBLISHER_BIN") || fail "cannot resolve configured publisher TPA executable: $PUBLISHER_BIN"
+    PUBLISHER_REPO="$RUN_DIR/smoke/publisher-repository"
+    "$publisher_path" pack -in="$SMOKE_INPUT" --atomic-publish="$PUBLISHER_REPO" \
+        2>&1 | tee "$RUN_DIR/logs/publisher-browser-smoke.log" || fail 'configured TPA.run publisher failed the local generation smoke test'
+    [[ -s "$PUBLISHER_REPO/index.html" && -s "$PUBLISHER_REPO/repository.json" ]] || fail 'configured TPA.run publisher does not generate both browser sidecars'
+
+    gpg --batch --show-keys --with-colons "$KEYRING" >"$RUN_DIR/public-key-info.txt" 2>"$RUN_DIR/logs/keyring-check.log" || fail 'public keyring is not readable by GPG'
+    python3 - "$RUN_DIR/public-key-info.txt" "$FINGERPRINT" <<'PY'
+import sys
+expected = sys.argv[2].upper()
+primary = False
+found = []
+for line in open(sys.argv[1], encoding='utf-8'):
+    fields = line.rstrip('\n').split(':')
+    if fields[0] == 'pub':
+        primary = True
+    elif fields[0] in ('sub', 'sec', 'ssb'):
+        primary = False
+    elif fields[0] == 'fpr' and primary and len(fields) > 9:
+        found.append(fields[9].upper())
+if expected not in found:
+    raise SystemExit('configured public keyring does not contain the expected primary fingerprint')
+PY
+
+    curl --fail --silent --show-error --max-time 10 "$SERVER_ORIGIN/version" -o "$RUN_DIR/tparun-version.json" || fail 'cannot read TPA.run version/capability endpoint'
+    python3 - "$RUN_DIR/tparun-version.json" "$PUBLISHER_BIN" <<'PY'
+import json, sys
+v = json.load(open(sys.argv[1], encoding='utf-8'))
+if v.get('service') != 'tparun' or v.get('repository_browser_compatibility') is not True:
+    raise SystemExit('TPA.run has not deployed the qualified repository-browser publication/serving compatibility')
+if v.get('tpa_bin') != sys.argv[2]:
+    raise SystemExit(f"TPA.run publisher binary mismatch: configured={v.get('tpa_bin')!r}, runner={sys.argv[2]!r}")
+PY
+
+    "$TPA_BINARY" verify --json --keyring="$KEYRING" --fingerprint="$FINGERPRINT" --require-signed "$REPOSITORY" \
+        >"$RUN_DIR/prepublication-verify.json" || fail 'current target repository failed independent signature/artifact verification'
+    python3 - "$RUN_DIR/prepublication-verify.json" "$FINGERPRINT" "$RUN_DIR/packages.tsv" <<'PY'
+import csv, json, subprocess, sys
+r = json.load(open(sys.argv[1], encoding='utf-8'))
+if r.get('valid') is not True or r.get('signatureVerified') is not True or r.get('signer', '').upper() != sys.argv[2].upper():
+    raise SystemExit(f'current target repository trust check failed: {r.get("error", "invalid report")}')
+expected = {}
+with open(sys.argv[3], encoding='utf-8') as f:
+    for row in csv.reader(f, delimiter='\t'):
+        package, version, arch, size, digest = row
+        expected[arch] = (package, version, digest)
+for arch, (package, version, digest) in expected.items():
+    existing = [p for p in r.get('packages', []) if p.get('package') == package and p.get('architecture') == arch]
+    for item in existing:
+        if item.get('version') == version:
+            if item.get('sha256') != digest:
+                raise SystemExit(f'release version already exists with different bytes: {package} {version} {arch}')
+            raise SystemExit(f'release identity is already published: {package} {version} {arch}')
+        if subprocess.run(['dpkg', '--compare-versions', version, 'gt', item['version']]).returncode != 0:
+            raise SystemExit(f'release version is not newer than published {item["version"]} for {arch}')
+PY
+
+    export TPARUN_STAGING_DIR="$RUN_DIR/staging"
+    mkdir -m 0700 -p "$TPARUN_STAGING_DIR"
+    tparun stage "$SOURCE_DIR/dist/tpa-amd64.deb" "$SOURCE_DIR/dist/tpa-arm64.deb" "$SOURCE_DIR/dist/tpa-riscv64.deb" \
+        2>&1 | tee "$RUN_DIR/logs/tparun-stage.log"
+    tparun status 2>&1 | tee "$RUN_DIR/logs/tparun-status-staged.log"
+    python3 - "$TPARUN_STAGING_DIR/metadata.json" "$SOURCE_DIR/dist" "$VERSION" <<'PY'
+import hashlib, json, pathlib, sys
+manifest = json.load(open(sys.argv[1], encoding='utf-8'))
+expected_version = sys.argv[3]
+expected = {'amd64', 'arm64', 'riscv64'}
+actual = set()
+for artifact in manifest.get('artifacts', []):
+    path = pathlib.Path(artifact['staged_path'])
+    data = path.read_bytes()
+    digest = hashlib.sha256(data).hexdigest()
+    if artifact.get('package') != 'tpa' or artifact.get('version') != expected_version or artifact.get('architecture') not in expected:
+        raise SystemExit(f'unexpected staged identity: {artifact}')
+    if artifact.get('size') != len(data) or artifact.get('sha256') != digest:
+        raise SystemExit(f'staged byte/hash mismatch: {artifact}')
+    if artifact['architecture'] in actual:
+        raise SystemExit('duplicate staged architecture')
+    actual.add(artifact['architecture'])
+if actual != expected:
+    raise SystemExit(f'staged architecture set mismatch: {actual}')
+PY
+
+    printf '\nRelease candidate\n  version: %s\n  source:  %s\n  origin/main at fetch: %s\n  target:  %s\n  signer:  %s\n  packages:\n' "$VERSION" "$REF" "$origin_main" "$REPOSITORY" "$FINGERPRINT"
+    cat "$RUN_DIR/packages.tsv"
+    printf '\nLocal staged manifest and hashes are recorded in %s.\n' "$RUN_DIR/logs/tparun-status-staged.log"
+    printf 'Type PUBLISH to submit this exact candidate to TPA.run (its own plan and y/yes prompt still applies): '
+    IFS= read -r confirmation
+    [[ "$confirmation" == PUBLISH ]] || fail 'operator declined publication; isolated staging remains in the run directory'
+
+    tparun publish --verbose "$REPOSITORY" 2>&1 | tee "$RUN_DIR/logs/tparun-publish.log"
+    tparun status 2>&1 | tee "$RUN_DIR/logs/tparun-status-after.log"
+    grep -Fq 'No packages staged.' "$RUN_DIR/logs/tparun-status-after.log" || fail 'publication did not clear the isolated staging manifest'
+
+    curl --fail --location --silent --show-error --max-time 20 "$REPOSITORY/" -o "$RUN_DIR/public-index.html" || fail 'published repository root/index.html is not publicly readable'
+    curl --fail --silent --show-error --max-time 20 "$REPOSITORY/repository.json" -o "$RUN_DIR/public-repository.json" || fail 'published repository.json is not publicly readable'
+    grep -Fq 'repository.json' "$RUN_DIR/public-index.html" || fail 'published HTML does not link its JSON inventory'
+    "$TPA_BINARY" verify --json --keyring="$KEYRING" --fingerprint="$FINGERPRINT" --require-signed "$REPOSITORY" \
+        >"$RUN_DIR/postpublication-verify.json" || fail 'published repository failed independent signature/artifact verification'
+    python3 - "$RUN_DIR/postpublication-verify.json" "$FINGERPRINT" "$RUN_DIR/public-repository.json" "$RUN_DIR/packages.tsv" "$VERSION" <<'PY'
+import csv, json, sys
+report = json.load(open(sys.argv[1], encoding='utf-8'))
+if report.get('valid') is not True or report.get('signatureVerified') is not True or report.get('signer', '').upper() != sys.argv[2].upper():
+    raise SystemExit(f'post-publication trust check failed: {report.get("error", "invalid report")}')
+view = json.load(open(sys.argv[3], encoding='utf-8'))
+if view.get('format') != 'tpa-repository-index' or view.get('version') != 1:
+    raise SystemExit('public repository.json has an unsupported format')
+expected = {}
+with open(sys.argv[4], encoding='utf-8') as f:
+    for row in csv.reader(f, delimiter='\t'):
+        package, version, arch, size, digest = row
+        expected[arch] = (package, version, int(size), digest)
+for arch, (package, version, size, digest) in expected.items():
+    matches = [p for p in view.get('packages', []) if p.get('metadata', {}).get('Package') == package and p.get('metadata', {}).get('Version') == version and p.get('metadata', {}).get('Architecture') == arch]
+    if len(matches) != 1:
+        raise SystemExit(f'public browser inventory identity count for {arch}: {len(matches)}')
+    artifact = matches[0].get('artifact', {})
+    if (artifact.get('size'), artifact.get('sha256')) != (size, digest):
+        raise SystemExit(f'public browser artifact hash/size mismatch for {arch}')
+print(f"Verified signed repository and all {len(expected)} published browser identities.")
+PY
+    for arch in "${RELEASE_ARCHES[@]}"; do
+        "$TPA_BINARY" inspect --json -package=tpa -ver="$VERSION" -arch="$arch" "$REPOSITORY" \
+            >"$RUN_DIR/inspect-$arch.json" || fail "published package identity not inspectable for $arch"
+        python3 - "$RUN_DIR/inspect-$arch.json" "$VERSION" "$arch" "$RUN_DIR/packages.tsv" <<'PY'
+import csv, json, sys
+r = json.load(open(sys.argv[1], encoding='utf-8'))
+items = [p for p in r.get('packages', []) if p.get('package') == 'tpa' and p.get('version') == sys.argv[2] and p.get('architecture') == sys.argv[3]]
+if len(items) != 1:
+    raise SystemExit(f'exact public package identity count: {len(items)}')
+with open(sys.argv[4], encoding='utf-8') as f:
+    expected = {row[2]: (int(row[3]), row[4]) for row in csv.reader(f, delimiter='\t')}[sys.argv[3]]
+if (items[0].get('size'), items[0].get('sha256')) != expected:
+    raise SystemExit('public package index differs from the qualified local artifact')
+PY
+    done
+    printf 'publication=verified\n' >>"$RUN_DIR/run.txt"
+else
+    printf '\nQualification and package build complete; no TPA.run staging or publication was requested.\n'
+    printf 'artifacts=%s\n' "$SOURCE_DIR/dist" >>"$RUN_DIR/run.txt"
+fi
+
+printf 'Evidence and artifacts: %s\n' "$RUN_DIR"
