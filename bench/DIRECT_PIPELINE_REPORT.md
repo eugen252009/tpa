@@ -12,9 +12,10 @@ Independently qualified implementation commits:
   and vet without the compose implementation present.
 - `dc267c25958e39ce1170f8cf5b11cc97053a6a26`: direct composition, CLI/capability,
   docs, failure tests, qualification and comparative benchmark harness.
-- A following qualification/evidence commit adds the retained measurements,
-  this report, stronger recursive/script/dependency tests and a shipped-JS DOM
-  logic test; no shipping implementation changes. See `git log -3 --oneline`.
+- `f11ccf1`: retained measurements, this report, stronger recursive/script/
+  dependency tests and a shipped-JS DOM logic test; no shipping implementation
+  changes. A following report-only commit records the remaining compatibility
+  qualifications.
 
 The handoff branch is committed and clean after the evidence commit. Original
 `/home/eugen/projekte/tpa` remains clean on `main` at `ffab7d5`; no merge, push,
@@ -159,6 +160,15 @@ Passed on the handoff source:
   unlist/delete retention behavior;
 - `tests/repository-contract-qualification.sh`: legacy empty/signed initialization,
   first-artifact transition, sidecar contract and APT acceptance;
+- `tests/version-qualification.sh`: temporary synthetic `9.8.7~test1`
+  amd64/arm64/riscv64 packages agree on Debian/runtime/provenance versions,
+  help identity and packaged completion files; existing release artifacts untouched;
+- `tests/dependency-qualification.sh`: legacy artifact-derived direct/transitive
+  dependency metadata and independent APT resolution;
+- `tests/ssh-output-qualification.sh`: all seven stages passed on a disposable
+  loopback OpenSSH/SFTP server, including APT consumption, strict host trust,
+  existing-path protection, concurrent writers and injected failure boundaries.
+  This qualifies existing pack transport, not remote compose support;
 - utility HTTP serving of all four generated files and shipped-JS Node DOM-mock
   tests: search including metadata, architecture filter, pagination, empty
   inventory, plain-text hostile metadata, traversal-link rejection, unsafe URL
