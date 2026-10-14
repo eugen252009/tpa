@@ -501,7 +501,7 @@ func inspectAndDeduplicate(entries []os.DirEntry, root string, workers int) ([]r
 				return fmt.Errorf("compare duplicate package identity %s %s %s: %w", pkg.Control.Name, pkg.Control.Version, pkg.Control.Architecture, err)
 			}
 			if !equal {
-				return Diagnostic{"Package/Version/Architecture", fmt.Sprintf("conflicting package identity %s %s %s in %s and %s; different artifact bytes require a new package version, not replacement under the same identity", pkg.Control.Name, pkg.Control.Version, pkg.Control.Architecture, filepath.Base(previous.Dist), filepath.Base(pkg.Dist)), controlPolicyURL + "#version"}
+				return Diagnostic{Field: "Package/Version/Architecture", Message: fmt.Sprintf("conflicting package identity %s %s %s in %s and %s; different artifact bytes require a new package version, not replacement under the same identity", pkg.Control.Name, pkg.Control.Version, pkg.Control.Architecture, filepath.Base(previous.Dist), filepath.Base(pkg.Dist)), URL: controlPolicyURL + "#version"}
 			}
 			return nil
 		}

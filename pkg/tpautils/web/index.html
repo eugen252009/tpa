@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>APT repository browser</title><link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script></head>
+<body><main><h1>APT repository browser</h1>
+<p>This is convenience metadata, not an APT trust anchor. Configure APT with an independently trusted signing key.</p>
+<noscript>JavaScript is required for the interactive listing. <a href="repository.json">Read the repository JSON inventory</a>.</noscript>
+<p><a href="repository.json">Versioned JSON inventory</a></p>
+<label>Search packages <input id="search" type="search" placeholder="Name, version, description or metadata"></label>
+<label>Architecture <select id="architecture"><option value="">All architectures</option></select></label>
+<p id="status" role="status">Loading repository.json…</p><section id="packages" aria-label="Packages"></section>
+<button id="more" type="button" hidden>Show more</button></main></body></html>

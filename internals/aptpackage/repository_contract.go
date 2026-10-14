@@ -2,6 +2,7 @@ package aptpackage
 
 import (
 	"fmt"
+	"github.com/eugen252009/tpa/pkg/debian"
 	"os"
 	"strconv"
 	"strings"
@@ -65,7 +66,7 @@ func validRepositoryArchitecture(value string) bool {
 }
 
 func validRepositoryPackageName(value string) bool {
-	return validRepositoryNameSegment(value)
+	return debian.ValidPackageName(value)
 }
 
 func validRepositoryArtifactBasename(value string) bool {

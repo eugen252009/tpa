@@ -15,17 +15,17 @@ func ParsePackage(path string) (Control, error) {
 
 func ParseControl(output []byte) (Control, error) {
 	if len(output) > maxControlFileSize {
-		return Control{}, Diagnostic{"control", "control metadata exceeds the supported size limit", controlPolicyURL}
+		return Control{}, Diagnostic{Field: "control", Message: "control metadata exceeds the supported size limit", URL: controlPolicyURL}
 	}
 	paragraphs, err := parseRepositoryParagraphs(output, false)
 	if err != nil {
-		return Control{}, Diagnostic{"control", err.Error() + "; use Field: value, indent continuation lines, and define each field only once", controlPolicyURL + "#syntax-of-control-files"}
+		return Control{}, Diagnostic{Field: "control", Message: err.Error() + "; use Field: value, indent continuation lines, and define each field only once", URL: controlPolicyURL + "#syntax-of-control-files"}
 	}
 	if len(paragraphs) == 0 {
 		return Control{}, ValidateControl(Control{})
 	}
 	if len(paragraphs) != 1 {
-		return Control{}, Diagnostic{"control", fmt.Sprintf("expected one package control stanza, got %d; use an indented dot for blank description lines", len(paragraphs)), controlPolicyURL + "#description"}
+		return Control{}, Diagnostic{Field: "control", Message: fmt.Sprintf("expected one package control stanza, got %d; use an indented dot for blank description lines", len(paragraphs)), URL: controlPolicyURL + "#description"}
 	}
 	c := controlFromFields(paragraphs[0])
 	return c, ValidateControl(c)

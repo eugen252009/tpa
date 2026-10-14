@@ -36,6 +36,14 @@ output read the injected runtime value. Set `TPA_VERSION` for release builds.
 `tpa --version` prints `tpa <version>`. Running `tpa` without a command prints
 the same help and returns status 2.
 
+## Standalone utilities
+
+[`tpa-utils`](docs/tpa-utils.md) is a separately buildable CLI and Go library
+(`pkg/tpautils`, shared pure metadata rules in `pkg/debian`) for field/control
+validation, Debian version comparison, ordinary APT inspection and an interactive
+static browser. No TPA.run account or backend is required. Browser generation
+never changes APT indexes/signatures or overwrites canonical TPA sidecars.
+
 ## Shell completion
 
 Debian packages built by `build.sh` automatically install completion for Bash,

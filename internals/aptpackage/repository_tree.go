@@ -250,7 +250,7 @@ func validateTPAPool(root, component string, architectures []string) error {
 	}
 	identities := make(map[PackageIdentity]string)
 	for _, firstEntry := range firstEntries {
-		if !firstEntry.IsDir() || len(firstEntry.Name()) != 1 || !validRepositoryPackageName(firstEntry.Name()) {
+		if !firstEntry.IsDir() || len(firstEntry.Name()) != 1 || !validRepositoryNameSegment(firstEntry.Name()) {
 			return fmt.Errorf("invalid package-prefix directory in pool")
 		}
 		firstRoot := filepath.Join(componentRoot, firstEntry.Name())

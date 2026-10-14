@@ -490,7 +490,7 @@ func parseRepositoryPackages(data []byte, indexArchitecture string) ([]Repositor
 			stanzaErrors = append(stanzaErrors, err)
 		}
 		add := func(field, message string) {
-			stanzaErrors = append(stanzaErrors, Diagnostic{field, message, "https://github.com/eugen252009/tpa/blob/main/docs/repository-format-v1.md"})
+			stanzaErrors = append(stanzaErrors, Diagnostic{Field: field, Message: message, URL: "https://github.com/eugen252009/tpa/blob/main/docs/repository-format-v1.md"})
 		}
 		lookup := make(map[string]string, len(fields))
 		for key, value := range fields {

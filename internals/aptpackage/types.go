@@ -399,7 +399,7 @@ func validateMetadataKeys(metadata map[string]any) error {
 	sort.Strings(keys)
 	var problems []error
 	add := func(key, message string) {
-		problems = append(problems, Diagnostic{key, message, controlPolicyURL + "#syntax-of-control-files"})
+		problems = append(problems, Diagnostic{Field: key, Message: message, URL: controlPolicyURL + "#syntax-of-control-files"})
 	}
 	for _, key := range keys {
 		field, err := metadataFieldName(key)
