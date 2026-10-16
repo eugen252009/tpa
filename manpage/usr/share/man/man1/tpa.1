@@ -65,9 +65,10 @@ TPA.run SSH destination: -in=tree --output=tparun+ssh://tparun@host:port/reposit
 -keyring=owner-public.gpg. Optional -fingerprint pins the expected signer;
 -generation-id chooses an ID and -parent-generation is required for updates.
 OpenSSH uses strict known_hosts and optional -ssh-config. No local rebuild,
-provider signing or fallback transport is performed. Protocol version 1 sends
-the full tree; chunked CAS is not yet implemented. Ordinary SSH remains available
-through pack --output. See docs/client-signed-ssh.md for scope and failure semantics.
+provider signing or fallback transport is performed. Protocol version 2 negotiates
+fixed 1MiB SHA256 chunks and streams only missing content. Identical repeats send
+zero payload chunks. -json reports activation and transfer counters. Ordinary SSH
+remains available independently through pack --output. See docs/client-signed-ssh.md for scope and failure semantics.
 .TP
 .B inspect
 Read repository Release metadata and Packages indexes from a local path or read-only HTTP(S)/SSH locator. Supports human or JSON output and exact package identity lookup.

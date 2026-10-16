@@ -1,108 +1,118 @@
-# Client-signed SSH publication: first vertical slice
+# Client-signed chunk-CAS SSH publication
 
-TPA builds/signs; the destination receives finished repository bytes. Generic
-OpenSSH remains independent of TPA.run and requires no account, CAS or host key
-for APT signing. `pack --output=ssh://...` and `host:path` retain existing behavior:
-new remote destination only, with explicit existing-destination refusal.
-
-## Finished repository -> restricted TPA.run SSH
+TPA builds/signs; TPA.run receives, verifies, stores and serves original files.
+Ordinary `pack --output=ssh://...` / `host:path` stays independent of TPA.run,
+CAS and hosted accounts; it still requires a new remote destination.
 
 ```sh
-# Build once on the owner/developer's machine:
+# Owner-side construction/signing, before transport:
 tpa pack -in ./artifacts -out ./finished -gpg OWNER_FINGERPRINT
-# Export only the public certificate for independent verification:
 gpg --export OWNER_FINGERPRINT > owner-public.gpg
-# Repository and owner public signer must already be authorized by TPA.run.
+# Repository ownership and this public signer must already be authorized:
 tpa publish -in ./finished \
   --output=tparun+ssh://tparun@host:2222/0123456789abcdef0123456789abcdef \
   -ssh-config ./ssh-config -keyring ./owner-public.gpg \
-  -fingerprint OWNER_FINGERPRINT
+  -fingerprint OWNER_FINGERPRINT -json
+# Updates add: -parent-generation CURRENT_GENERATION
 ```
 
-The explicit `tparun+ssh` scheme selects the restricted hosted protocol, never
-SFTP or a remote shell. This first `publish` command supports that hosted scheme
-only; ordinary output retains `pack --output`. A future unified finished-tree
-transport entry can preserve both without weakening this distinction. There is
-no automatic fallback to another transport or provider signing on failure.
+The explicit hosted destination uses restricted OpenSSH, pinned known_hosts,
+batch mode and ordinary client identities. No general shell/SFTP/forwarding,
+provider signature or automatic full-tree fallback. `publish` needs only public
+APT trust, not a signing secret. It verifies the Stable/main finished tree and
+canonical website pair locally; publication never builds/signs/changes that tree.
+Generation IDs are lifecycle references, not new package/release identities.
 
-The client verifies signatures/artifacts/canonical website pair with the explicit
-owner **public** key, inventories files, then streams from existing files. No
-build, signing, temporary package tree, full repository copy or payload-sized RAM
-buffer is introduced. A fresh32-hex generation ID is generated unless supplied
-with `-generation-id`. Updates require `-parent-generation` matching the current
-active generation. Stable/main is the first supported suite/component. Explicit
-local signature verification failure stops before any SSH transfer.
+## Protocol2
 
-Standard OpenSSH config/identity handling, strict known_hosts and batch mode are
-used; unknown/changed host keys fail. The service's SSH protocol user is `tparun`.
-Local SSH credentials are not APT signing authority. Neither provider nor client
-signing secrets are sent to the host. The local source tree is read-only to this
-publisher (unlike the existing generic transport's private readback scratch).
+Exec: `tparun-v1 generation-cas REPOSITORY_ID`. The command namespace stays stable;
+the handshake explicitly identifies `tparun-chunk-ssh`, version2 and
+`fixed-sha256-1m-v1`. Authorization precedes ready and object negotiation. Existing
+live key/account/repository policy, publication slot and transactional credential/
+expected-parent checks apply. Hash knowledge grants no permission. The initial
+reuse scope is **within one repository**: namespaces are separate across repos,
+so another customer's object existence cannot be queried/referenced this way.
 
-## Version1 wire / server boundary
+After the bounded JSON ready line, messages use a4-byte big-endian length and
+strict JSON, at most16MiB each. Inventory contains version/algorithm, repository,
+generation/expected parent, sorted unique relative file paths, original lengths/
+SHA256 and ordered chunk SHA256/length extents. Fixed1MiB boundaries reset for
+each file; only the last chunk may be shorter. Paths use existing traversal/
+duplicate/prefix/depth validation. Maximum131,072 extents and65,536 files are
+explicit metadata bounds, not whole-file payload buffers.
 
-Command: `tparun-v1 generation <32-hex-repository-id>`. One exec/channel/connection;
-no shell, PTY, forwarding, SCP or SFTP. Existing identity/key-version/lifecycle
-checks and repository ownership/delegation policy authorize admission. Pending,
-revoked and read-only keys cannot publish. The same credential is rechecked at
-prebuilt activation checkpoints, inside the durable commit transaction, and
-monitored throughout the connection.
+Server returns distinct missing chunks. Client sends each requested object's
+exact raw bytes in request order; server verifies length/SHA256 and durably
+inserts/leases it before acknowledging its digest. Existing verified objects are
+leased/reused. A repeated identical publication transfers **zero payload chunks**.
+The client rejects requests for undeclared, duplicated or incorrectly sized
+objects. It reads existing files with one1MiB hashing buffer, then streams only
+requested file sections, without a repository copy or whole-DEB allocation.
 
-Server emits bounded JSON `version:1`, `protocol:tparun-prebuilt-ssh`, `state:ready`.
-Only after that readiness does the client send a bounded one-line JSON header
-(`version:1`, `content_type:multipart/form-data; boundary=...`), followed by the
-existing canonical multipart generation inventory and all files. InRelease is
-first. It ends with an EOF on the write half of the SSH channel. Server returns
-JSON with `version`, HTTP-compatible `status` and the existing activation result.
-Malformed headers/version/content types fail closed.
+Final frames report activation identity, original signer and transfer/storage
+counters. `-json` exposes verified uploaded bytes, reused unique bytes, logical
+bytes and unique CAS payload storage. Client also measures SSH application-stream
+bytes (both directions) and control bytes excluding payload. These are not TCP/
+encrypted SSH wire bytes. Failed/uncertain activation must be independently
+resolved against current generation authority before retrying.
 
-The receiver invokes the **existing prebuilt admission/verifier/activation**, not
-the package-ingestion worker, TPA builder or provider signer. The server can run
-this handler with no builder executable and an empty signing home. File inventory,
-owner-public-key signature, APT checks, capacity, expected parent, publication
-slots and activation rollback remain authoritative. Canonical HTML/JSON are
-verified for agreement, never silently regenerated as published output.
+## Verification, storage and lifetime
 
-The original control SSH handshake/wire limits remain for unauthenticated/pending
-operations. A live write credential may use the configured publication timeout;
-wire allowance increases only after repository authorization. It is bounded
-relative to configured MaxUpload; prebuilt HTTP-compatible body limits still
-apply. Do not raise limits without matching disk/inode/timeout policy.
+The server reconstructs exact file streams into the existing production prebuilt
+receiver/verifier. One **transient** full verification tree is needed by the
+current path-based verifier. Signature, artifact identities/hashes, indexes and
+canonical sidecars are verified; no repair/regeneration or provider signing.
+After quota checks, durable CAS retention precedes activation. Verification files
+are removed and replaced by a small private extent descriptor; active and retained
+generations do **not** keep additional persistent full repository payload trees.
+Original file content is streamed/seeked directly from immutable chunks over
+HTTP, retaining common range/HEAD/conditional/egress behavior. Private descriptors
+and raw object paths are never downloadable repository files.
 
-**This version is full-tree transfer, not CAS.** It uploads every file, including
-an unchanged second generation. Chunked negotiation, persistent content objects,
-reference/GC lifecycle, a fresh minimal canonical core schema, huge-file reader
-limits and full-process restart qualification remain later gates. This slice
-uses isolated fresh instances of the existing customer-security/prebuilt state;
-it introduces no historical migration bridges and touches no deployed database.
-Legacy builder routes still exist separately; do not use them as fallbacks or
-claim that the whole backend is already the final canonical core.
+Repository HTTP readers pin reachability with the existing repository lock for
+the response; activation/retention for that repo waits for such readers. Other
+repositories and chunk reception continue independently. This deliberately simple
+pinning policy can delay activation behind slow downloads.
 
-If transport fails after activation, an error can mean activation is unknown.
-Inspect the active generation before retrying; never retry with a stale parent
-or rebuild the signed content merely to change its identity.
+Chunks committed before interruption remain leased for24hours. Reconnect and
+resubmit inventory; verified remaining content is negotiated again. There is no
+opaque browser token or second upload service. A failed generation that already
+registered an immutable job ID may require a fresh generation ID on retry.
 
-## Capability discovery
+Owner-only `GET /v1/repositories/ID/cas-usage` exposes logical current generation,
+unique CAS payload bytes/objects, last-generation uploaded/reused bytes, retained
+counts and observed HTTP egress. Egress reuses the existing persistent daily
+ledger, without double-counting strict accounting. Owner-authorized
+`POST /v1/repositories/ID/cas-gc` explicitly reuses conservative collection:
+active/retained generations and live leases protect objects; uncertain jobs remain
+protected. Interrupted/failed candidate cleanup never guesses an active root dead.
+No new background collector or billing integration is introduced.
 
-`tpa capabilities` advertises `repository.publish-client-signed-tparun-ssh.v1`
-and the additive `publication.client_signed_ssh` protocol name/version fields.
-`client_signed_ssh_chunked_cas` is explicitly false: the separate backend chunk
-store is not yet a negotiated publishing transport. Existing standalone inbound
-server/managed-publication flags stay false; generic pack output backends stay
-local-filesystem and ssh-sftp. See [tparun-integration-contract.md](tparun-integration-contract.md).
+## Server mode and qualification boundaries
 
-## Qualification
+`TPARUN_RECEIVE_ONLY=true` skips builder preflight/worker and rejects legacy
+individual-package publishing, server metadata mutation and provider-key routes.
+Use the self-hosted/no-billing profile and existing local policy settings. No
+Stripe or dashboard is needed for SSH/HTTP operation. This mode does not reset
+existing state or create a new account system.
 
-- `tests/signed-ssh-repository-qualification.sh REVIEW_DIRECTORY`: builds a local
-  signed complete repository using the six retained BLL/Mema archives, publishes
-  to disposable ordinary OpenSSH, compares every file hash including signatures/
-  website and performs Debian12 HTTP/APT install/upgrade. Existing destination is
-  refused. Existing seven-step SSH failure qualification remains separate.
-- Backend `TestRealClientSignedSSHGeneration`, enabled with
-  `TPARUN_SSH_QUALIFICATION=IMPLEMENTATION_ROOT` and `TPA_DIR=...`: real HTTP account
-  provisioning plus existing approved-key fixtures, real OpenSSH possession,
-  first/repeat publish, stale parent/foreign scope/read-only rejection, independent
-  signed HTTP verification and Debian12 APT using that same tree. Approved-key
-  fixture setup does not qualify browser authenticator enrollment.
-- Protocol/header/permission and existing customer SSH/prebuilt tests run without
-  the real-artifact opt-in. Local qualification is not deployment qualification.
+The isolated implementation currently composes the existing customer/prebuilt
+application store and content schema1 with conservative retain-before-activation
+coordination. Fresh canonical hosting schema consolidation remains a separate
+reviewable phase; do not invent historical Schema17/20 bridges or reset deployed
+state. Existing artifact-size/time limits and full crash/restore qualification
+still apply; streaming does not certify arbitrary-size inputs.
+
+V1 full-tree receiving remains available to explicit Go callers using
+`HostedPublishOptions.LegacyFullTree`; it is never an automatic downgrade.
+Capabilities advertises protocol2 and `client_signed_ssh_chunked_cas: true`;
+standalone inbound-server and hosted-managed-publication flags remain false.
+
+The opt-in backend real-artifact gate exercises the unchanged14-file BLL/Mema
+fixture, zero-payload repeat, scoped authority, concurrent expected-parent
+competition, storage reopen, real changed16MiB package, interrupted/reused chunks,
+corruption rejection, activation rollback/reference cleanup, Firefox and signed
+Debian12 APT. It also kills/restarts the actual receive-only serve executable
+while a chunk is incomplete and resumes against the original active repository.
+These tests do not certify hardware enrollment, every crash point, canonical
+schema cutover, package/systemd deployment or production readiness.

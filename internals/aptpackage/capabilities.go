@@ -80,6 +80,7 @@ func GetCapabilities() Capabilities {
 		"repository.pack-empty.v1",
 		"repository.pack.v1",
 		"repository.publish-client-signed-tparun-ssh.v1",
+		"repository.publish-client-signed-tparun-ssh.v2",
 		"repository.publish-ssh-new.v1",
 		"repository.unlist.v1",
 		"repository.verify.v1",
@@ -106,7 +107,7 @@ func GetCapabilities() Capabilities {
 		Publication: CapabilityPublication{
 			AtomicReplaceLinuxRenameExchange: runtime.GOOS == "linux",
 			HostedManagedPublication:         false,
-			ClientSignedSSH:                  true, ClientSignedSSHProtocol: hostedGenerationProtocol, ClientSignedSSHProtocolVersion: 1, ClientSignedSSHChunkedCAS: false,
+			ClientSignedSSH:                  true, ClientSignedSSHProtocol: "tparun-chunk-ssh", ClientSignedSSHProtocolVersion: 2, ClientSignedSSHChunkedCAS: true,
 		},
 		Transport: CapabilityTransport{InboundSSHUpload: false, AuthenticatedUpload: false},
 		OutputBackends: []CapabilityOutputBackend{

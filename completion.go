@@ -35,7 +35,7 @@ var completionOptions = map[string][]completionOption{
 		{"workers", "text", "Build worker count"}, {"memory-mib", "text", "Worker scratch budget in MiB"}, {"epoch", "text", "Reproducible Unix timestamp"},
 		{"gpg", "text", "Signing identity"}, {"origin", "text", "Repository origin"}, {"label", "text", "Repository label"}, {"suite", "text", "Suite"}, {"codename", "text", "Codename"}, {"components", "text", "Component"}, {"repo-description", "text", "Repository description"},
 	},
-	"publish": {{"in", "dir", "Finished signed repository"}, {"out", "text", "Explicit TPA.run SSH destination"}, {"output", "text", "Explicit TPA.run SSH destination"}, {"ssh-config", "file", "OpenSSH config"}, {"keyring", "file", "Owner public key"}, {"fingerprint", "text", "Expected owner signer"}, {"generation-id", "text", "Generation identity"}, {"parent-generation", "text", "Expected parent"}},
+	"publish": {{"json", "none", "Publish result and transfer counters as JSON"}, {"in", "dir", "Finished signed repository"}, {"out", "text", "Explicit TPA.run SSH destination"}, {"output", "text", "Explicit TPA.run SSH destination"}, {"ssh-config", "file", "OpenSSH config"}, {"keyring", "file", "Owner public key"}, {"fingerprint", "text", "Expected owner signer"}, {"generation-id", "text", "Generation identity"}, {"parent-generation", "text", "Expected parent"}},
 	"parse":   {{"in", "file", "Debian archive"}},
 	"pack": {
 		{"in", "dir", "Package input directory"}, {"out", "dir", "Repository output"},

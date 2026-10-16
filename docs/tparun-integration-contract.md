@@ -2,8 +2,8 @@
 
 The binding ownership rules are in [the architecture contract](../TPA-ARCHITECTURE-CONTRACT.md).
 TPA now additionally supports finished client-signed repository publication through
-restricted TPA.run SSH v1; see [client-signed-ssh.md](client-signed-ssh.md). That
-protocol is full-tree streaming, **not yet chunked CAS**. Ordinary SSH/SFTP stays
+restricted TPA.run SSH v2; see [client-signed-ssh.md](client-signed-ssh.md). That
+protocol negotiates fixed1MiB SHA256 chunks and transfers only missing objects. Ordinary SSH/SFTP stays
 independent and new-destination-only. Local real-package/signature/sidecar/APT
 qualification does not establish compatibility with any deployed TPA.run instance
 or production/deployment readiness.
@@ -44,9 +44,9 @@ architecture. Their earlier qualification does not override this ownership.
    receiver's independently verified generation may become visible. Resolve
    uncertain activation rather than blindly retrying or rebuilding server-side.
 
-Capabilities advertises `repository.publish-client-signed-tparun-ssh.v1`,
+Capabilities advertises `repository.publish-client-signed-tparun-ssh.v2` (plus explicit legacy v1),
 `publication.client_signed_ssh`, its protocol name/version and explicit
-`client_signed_ssh_chunked_cas: false`. These additive schema-v1 fields describe
+`client_signed_ssh_chunked_cas: true`. These additive schema-v1 fields describe
 an outbound client, not a TPA upload server. The standalone transport inbound/
 authenticated-upload server flags and hosted-managed-publication flag stay false.
 Ordinary `pack` output backends remain local-filesystem / ssh-sftp; the explicit
@@ -61,7 +61,8 @@ only public verification trust, never private provider signing material.
 | `repository.compose-metadata.v1` | `tpa compose -in` metadata-only JSON/JSONL/directory, `-out` new local destination, explicit repository metadata/signer and resource/epoch options | Independently verified v1 tree containing in-process metadata-only DEBs and canonical sidecars | New destination only; no payload files, remote activation, hosted account, managed key creation or replacement; see `direct-compose.md` |
 | `repository.pack-empty.v1` | `tpa pack --empty`, no package input, repository Release metadata (defaults: suite/codename `stable`, component `main`), optional architecture list and signer | Verified empty v1 tree with empty indexes and paired sidecars | Refuses every pre-existing destination; no live tree is replaced |
 | `repository.pack.v1` | Normal `tpa pack` with a fresh `.deb` artifact set and repository metadata | Verified snapshot derived from artifacts | Empty artifact input fails; duplicate identity with conflicting bytes fails |
-| `repository.publish-client-signed-tparun-ssh.v1` | `tpa publish` with completed owner-signed Stable/main tree, explicit public keyring and `tparun+ssh://` repository | Exact received content independently verified and activated by authorized receiver with expected-parent check | Explicit protocol v1 full-tree upload, no chunked CAS yet, no server building/signing or fallback |
+| `repository.publish-client-signed-tparun-ssh.v2` | `tpa publish` with completed owner-signed Stable/main tree, public trust and explicit `tparun+ssh://` repository | Missing chunks verified/leased; exact full files verified; CAS-backed generation activated and served | No provider signing/building; no automatic v1 downgrade; authorization and expected parent checked durably |
+| `repository.publish-client-signed-tparun-ssh.v1` | Explicit legacy Go option `LegacyFullTree` | Original full-tree receiver remains available | Not the default CLI or negotiated fallback |
 | `repository.publish-ssh-new.v1` | Verified local candidate plus an SSH/SFTP destination | Remote tree read back and verified, then renamed to a new path | Existing remote destinations are refused; activation semantics depend on the SFTP server and the remote parent must exclude out-of-band writers |
 | `repository.inspect.v1` | Read-only locator and optional exact identity | Bounded metadata report; does not fetch package bytes | Read-only; signature may be present but untrusted without an explicit key |
 | `repository.verify.v1` | Read-only locator and optional public key/fingerprint policy | Verified indexes, indexed artifact bytes, identities, and signature status | Generic APT verification does not require TPA browser sidecars or enforce an exact tree inventory |
@@ -112,9 +113,10 @@ shell/SFTP endpoint. SSH key possession alone is insufficient: account/key
 liveness, current write permission, repository ownership/policy, quota, exact
 content/signature and expected parent must also pass. The TPA client itself
 implements no inbound upload listener. Its sibling server implementation and
-client are locally qualified for this full-tree handler scope only; minimal
-headless startup, canonical core schema and integrated chunk lifecycle remain
-unfinished. Never equate a local handler test with deployment qualification.
+client are locally qualified for chunk transfer, direct CAS HTTP, interrupted
+reconnect, actual receive-only process restart and explicit conservative GC.
+Canonical core schema consolidation, exhaustive crash/restore and release
+qualification remain separate; see the implementation report. Never equate a local handler test with deployment qualification.
 
 This document and the standalone TPA qualification do not establish TPA.run
 production compatibility, quota enforcement, authorization correctness,

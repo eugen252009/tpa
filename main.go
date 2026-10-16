@@ -286,7 +286,7 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 	parentGeneration := flags.String("parent-generation", "", "Expected parent generation for -generation-manifest")
 	noProvenance := flags.Bool("no-provenance", false, "Disable automatic TPA provenance metadata")
 	yes := flags.Bool("yes", false, "Confirm destructive package deletion")
-	jsonOutput := flags.Bool("json", false, "Write check/inspect/verify output as JSON")
+	jsonOutput := flags.Bool("json", false, "Write check/inspect/verify/publish output as JSON")
 	keyringPath := flags.String("keyring", "", "Public OpenPGP key export for repository signature verification")
 	fingerprint := flags.String("fingerprint", "", "Expected full OpenPGP signer fingerprint")
 	requireSigned := flags.Bool("require-signed", false, "Require a valid signed InRelease")
@@ -392,7 +392,7 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 	}
 	switch command {
 	case "publish":
-		allowed := map[string]bool{"in": true, "out": true, "output": true, "ssh-config": true, "keyring": true, "fingerprint": true, "generation-id": true, "parent-generation": true}
+		allowed := map[string]bool{"in": true, "out": true, "output": true, "ssh-config": true, "keyring": true, "fingerprint": true, "generation-id": true, "parent-generation": true, "json": true}
 		for name := range seenFlags {
 			if !allowed[name] {
 				return usageError(stderr, fmt.Sprintf("-%s is not supported by publish", name))
@@ -413,7 +413,11 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 		if err != nil {
 			return commandFailure(stderr, fmt.Sprintf("publish signed repository: %v", err))
 		}
-		fmt.Fprintf(stdout, "Generation %s activated; original APT signer %s.\n", result.GenerationID, result.APTSigner)
+		if *jsonOutput {
+			json.NewEncoder(stdout).Encode(result)
+		} else {
+			fmt.Fprintf(stdout, "Generation %s activated; original APT signer %s.\n", result.GenerationID, result.APTSigner)
+		}
 	case "compose":
 		allowed := map[string]bool{"in": true, "out": true, "workers": true, "memory-mib": true, "epoch": true, "gpg": true, "origin": true, "label": true, "suite": true, "codename": true, "components": true, "repo-description": true}
 		for flag := range seenFlags {

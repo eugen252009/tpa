@@ -23,6 +23,7 @@ const hostedGenerationProtocol = "tparun-prebuilt-ssh"
 var hostedIDPattern = regexp.MustCompile(`^[a-f0-9]{32}$`)
 
 type HostedPublishOptions struct {
+	LegacyFullTree   bool
 	SSHConfig        string
 	Keyring          []byte
 	Fingerprint      string
@@ -30,14 +31,22 @@ type HostedPublishOptions struct {
 	ParentGeneration string
 }
 type HostedPublishResult struct {
-	ID           string `json:"id"`
-	State        string `json:"state"`
-	GenerationID string `json:"generation_id"`
-	APTSigner    string `json:"apt_signer"`
+	SSHApplicationBytes  int64  `json:"ssh_application_bytes"`
+	ProtocolControlBytes int64  `json:"protocol_control_bytes"`
+	CAS                  bool   `json:"cas"`
+	UploadedBytes        int64  `json:"uploaded_bytes"`
+	ReusedUniqueBytes    int64  `json:"reused_unique_bytes"`
+	LogicalBytes         int64  `json:"logical_bytes"`
+	UniqueCASBytes       int64  `json:"unique_cas_bytes"`
+	ID                   string `json:"id"`
+	State                string `json:"state"`
+	GenerationID         string `json:"generation_id"`
+	APTSigner            string `json:"apt_signer"`
 }
 
 // PublishRepositoryToTPARunSSH streams an already-complete owner-signed stable
-// repository. Protocol v1 is full-tree SSH transfer, explicitly not yet CAS.
+// repository. Default protocol2 negotiates fixed chunks; LegacyFullTree is an
+// explicit compatibility option, never an automatic downgrade.
 // No files are modified, no package/repository build or signing is performed.
 func PublishRepositoryToTPARunSSH(ctx context.Context, directory, destination string, opts HostedPublishOptions) (HostedPublishResult, error) {
 	var result HostedPublishResult
@@ -99,7 +108,11 @@ func PublishRepositoryToTPARunSSH(ctx context.Context, directory, destination st
 	if dest.PortExplicit {
 		args = append(args, "-p", strconv.Itoa(dest.Port))
 	}
-	args = append(args, "-l", "tparun", "--", dest.Host, "tparun-v1 generation "+repo)
+	command := "tparun-v1 generation-cas "
+	if opts.LegacyFullTree {
+		command = "tparun-v1 generation "
+	}
+	args = append(args, "-l", "tparun", "--", dest.Host, command+repo)
 	cmd := exec.CommandContext(ctx, "ssh", args...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -123,6 +136,18 @@ func PublishRepositoryToTPARunSSH(ctx context.Context, directory, destination st
 			_ = cmd.Wait()
 		}
 	}()
+	if !opts.LegacyFullTree {
+		result, err = publishHostedCAS(directory, manifest, stdin, stdout)
+		if err != nil {
+			return result, err
+		}
+		err = cmd.Wait()
+		waited = true
+		if err != nil {
+			return result, fmt.Errorf("CAS SSH completion (activation may have occurred): %w: %s", err, diagnostic.String())
+		}
+		return result, nil
+	}
 	decoder := json.NewDecoder(io.LimitReader(stdout, 128<<10))
 	var ready struct {
 		Version         int

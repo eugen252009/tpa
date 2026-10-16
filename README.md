@@ -49,8 +49,10 @@ the same help and returns status 2.
 [`tpa publish`](docs/client-signed-ssh.md) streams a finished, independently
 verified owner-signed Stable/main tree to an explicit `tparun+ssh://` destination.
 The restricted host verifies and activates the original bytes without a builder
-or signing secret. This first protocol sends the full tree; CAS and a fresh
-canonical minimal host schema are not yet implemented. Ordinary OpenSSH output
+or signing secret. Protocol2 negotiates fixed1MiB SHA256 chunks and uploads only
+missing content; repeated identical uploads send zero payload. Generations serve
+from immutable chunks without persistent full-tree copies. Fresh canonical host
+schema consolidation remains a separate phase. Ordinary OpenSSH output
 remains independent through `pack --output=ssh://...` or `host:path`.
 
 ## Direct metadata-only repositories
@@ -109,7 +111,7 @@ The packaged files are:
 | `build` | Package root at `-in` | `.deb` archive or destination directory at `-out`, using `dpkg-deb --root-owner-group --build` |
 | `parse` | `.deb` archive at `-in` | Human-readable parsed control summary on standard output |
 | `compose` | Metadata-only JSON, JSONL or directory at `-in` | New local repository at `-out`, direct reproducible DEBs, optional existing GPG signer; no package trees |
-| `publish` | Finished signed tree at `-in`, explicit `tparun+ssh://` output and owner public keyring | Restricted full-tree SSH publication, exact byte preservation; no server signing/building or CAS yet |
+| `publish` | Finished signed tree at `-in`, explicit `tparun+ssh://` output and owner public keyring | Restricted chunk-CAS SSH publication, exact byte preservation and zero-payload repeat; no server signing/building |
 | `pack` | Top-level `.deb` files in `-in`, an optional JSON config path, or `--empty` | Verified APT repository at local or SSH/SFTP `--output`, or local `--atomic-publish`; optionally a generation inventory |
 | `inspect` | Local repository path or read-only HTTP(S)/SSH locator | Release metadata and rich package-index entries; optionally exact `-package`, `-ver`, `-arch` lookup |
 | `verify` | Local repository path or read-only HTTP(S)/SSH locator | Verifies Release/index integrity, signatures when present, and every indexed `.deb` artifact |
