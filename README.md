@@ -44,6 +44,15 @@ output read the injected runtime value. Set `TPA_VERSION` for release builds.
 `tpa --version` prints `tpa <version>`. Running `tpa` without a command prints
 the same help and returns status 2.
 
+## Client-signed SSH publication
+
+[`tpa publish`](docs/client-signed-ssh.md) streams a finished, independently
+verified owner-signed Stable/main tree to an explicit `tparun+ssh://` destination.
+The restricted host verifies and activates the original bytes without a builder
+or signing secret. This first protocol sends the full tree; CAS and a fresh
+canonical minimal host schema are not yet implemented. Ordinary OpenSSH output
+remains independent through `pack --output=ssh://...` or `host:path`.
+
 ## Direct metadata-only repositories
 
 [`tpa compose`](docs/direct-compose.md) is an opt-in JSON/JSONL/directory-to-APT
@@ -100,6 +109,7 @@ The packaged files are:
 | `build` | Package root at `-in` | `.deb` archive or destination directory at `-out`, using `dpkg-deb --root-owner-group --build` |
 | `parse` | `.deb` archive at `-in` | Human-readable parsed control summary on standard output |
 | `compose` | Metadata-only JSON, JSONL or directory at `-in` | New local repository at `-out`, direct reproducible DEBs, optional existing GPG signer; no package trees |
+| `publish` | Finished signed tree at `-in`, explicit `tparun+ssh://` output and owner public keyring | Restricted full-tree SSH publication, exact byte preservation; no server signing/building or CAS yet |
 | `pack` | Top-level `.deb` files in `-in`, an optional JSON config path, or `--empty` | Verified APT repository at local or SSH/SFTP `--output`, or local `--atomic-publish`; optionally a generation inventory |
 | `inspect` | Local repository path or read-only HTTP(S)/SSH locator | Release metadata and rich package-index entries; optionally exact `-package`, `-ver`, `-arch` lookup |
 | `verify` | Local repository path or read-only HTTP(S)/SSH locator | Verifies Release/index integrity, signatures when present, and every indexed `.deb` artifact |

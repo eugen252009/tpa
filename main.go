@@ -35,6 +35,7 @@ var publicCommands = []commandDescription{
 	{"compose", "Build a new repository directly from metadata-only JSON definitions"},
 	{"parse", "Read package metadata"},
 	{"pack", "Build an APT repository"},
+	{"publish", "Publish an already-signed repository to an explicit TPA.run SSH destination"},
 	{"inspect", "Inspect an existing repository"},
 	{"capabilities", "Print machine-readable TPA capabilities"},
 	{"completion", "Print shell completion for bash, zsh, or fish"},
@@ -369,7 +370,7 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 		cfg.Provenance = &disabled
 	}
 
-	if seenFlags["ssh-config"] && command != "pack" {
+	if seenFlags["ssh-config"] && command != "pack" && command != "publish" {
 		return usageError(stderr, "--ssh-config is only valid with pack")
 	}
 	if seenFlags["empty"] && command != "pack" {
@@ -378,7 +379,7 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 	if seenFlags["yes"] && command != "delete" {
 		return usageError(stderr, "--yes is only valid with delete")
 	}
-	if command != "inspect" && command != "verify" {
+	if command != "inspect" && command != "verify" && command != "publish" {
 		for _, name := range []string{"json", "keyring", "fingerprint", "require-signed"} {
 			if seenFlags[name] && !(command == "check" && name == "json") {
 				return usageError(stderr, fmt.Sprintf("-%s is only valid with inspect or verify", name))
@@ -390,6 +391,29 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 		return usageError(stderr, "-memory-mib and -epoch are only valid with compose")
 	}
 	switch command {
+	case "publish":
+		allowed := map[string]bool{"in": true, "out": true, "output": true, "ssh-config": true, "keyring": true, "fingerprint": true, "generation-id": true, "parent-generation": true}
+		for name := range seenFlags {
+			if !allowed[name] {
+				return usageError(stderr, fmt.Sprintf("-%s is not supported by publish", name))
+			}
+		}
+		if flags.NArg() != 0 || !seenFlags["in"] || *keyringPath == "" || seenFlags["out"] == seenFlags["output"] {
+			return usageError(stderr, "publish requires -in finished-repository, exactly one -out/--output tparun+ssh://host/repository-id and -keyring owner-public.gpg")
+		}
+		target := cfg.OutDir
+		if seenFlags["output"] {
+			target = *output
+		}
+		public, err := readLimitedFile(*keyringPath, aptpackage.MaxRepositoryKeyringSize)
+		if err != nil {
+			return commandFailure(stderr, err.Error())
+		}
+		result, err := aptpackage.PublishRepositoryToTPARunSSH(context.Background(), cfg.InDir, target, aptpackage.HostedPublishOptions{SSHConfig: *sshConfig, Keyring: public, Fingerprint: *fingerprint, GenerationID: *generationID, ParentGeneration: *parentGeneration})
+		if err != nil {
+			return commandFailure(stderr, fmt.Sprintf("publish signed repository: %v", err))
+		}
+		fmt.Fprintf(stdout, "Generation %s activated; original APT signer %s.\n", result.GenerationID, result.APTSigner)
 	case "compose":
 		allowed := map[string]bool{"in": true, "out": true, "workers": true, "memory-mib": true, "epoch": true, "gpg": true, "origin": true, "label": true, "suite": true, "codename": true, "components": true, "repo-description": true}
 		for flag := range seenFlags {

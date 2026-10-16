@@ -59,6 +59,16 @@ Generate and verify Packages, Packages.gz, Release, and optionally InRelease.
 Use --empty for the canonical empty-repository workflow. --output accepts a
 local path or a new SSH/SFTP destination.
 .TP
+.B publish
+Stream an already-complete owner-signed Stable/main repository to an explicit
+TPA.run SSH destination: -in=tree --output=tparun+ssh://tparun@host:port/repository-id
+-keyring=owner-public.gpg. Optional -fingerprint pins the expected signer;
+-generation-id chooses an ID and -parent-generation is required for updates.
+OpenSSH uses strict known_hosts and optional -ssh-config. No local rebuild,
+provider signing or fallback transport is performed. Protocol version 1 sends
+the full tree; chunked CAS is not yet implemented. Ordinary SSH remains available
+through pack --output. See docs/client-signed-ssh.md for scope and failure semantics.
+.TP
 .B inspect
 Read repository Release metadata and Packages indexes from a local path or read-only HTTP(S)/SSH locator. Supports human or JSON output and exact package identity lookup.
 .TP
