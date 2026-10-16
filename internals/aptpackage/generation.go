@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -64,7 +65,6 @@ func CreateGenerationManifest(root, repositoryID, generationID, parentGeneration
 		return GenerationManifest{}, fmt.Errorf("generation root must be a directory")
 	}
 	manifest := GenerationManifest{Version: 1, RepositoryID: repositoryID, GenerationID: generationID, ParentGeneration: parentGeneration, Files: []GenerationFile{}}
-	lastPath := ""
 	err = filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -93,10 +93,6 @@ func CreateGenerationManifest(root, repositoryID, generationID, parentGeneration
 		if err = validateGenerationRelativePath(rel); err != nil {
 			return err
 		}
-		if rel <= lastPath {
-			return fmt.Errorf("generation walk did not produce sorted unique paths")
-		}
-		lastPath = rel
 		if len(manifest.Files) >= maxGenerationFiles {
 			return fmt.Errorf("generation exceeds %d files", maxGenerationFiles)
 		}
@@ -110,6 +106,10 @@ func CreateGenerationManifest(root, repositoryID, generationID, parentGeneration
 	if err != nil {
 		return GenerationManifest{}, err
 	}
+	// WalkDir orders directory entries, not complete relative paths: '-' in a
+	// sibling name sorts before '/' in the already-visited directory prefix.
+	// Only bounded file metadata is sorted; file hashing remains streamed.
+	sort.Slice(manifest.Files, func(i, j int) bool { return manifest.Files[i].Path < manifest.Files[j].Path })
 	if len(manifest.Files) == 0 {
 		return GenerationManifest{}, fmt.Errorf("generation contains no files")
 	}
