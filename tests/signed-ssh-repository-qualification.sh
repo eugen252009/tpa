@@ -12,22 +12,29 @@ cleanup(){ docker rm -f "$CONTAINER" >/dev/null 2>&1 || :; GNUPGHOME="$TMP/gpg" 
 trap cleanup EXIT
 export GNUPGHOME="$TMP/gpg"
 mkdir -m700 "$GNUPGHOME"
-gpg --batch --pinentry-mode loopback --passphrase '' --quick-generate-key 'Local SSH Qualification <ssh@example.invalid>' rsa2048 sign 0 >"$TMP/keygen.log" 2>&1
-FP=$(gpg --batch --with-colons --list-secret-keys 2>/dev/null | awk -F: '$1=="fpr"{print $10;exit}')
-gpg --batch --export "$FP" > "$EVIDENCE/owner-public.gpg"
 (cd "$ROOT" && go build -o "$TMP/tpa" .)
-mkdir "$TMP/input"
-# Existing archives are reused unchanged; source package trees are not rebuilt.
-cp "$INPUT"/bll/dist/bll*_0.2.0_all.deb "$INPUT/mema-041/dist/mema_0.4.1_amd64.deb" "$INPUT/mema-release/dist/mema_0.4.2_amd64.deb" "$TMP/input/"
-(cd "$TMP/input" && sha256sum *.deb) > "$EVIDENCE/input-packages.sha256"
-"$TMP/tpa" pack -in="$TMP/input" -out="$EVIDENCE/source" -gpg="$FP"
+if test -n "${FROZEN_SOURCE_DIR:-}"; then
+ gpg --batch --import "${FROZEN_PUBLIC_KEY:?required with frozen source}" >"$TMP/public-import.log" 2>&1
+ FP=$(gpg --batch --with-colons --list-keys 2>/dev/null | awk -F: '$1=="fpr"{print $10;exit}')
+ mkdir "$EVIDENCE/source"; cp -a "$FROZEN_SOURCE_DIR/." "$EVIDENCE/source/"
+else
+ gpg --batch --pinentry-mode loopback --passphrase '' --quick-generate-key 'Local SSH Qualification <ssh@example.invalid>' rsa2048 sign 0 >"$TMP/keygen.log" 2>&1
+ FP=$(gpg --batch --with-colons --list-secret-keys 2>/dev/null | awk -F: '$1=="fpr"{print $10;exit}')
+ mkdir "$TMP/input"
+ # Existing archives are reused unchanged; source package trees are not rebuilt.
+ cp "$INPUT"/bll/dist/bll*_0.2.0_all.deb "$INPUT/mema-041/dist/mema_0.4.1_amd64.deb" "$INPUT/mema-release/dist/mema_0.4.2_amd64.deb" "$TMP/input/"
+ (cd "$TMP/input" && sha256sum *.deb) > "$EVIDENCE/input-packages.sha256"
+ "$TMP/tpa" pack -in="$TMP/input" -out="$EVIDENCE/source" -gpg="$FP"
+fi
+gpg --batch --export "$FP" > "$EVIDENCE/owner-public.gpg"
+export QUALIFICATION_PUBLIC_KEY="$EVIDENCE/owner-public.gpg"
 "$TMP/tpa" verify --require-signed -keyring="$EVIDENCE/owner-public.gpg" -fingerprint="$FP" "$EVIDENCE/source"
 mkdir "$TMP/helper"
 printf 'module qualification\n\ngo 1.26.3\nrequire github.com/eugen252009/tpa v0.0.0\nreplace github.com/eugen252009/tpa => %s\n' "$ROOT" > "$TMP/helper/go.mod"
 cat > "$TMP/helper/main.go" <<'GO'
 package main
 import("context";"fmt";"os";"github.com/eugen252009/tpa/internals/aptpackage")
-func main(){d,e:=aptpackage.ParseRepositoryDestination(os.Args[2]);if e==nil{d.SSHConfigPath=os.Args[3];e=aptpackage.PublishRepositoryToSSH(context.Background(),aptpackage.Config{OutDir:os.Args[1],GPG:os.Args[4]},d)};if e!=nil{fmt.Fprintln(os.Stderr,e);os.Exit(1)}}
+func main(){ctx:=context.Background();key,e:=os.ReadFile(os.Getenv("QUALIFICATION_PUBLIC_KEY"));if e==nil{var loc aptpackage.RepositoryLocator;loc,e=aptpackage.ParseRepositoryLocator(os.Args[1]);if e==nil{var reader aptpackage.RepositoryReader;reader,e=aptpackage.OpenRepositoryReader(loc);if e==nil{_,e=aptpackage.VerifyRepository(ctx,reader,aptpackage.RepositoryOptions{Codename:"stable",Keyring:key,Fingerprint:os.Args[4],RequireSigned:true});reader.Close()}}};if e==nil{var d aptpackage.RepositoryDestination;d,e=aptpackage.ParseRepositoryDestination(os.Args[2]);if e==nil{d.SSHConfigPath=os.Args[3];e=aptpackage.PublishRepositoryToSSH(ctx,aptpackage.Config{OutDir:os.Args[1],GPG:os.Args[4]},d)}};if e!=nil{fmt.Fprintln(os.Stderr,e);os.Exit(1)}}
 GO
 (cd "$TMP/helper" && go build -mod=mod -o "$TMP/publish" .)
 ssh-keygen -q -t ed25519 -N '' -f "$TMP/client"
@@ -42,7 +49,15 @@ printf 'Host *\n IdentityFile %s\n IdentitiesOnly yes\n UserKnownHostsFile %s\n 
 # The existing transport owns/mutates its readback scratch, never source/.
 mkdir "$TMP/scratch"; cp -a "$EVIDENCE/source/." "$TMP/scratch/"
 URL="ssh://publisher@127.0.0.1:$PORT/home/publisher/finished"
-"$TMP/publish" "$TMP/scratch" "$URL" "$TMP/config" "$FP"
+if test "${MEASURE_SSH:-false}" = true; then
+ mkdir "$TMP/instrument"
+ printf '#!/bin/bash\nargs=(); for arg in "$@"; do if test "$arg" != "-q"; then args+=("$arg"); fi; done\nexec /usr/bin/ssh -vv -E "$SSH_TRACE_DIR/ssh-$$.log" "${args[@]}"\n' > "$TMP/instrument/ssh-measured"
+ printf '#!/bin/sh\nexec /usr/bin/sftp -S "$SSH_MEASURED" "$@"\n' > "$TMP/instrument/sftp"
+ chmod 755 "$TMP/instrument/ssh-measured" "$TMP/instrument/sftp"
+ PATH="$TMP/instrument:$PATH" SSH_MEASURED="$TMP/instrument/ssh-measured" SSH_TRACE_DIR="$EVIDENCE" python3 "$ROOT/bench/measure-ordinary.py" "$EVIDENCE" "$TMP/publish" "$TMP/scratch" "$URL" "$TMP/config" "$FP"
+else
+ "$TMP/publish" "$TMP/scratch" "$URL" "$TMP/config" "$FP"
+fi
 if "$TMP/publish" "$TMP/scratch" "$URL" "$TMP/config" "$FP" >"$EVIDENCE/repeat.log" 2>&1; then echo 'existing destination unexpectedly replaced' >&2; exit 1; fi
 grep -F 'destination already exists' "$EVIDENCE/repeat.log"
 mkdir "$EVIDENCE/received"; docker cp "$CONTAINER:/home/publisher/finished/." "$EVIDENCE/received/" >/dev/null
