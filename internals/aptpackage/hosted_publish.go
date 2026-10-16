@@ -18,6 +18,8 @@ import (
 	"time"
 )
 
+const hostedGenerationProtocol = "tparun-prebuilt-ssh"
+
 var hostedIDPattern = regexp.MustCompile(`^[a-f0-9]{32}$`)
 
 type HostedPublishOptions struct {
@@ -130,7 +132,7 @@ func PublishRepositoryToTPARunSSH(ctx context.Context, directory, destination st
 	if err := decoder.Decode(&ready); err != nil {
 		return result, fmt.Errorf("TPA.run SSH capability/admission failed: %w: %s", err, diagnostic.String())
 	}
-	if ready.Version != 1 || ready.Protocol != "tparun-prebuilt-ssh" || ready.State != "ready" {
+	if ready.Version != 1 || ready.Protocol != hostedGenerationProtocol || ready.State != "ready" {
 		return result, fmt.Errorf("required TPA.run generation protocol unavailable")
 	}
 	writer := multipart.NewWriter(stdin)

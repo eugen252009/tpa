@@ -1,30 +1,28 @@
 # TPA / hosted TPA.run integration contract
 
-This is a transport-independent boundary for a future hosted adapter. It does
-not add a hosted API, authenticated hosted-upload protocol, authorization
-mechanism, or deployment. Standalone TPA separately supports outbound SSH/SFTP
-publication to a new remote path; that is not hosted publication.
-Compatibility with any deployed or checked-out TPA.run build is **NOT VERIFIED**;
-in particular, an adapter must prove that its candidate verifier accepts TPA's
-paired root `index.html` and `repository.json` sidecars before use.
+The binding ownership rules are in [the architecture contract](../TPA-ARCHITECTURE-CONTRACT.md).
+TPA now additionally supports finished client-signed repository publication through
+restricted TPA.run SSH v1; see [client-signed-ssh.md](client-signed-ssh.md). That
+protocol is full-tree streaming, **not yet chunked CAS**. Ordinary SSH/SFTP stays
+independent and new-destination-only. Local real-package/signature/sidecar/APT
+qualification does not establish compatibility with any deployed TPA.run instance
+or production/deployment readiness.
 
 ## Ownership boundary
 
-TPA owns Debian package parsing, APT repository generation, local lifecycle
-semantics, candidate verification, and optional local GPG signing. Hosted
-orchestration owns account/repository authorization, visibility, quotas and
-admission, trusted binary/source selection, sandbox/resource limits, independent
-candidate validation, signing policy/key custody, generation activation,
-rollback, and retention references.
+TPA on the owner/developer side owns package construction/parsing, APT indexes,
+canonical website generation, local lifecycle changes and signing. Hosted
+orchestration owns account/repository authorization, visibility, admission,
+quotas/metering, independent verification of received bytes, immutable storage,
+generation activation and retention. Signer public trust is server policy;
+private signing-key custody remains with the owner, not the host.
 
-A hosted caller may invoke TPA as a subprocess in a fresh isolated work area or
-use the exported Go repository operations. Stop the builder and its descendants
-before validation, and validate a server-owned immutable copy rather than a
-concurrently writable work tree. It must not duplicate TPA's package
-index, artifact-hash, or lifecycle semantics. It must also not give standalone
-TPA direct write access to hosted live storage. Publication uses TPA.run's
-authorized `stage` / `status` / `publish` workflow only; staging and publication
-must be separately qualified against the intended server baseline.
+Publish only a completed stable candidate. The receiver verifies and activates
+exact received content; it must not run a repository builder, repair indexes,
+regenerate the website/provenance or replace signatures. Reuse TPA verification
+semantics without granting the client direct hosted live-filesystem access.
+Legacy server-build/signing `stage` / `publish` workflows are not the target
+architecture. Their earlier qualification does not override this ownership.
 
 ## Capability negotiation
 
@@ -41,17 +39,20 @@ must be separately qualified against the intended server baseline.
 4. After generation, independently validate the candidate against
    [repository-format-v1.md](repository-format-v1.md), the signed APT metadata,
    package bytes, expected identity, and the bounded transport inventory.
-5. Only then submit the candidate through the separately authorized hosted
-   staging API. Query its status and publish only the staged candidate that
-   passed independent checks. Do not write directly into generation storage.
+5. Submit through the separately authorized finished-tree SSH receiver using
+   `tpa publish`, explicit owner public trust and expected active parent. Only the
+   receiver's independently verified generation may become visible. Resolve
+   uncertain activation rather than blindly retrying or rebuilding server-side.
 
-The capabilities document explicitly reports that this standalone TPA has no
-hosted managed publication, authenticated upload, or inbound SSH upload. It
-supports local operations, read-only HTTP(S)/SSH repository inspection,
-outbound SSH/SFTP publication to a new remote path, and optional GPG `InRelease`
-signing using the caller's GPG environment. A hosted
-managed signer must remain outside the package-build process; never pass hosted
-private signing material to TPA.
+Capabilities advertises `repository.publish-client-signed-tparun-ssh.v1`,
+`publication.client_signed_ssh`, its protocol name/version and explicit
+`client_signed_ssh_chunked_cas: false`. These additive schema-v1 fields describe
+an outbound client, not a TPA upload server. The standalone transport inbound/
+authenticated-upload server flags and hosted-managed-publication flag stay false.
+Ordinary `pack` output backends remain local-filesystem / ssh-sftp; the explicit
+hosted destination currently belongs to the finished-tree `publish` command.
+Local owner-side signing may use the caller's GPG environment; publishing needs
+only public verification trust, never private provider signing material.
 
 ## Operation model (semantic, not wire format)
 
@@ -60,6 +61,7 @@ private signing material to TPA.
 | `repository.compose-metadata.v1` | `tpa compose -in` metadata-only JSON/JSONL/directory, `-out` new local destination, explicit repository metadata/signer and resource/epoch options | Independently verified v1 tree containing in-process metadata-only DEBs and canonical sidecars | New destination only; no payload files, remote activation, hosted account, managed key creation or replacement; see `direct-compose.md` |
 | `repository.pack-empty.v1` | `tpa pack --empty`, no package input, repository Release metadata (defaults: suite/codename `stable`, component `main`), optional architecture list and signer | Verified empty v1 tree with empty indexes and paired sidecars | Refuses every pre-existing destination; no live tree is replaced |
 | `repository.pack.v1` | Normal `tpa pack` with a fresh `.deb` artifact set and repository metadata | Verified snapshot derived from artifacts | Empty artifact input fails; duplicate identity with conflicting bytes fails |
+| `repository.publish-client-signed-tparun-ssh.v1` | `tpa publish` with completed owner-signed Stable/main tree, explicit public keyring and `tparun+ssh://` repository | Exact received content independently verified and activated by authorized receiver with expected-parent check | Explicit protocol v1 full-tree upload, no chunked CAS yet, no server building/signing or fallback |
 | `repository.publish-ssh-new.v1` | Verified local candidate plus an SSH/SFTP destination | Remote tree read back and verified, then renamed to a new path | Existing remote destinations are refused; activation semantics depend on the SFTP server and the remote parent must exclude out-of-band writers |
 | `repository.inspect.v1` | Read-only locator and optional exact identity | Bounded metadata report; does not fetch package bytes | Read-only; signature may be present but untrusted without an explicit key |
 | `repository.verify.v1` | Read-only locator and optional public key/fingerprint policy | Verified indexes, indexed artifact bytes, identities, and signature status | Generic APT verification does not require TPA browser sidecars or enforce an exact tree inventory |
@@ -99,16 +101,20 @@ use the hosted activation mechanism.
 
 ## SSH and deployment boundary
 
-TPA has two distinct outbound SSH uses: read-only repository inspection through
-the system `ssh` client, and SFTP publication of a verified repository tree to a
-new remote path. SSH output does not replace an existing tree, execute remote
-shell commands, authenticate a hosted publication request, or activate hosted
-generations. Its same-parent rename behavior is server-dependent, and the remote
-parent must exclude out-of-band writers. It is not an upload server or hosted
-publication API. SSH-key login to a hosted account is not itself repository
-publication authorization. Any inbound SSH protocol requires a separate
-restricted server design and qualification; this contract intentionally does
-not invent one.
+TPA has three distinct outbound SSH uses: read-only repository inspection,
+ordinary SFTP publication to a new remote path, and explicit finished-tree
+TPA.run SSH publishing. Ordinary output does not become a hosted API, replace
+existing destinations or require a TPA.run account/daemon/CAS. Its same-parent
+rename remains server-dependent and the parent must exclude out-of-band writers.
+
+The separate hosted protocol is restricted and repository-authorized, not a
+shell/SFTP endpoint. SSH key possession alone is insufficient: account/key
+liveness, current write permission, repository ownership/policy, quota, exact
+content/signature and expected parent must also pass. The TPA client itself
+implements no inbound upload listener. Its sibling server implementation and
+client are locally qualified for this full-tree handler scope only; minimal
+headless startup, canonical core schema and integrated chunk lifecycle remain
+unfinished. Never equate a local handler test with deployment qualification.
 
 This document and the standalone TPA qualification do not establish TPA.run
 production compatibility, quota enforcement, authorization correctness,

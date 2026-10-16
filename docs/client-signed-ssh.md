@@ -82,6 +82,15 @@ If transport fails after activation, an error can mean activation is unknown.
 Inspect the active generation before retrying; never retry with a stale parent
 or rebuild the signed content merely to change its identity.
 
+## Capability discovery
+
+`tpa capabilities` advertises `repository.publish-client-signed-tparun-ssh.v1`
+and the additive `publication.client_signed_ssh` protocol name/version fields.
+`client_signed_ssh_chunked_cas` is explicitly false: the separate backend chunk
+store is not yet a negotiated publishing transport. Existing standalone inbound
+server/managed-publication flags stay false; generic pack output backends stay
+local-filesystem and ssh-sftp. See [tparun-integration-contract.md](tparun-integration-contract.md).
+
 ## Qualification
 
 - `tests/signed-ssh-repository-qualification.sh REVIEW_DIRECTORY`: builds a local

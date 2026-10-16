@@ -43,8 +43,12 @@ type CapabilitySigning struct {
 }
 
 type CapabilityPublication struct {
-	AtomicReplaceLinuxRenameExchange bool `json:"atomic_replace_linux_rename_exchange"`
-	HostedManagedPublication         bool `json:"hosted_managed_publication"`
+	AtomicReplaceLinuxRenameExchange bool   `json:"atomic_replace_linux_rename_exchange"`
+	HostedManagedPublication         bool   `json:"hosted_managed_publication"`
+	ClientSignedSSH                  bool   `json:"client_signed_ssh"`
+	ClientSignedSSHProtocol          string `json:"client_signed_ssh_protocol"`
+	ClientSignedSSHProtocolVersion   int    `json:"client_signed_ssh_protocol_version"`
+	ClientSignedSSHChunkedCAS        bool   `json:"client_signed_ssh_chunked_cas"`
 }
 
 type CapabilityTransport struct {
@@ -75,6 +79,7 @@ func GetCapabilities() Capabilities {
 		"repository.inspect.v1",
 		"repository.pack-empty.v1",
 		"repository.pack.v1",
+		"repository.publish-client-signed-tparun-ssh.v1",
 		"repository.publish-ssh-new.v1",
 		"repository.unlist.v1",
 		"repository.verify.v1",
@@ -101,6 +106,7 @@ func GetCapabilities() Capabilities {
 		Publication: CapabilityPublication{
 			AtomicReplaceLinuxRenameExchange: runtime.GOOS == "linux",
 			HostedManagedPublication:         false,
+			ClientSignedSSH:                  true, ClientSignedSSHProtocol: hostedGenerationProtocol, ClientSignedSSHProtocolVersion: 1, ClientSignedSSHChunkedCAS: false,
 		},
 		Transport: CapabilityTransport{InboundSSHUpload: false, AuthenticatedUpload: false},
 		OutputBackends: []CapabilityOutputBackend{
