@@ -135,7 +135,7 @@ func verifyRepositoryWithIdentity(cfg Config, verifyIdentity bool) error {
 		return nil
 	}
 	keyLookupStage := startStage(stageSignKeyLookup)
-	fingerprint, err := signingFingerprint(cfg.GPG)
+	fingerprint, err := primaryGPGFingerprint(cfg.GPG, false)
 	keyLookupStage()
 	if err != nil {
 		return err
@@ -277,7 +277,15 @@ func validSHA256(value string) bool {
 }
 
 func signingFingerprint(selector string) (string, error) {
-	cmd := exec.Command("gpg", "--batch", "--with-colons", "--fingerprint", "--list-secret-keys", selector)
+	return primaryGPGFingerprint(selector, true)
+}
+
+func primaryGPGFingerprint(selector string, secret bool) (string, error) {
+	lookup := "--list-keys"
+	if secret {
+		lookup = "--list-secret-keys"
+	}
+	cmd := exec.Command("gpg", "--batch", "--with-colons", "--fingerprint", lookup, selector)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("resolve signing key %q: %w: %s", selector, err, strings.TrimSpace(string(output)))
@@ -290,9 +298,9 @@ func signingFingerprint(selector string) (string, error) {
 			continue
 		}
 		switch fields[0] {
-		case "sec", "sec#", "sec>":
+		case "sec", "sec#", "sec>", "pub":
 			wantPrimaryFingerprint = true
-		case "ssb", "ssb#", "ssb>":
+		case "ssb", "ssb#", "ssb>", "sub":
 			wantPrimaryFingerprint = false
 		case "fpr":
 			if wantPrimaryFingerprint {
