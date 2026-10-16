@@ -1,5 +1,13 @@
 # TPA — Tool for Package Automation
 
+Architecture authority: [TPA-ARCHITECTURE-CONTRACT.md](TPA-ARCHITECTURE-CONTRACT.md).
+TPA builds/signs locally and publishes finished repositories; TPA.run is a
+receiving/verifying/storage/HTTP host, not another builder or signing authority.
+The [conformance audit](docs/architecture-conformance-audit.md) distinguishes
+reusable implementation from legacy hosted-ingestion deviations and missing
+SSH/CAS functionality. Existing command documentation below describes current
+implementation, not automatic approval of every historical integration path.
+
 TPA creates Debian package directory trees, builds and inspects `.deb` files,
 and derives small APT repositories from package artifacts.
 
