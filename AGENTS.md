@@ -1,5 +1,16 @@
 # TPA Development Guide
 
+## Binding architecture — read before changes
+
+Before changing publishing, repository generation, signing, storage, repository
+websites or backend integration, read and follow
+[`TPA-ARCHITECTURE-CONTRACT.md`](TPA-ARCHITECTURE-CONTRACT.md).
+It overrides conflicting historical implementation notes or qualification plans:
+TPA builds/signs locally; ordinary SSH copies; TPA.run receives/verifies/stores/
+meters/serves finished content. No host builder or mandatory host signing.
+Do not infer conformance from passing legacy ingestion tests. Do not introduce
+schema bridges without a demonstrated durable-data retention requirement.
+
 ## Purpose
 
 TPA is a Go command-line tool for creating Debian package trees, building and
