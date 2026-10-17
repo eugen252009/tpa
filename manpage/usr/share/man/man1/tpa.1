@@ -19,6 +19,16 @@ to build package archives, and derives APT repository metadata from actual .deb
 artifacts. Plain, gzip-compressed, and xz-compressed control archives are normally
 read in process; explicitly unsupported formats use a bounded dpkg-deb fallback.
 Malformed supported archives fail directly.
+.SH CUSTOMER ACCOUNTS
+register and login delegate to the installed tparun customer-ssh client.
+Missing or old clients fail closed. Require --address host:port,
+--known-hosts pinned-file, --identity private-key and --server exact-HTTPS-origin.
+Registration stages browser password/passkey enrollment; the original SSH key
+must explicitly confirm your own browser code using tpa register --confirm.
+A private --confirmation-file (0600) avoids putting secrets in process arguments.
+Never confirm a code sent by somebody else. Login saves a private server-scoped
+session through the canonical TPA.run client, never printing the token.
+Generic ssh:// and SCP repository output destinations are unchanged.
 .SH COMMANDS
 .TP
 .B init

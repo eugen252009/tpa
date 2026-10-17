@@ -1,4 +1,19 @@
-# TPA — Tool for Package Automation
+# TPA
+
+## Optional TPA.run customer accounts
+
+`register` and `login` delegate to the installed `tparun customer-ssh` client; missing/old clients fail closed. They do not change generic `ssh://`/SCP repository destinations, grants, package generation or the repository-format capability contract. No shell command is constructed. Use an independently pinned host identity and exact HTTPS account origin:
+
+```sh
+tpa register --address host:2222 --known-hosts pinned --identity key --server https://accounts.example.invalid
+# Complete your own browser enrollment, then explicitly confirm its code:
+tpa register --confirm --address host:2222 --known-hosts pinned --identity key --server https://accounts.example.invalid
+# Alternatively --confirmation-file private-code (0600); never put the code in argv/URLs.
+tpa login --address host:2222 --known-hosts pinned --identity key --server https://accounts.example.invalid
+```
+
+Registration does not immediately activate an account. The invitation is not an account session; browser enrollment alone cannot activate it. Confirmation must come from the original key. Never confirm somebody else's browser code. Login saves only a private, HTTPS-server-scoped session in the canonical TPA.run client store; tokens are not printed. Address/known-hosts/origin may be configured via `TPARUN_CUSTOMER_SSH_ADDRESS`, `TPARUN_CUSTOMER_KNOWN_HOSTS`, `TPARUN_SERVER`. This development integration is not a release/deployment approval.
+ — Tool for Package Automation
 
 Architecture authority: [TPA-ARCHITECTURE-CONTRACT.md](TPA-ARCHITECTURE-CONTRACT.md).
 TPA builds/signs locally and publishes finished repositories; TPA.run is a

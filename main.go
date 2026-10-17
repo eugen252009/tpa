@@ -45,6 +45,8 @@ var publicCommands = []commandDescription{
 	{"json", "Build from JSON configuration"},
 	{"schema", "Print the configuration schema"},
 	{"version", "Print the TPA version"},
+	{"register", "Register with a TPA.run account server (pinned customer SSH)"},
+	{"login", "Log in to a TPA.run account server (pinned customer SSH)"},
 }
 
 func writeIdentityHeader(output io.Writer) {
@@ -223,6 +225,9 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 			return commandFailure(stderr, fmt.Sprintf("write completion: %v", err))
 		}
 		return 0
+	}
+	if command == "register" || command == "login" {
+		return runCustomerAccount(args, stdin, stdout, stderr)
 	}
 	if command == "capabilities" {
 		if len(args) != 1 {
