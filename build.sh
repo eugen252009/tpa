@@ -16,7 +16,7 @@ if [ -n "$SOURCE_COMMIT" ]; then
     [ "${#SOURCE_COMMIT}" -eq 40 ] || { echo 'source commit must be full SHA-1' >&2; exit 1; }
 fi
 LDFLAGS="-X github.com/eugen252009/tpa/internal/version.Version=$VERSION"
-DEPENDS="libc6,dpkg,gpg,gzip,openssh-client"
+DEPENDS="libc6,dpkg,gpg,gpg-agent,gzip,openssh-client"
 HOMEPAGE="https://github.com/eugen252009/tpa"
 MAINTAINER="TPA Project <tpa@lupricht.net>"
 SECTION="utils"

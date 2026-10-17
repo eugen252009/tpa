@@ -38,6 +38,8 @@ for arch in amd64 arm64 riscv64; do
     test "$maintainer" = 'TPA Project <tpa@lupricht.net>'
     test "$homepage" = 'https://github.com/eugen252009/tpa'
     test "$(dpkg-deb -f "$deb" Recommends)" = bash-completion
+    dpkg-deb -f "$deb" Depends | grep -Fq gpg-agent
+    dpkg-deb -f "$deb" Depends | grep -Fq openssh-client
     printf '%s: Debian Version=%s TPA-Version=%s\n' "$arch" "$package_version" "$provenance_version"
     extracted="$TMP/extracted-$arch"
     mkdir -p "$extracted"

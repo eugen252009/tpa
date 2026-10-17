@@ -19,7 +19,7 @@ package:
   description: Tool for Package Automation
   maintainer: TPA Project <tpa@lupricht.net>
   homepage: https://github.com/eugen252009/tpa
-  depends: libc6, dpkg, gpg, gzip, openssh-client
+  depends: libc6, dpkg, gpg, gpg-agent, gzip, openssh-client
   recommends: bash-completion
   section: utils
   priority: optional
