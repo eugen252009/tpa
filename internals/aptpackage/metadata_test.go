@@ -216,6 +216,40 @@ func TestGeneratedProvenanceIsInjected(t *testing.T) {
 	}
 }
 
+func TestInitPackageUsesSourceDateEpoch(t *testing.T) {
+	t.Setenv("SOURCE_DATE_EPOCH", "1767225600")
+	root := t.TempDir()
+	cfg := Config{
+		Control: Control{Name: "reproducible", Version: "1.0", Architecture: "all", Maintainer: "Example", Description: "Reproducible"},
+		OutDir:  root,
+	}
+	if err := InitPackage(cfg); err != nil {
+		t.Fatal(err)
+	}
+	control, err := os.ReadFile(filepath.Join(root, "DEBIAN", "control"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := fieldValue(string(control), "Created-At"), "2026-01-01T00:00:00Z"; got != want {
+		t.Fatalf("Created-At = %q, want SOURCE_DATE_EPOCH value %q", got, want)
+	}
+}
+
+func TestInitPackageRejectsInvalidSourceDateEpoch(t *testing.T) {
+	for _, value := range []string{"invalid", "-1"} {
+		t.Run(value, func(t *testing.T) {
+			t.Setenv("SOURCE_DATE_EPOCH", value)
+			cfg := Config{
+				Control: Control{Name: "invalid-time", Version: "1.0", Architecture: "all", Maintainer: "Example", Description: "Invalid time"},
+				OutDir:  t.TempDir(),
+			}
+			if err := InitPackage(cfg); err == nil {
+				t.Fatal("InitPackage accepted invalid SOURCE_DATE_EPOCH")
+			}
+		})
+	}
+}
+
 func TestAllMaintainerScriptsAreWrittenSeparately(t *testing.T) {
 	root := t.TempDir()
 	cfg := Config{

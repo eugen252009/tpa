@@ -508,6 +508,17 @@ result. It rejects expired, revoked, invalid, or ambiguous signature status and
 requires the InRelease signature block to end the file. Key creation, storage,
 expiration, and rotation remain GPG concerns.
 
+## Reusable Debian release workflow
+
+TPA also provides a tag-driven GitHub Actions workflow that uses TPA itself to
+build project `.deb` files, verify package metadata and payloads, check
+reproducibility, qualify configured architectures, and publish complete GitHub
+Releases with checksums, source, manifests, provenance, and GitHub build
+attestations. Project compilation and payload staging remain project-owned; the
+workflow does not publish an APT repository. See
+[`docs/reusable-deb-release.md`](docs/reusable-deb-release.md) for the
+configuration contract, TPA dogfood setup, and TPA.run/MEMA adoption examples.
+
 ## Hosted integration boundary
 
 `tpa capabilities` emits a versioned JSON contract

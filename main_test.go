@@ -261,8 +261,8 @@ func TestBuildScriptUsesOneInjectedVersionForBinaryAndPackage(t *testing.T) {
 	for _, fragment := range []string{
 		"VERSION=${TPA_VERSION:-0.0.0~dev}",
 		"LDFLAGS=\"-X github.com/eugen252009/tpa/internal/version.Version=$VERSION\"",
-		"go build -ldflags \"$LDFLAGS\" -o tpa .",
-		"go build -ldflags \"$LDFLAGS\" -o \"$work_dir/usr/local/bin/tpa\" .",
+		"go build -trimpath -ldflags \"$LDFLAGS\" -o tpa .",
+		"go build -trimpath -ldflags \"$LDFLAGS\" -o \"$work_dir/usr/local/bin/tpa\" .",
 		"-ver=\"$VERSION\"",
 	} {
 		if !strings.Contains(text, fragment) {

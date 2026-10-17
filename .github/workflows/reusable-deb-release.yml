@@ -1,0 +1,529 @@
+name: Reusable Debian release
+
+on:
+  workflow_call:
+    inputs:
+      config:
+        description: Project-relative TPA release configuration YAML
+        required: false
+        type: string
+        default: .tpa-release.yml
+      tpa-repository:
+        description: Repository containing the pinned TPA source commit
+        required: false
+        type: string
+        default: eugen252009/tpa
+      tpa-ref:
+        description: Full immutable 40-character TPA source commit containing this workflow
+        required: true
+        type: string
+      tpa-version:
+        description: TPA builder version, or from-release-tag to use the planned Debian version
+        required: false
+        type: string
+        default: from-release-tag
+      go-version:
+        description: Optional Go toolchain version for project build/test commands
+        required: false
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      config:
+        description: Project-relative TPA release configuration YAML
+        required: false
+        type: string
+        default: .tpa-release.yml
+      tpa-repository:
+        description: Repository containing the pinned TPA source commit
+        required: false
+        type: string
+        default: eugen252009/tpa
+      tpa-ref:
+        description: Full immutable 40-character TPA source commit containing this workflow
+        required: true
+        type: string
+      tpa-version:
+        description: TPA builder version, or from-release-tag to use the planned Debian version
+        required: false
+        type: string
+        default: from-release-tag
+      go-version:
+        description: Optional Go toolchain version for project build/test commands
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Validate release source and plan matrix
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      commit: ${{ steps.plan.outputs.commit }}
+      source_date_epoch: ${{ steps.plan.outputs.source_date_epoch }}
+      publish: ${{ steps.plan.outputs.publish }}
+      release: ${{ steps.plan.outputs.release }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      has_upgrade: ${{ steps.plan.outputs.has_upgrade }}
+    env:
+      TPA_WORKFLOW_REF: ${{ inputs.tpa-ref }}
+      RELEASE_CONFIG: ${{ inputs.config }}
+    steps:
+      - name: Check out project source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: source
+      - name: Check out pinned TPA source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: ${{ inputs.tpa-repository }}
+          ref: ${{ inputs.tpa-ref }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: tpa-source
+      - name: Validate TPA source pin and build release helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TPA_WORKFLOW_REF" =~ ^[0-9a-f]{40}$ ]] || { echo "tpa-ref must be a full lowercase commit SHA" >&2; exit 1; }
+          actual=$(git -C tpa-source rev-parse HEAD)
+          [[ "$actual" == "$TPA_WORKFLOW_REF" ]] || { echo "TPA checkout does not match tpa-ref" >&2; exit 1; }
+      - name: Set up TPA's Go toolchain
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version-file: tpa-source/go.mod
+          cache: false
+      - name: Build release helper and validate source plan
+        id: plan
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
+          EVENT_SHA: ${{ github.sha }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          go -C tpa-source build -trimpath -o "$RUNNER_TEMP/tpa-release" ./cmd/tpa-release
+          "$RUNNER_TEMP/tpa-release" plan \
+            --config "$RELEASE_CONFIG" --workspace source \
+            --event-name "$EVENT_NAME" --ref "$EVENT_REF" --commit "$EVENT_SHA" \
+            --run-number "$RUN_NUMBER" --output "$RUNNER_TEMP/release-plan.json" \
+            --github-output "$GITHUB_OUTPUT"
+
+  test:
+    name: Project tests
+    needs: prepare
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      TPA_WORKFLOW_REF: ${{ inputs.tpa-ref }}
+      RELEASE_CONFIG: ${{ inputs.config }}
+      PROJECT_GO_VERSION: ${{ inputs.go-version }}
+    steps:
+      - name: Check out project source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ needs.prepare.outputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: source
+      - name: Check out pinned TPA source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: ${{ inputs.tpa-repository }}
+          ref: ${{ inputs.tpa-ref }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: tpa-source
+      - name: Verify pinned TPA source
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TPA_WORKFLOW_REF" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$(git -C tpa-source rev-parse HEAD)" == "$TPA_WORKFLOW_REF" ]]
+      - name: Set up TPA's Go toolchain
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version-file: tpa-source/go.mod
+          cache: false
+      - name: Build release helper
+        run: go -C tpa-source build -trimpath -o "$RUNNER_TEMP/tpa-release" ./cmd/tpa-release
+      - name: Set up project Go toolchain
+        if: ${{ inputs.go-version != '' }}
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version: ${{ inputs.go-version }}
+          cache: false
+      - name: Run project tests
+        shell: bash
+        env:
+          PLAN_PATH: ${{ runner.temp }}/release-plan.json
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
+          EVENT_SHA: ${{ needs.prepare.outputs.commit }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/tpa-release" plan \
+            --config "$RELEASE_CONFIG" --workspace source \
+            --event-name "$EVENT_NAME" --ref "$EVENT_REF" \
+            --commit "$EVENT_SHA" --run-number "$RUN_NUMBER" \
+            --output "$PLAN_PATH"
+          "$RUNNER_TEMP/tpa-release" run --config "$RELEASE_CONFIG" --workspace source \
+            --plan "$PLAN_PATH" --phase test
+
+  build:
+    name: Package ${{ matrix.architecture }} / rebuild ${{ matrix.rebuild }}
+    needs: [prepare, test]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    permissions:
+      contents: read
+    env:
+      TPA_WORKFLOW_REF: ${{ inputs.tpa-ref }}
+      TPA_VERSION_INPUT: ${{ inputs.tpa-version }}
+      PROJECT_GO_VERSION: ${{ inputs.go-version }}
+      RELEASE_CONFIG: ${{ inputs.config }}
+      RELEASE_COMMIT: ${{ needs.prepare.outputs.commit }}
+      RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+      RELEASE_EPOCH: ${{ needs.prepare.outputs.source_date_epoch }}
+      TARGET_ARCH: ${{ matrix.architecture }}
+      REBUILD_NUMBER: ${{ matrix.rebuild }}
+      RUNTIME_MODE: ${{ matrix.runtime }}
+    steps:
+      - name: Check out project source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ needs.prepare.outputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: source
+      - name: Check out pinned TPA source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: ${{ inputs.tpa-repository }}
+          ref: ${{ inputs.tpa-ref }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: tpa-source
+      - name: Set up TPA's Go toolchain
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version-file: tpa-source/go.mod
+          cache: false
+      - name: Validate TPA pin and build pinned package engine and release helper
+        id: builder
+        shell: bash
+        env:
+          TPA_VERSION_INPUT: ${{ inputs.tpa-version }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$TPA_WORKFLOW_REF" =~ ^[0-9a-f]{40}$ ]] || { echo "tpa-ref must be a full lowercase commit SHA" >&2; exit 1; }
+          TPA_RELEASE_TPA_COMMIT=$(git -C tpa-source rev-parse HEAD)
+          [[ "$TPA_RELEASE_TPA_COMMIT" == "$TPA_WORKFLOW_REF" ]] || { echo "TPA checkout does not match tpa-ref" >&2; exit 1; }
+          if [[ "$TPA_VERSION_INPUT" == "from-release-tag" ]]; then
+            TPA_RELEASE_TPA_VERSION="$RELEASE_VERSION"
+          else
+            TPA_RELEASE_TPA_VERSION="$TPA_VERSION_INPUT"
+          fi
+          dpkg --validate-version "$TPA_RELEASE_TPA_VERSION"
+          echo "TPA_RELEASE_TPA_COMMIT=$TPA_RELEASE_TPA_COMMIT" >> "$GITHUB_ENV"
+          echo "TPA_RELEASE_TPA_VERSION=$TPA_RELEASE_TPA_VERSION" >> "$GITHUB_ENV"
+          go -C tpa-source build -trimpath -ldflags "-X github.com/eugen252009/tpa/internal/version.Version=$TPA_RELEASE_TPA_VERSION" -o "$RUNNER_TEMP/tpa-builder" .
+          go -C tpa-source build -trimpath -o "$RUNNER_TEMP/tpa-release" ./cmd/tpa-release
+          actual_version=$("$RUNNER_TEMP/tpa-builder" version)
+          [[ "$actual_version" == "$TPA_RELEASE_TPA_VERSION" ]] || { echo "built TPA version mismatch" >&2; exit 1; }
+      - name: Set up project Go toolchain
+        if: ${{ inputs.go-version != '' }}
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version: ${{ inputs.go-version }}
+          cache: false
+      - name: Enable cross-architecture runtime tests
+        if: ${{ matrix.runtime == 'emulated' }}
+        uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3
+        with:
+          platforms: arm64,riscv64
+      - name: Build project payload
+        shell: bash
+        env:
+          PLAN_PATH: ${{ runner.temp }}/release-plan.json
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/tpa-release" plan \
+            --config "$RELEASE_CONFIG" --workspace source \
+            --event-name "$EVENT_NAME" --ref "$EVENT_REF" \
+            --commit "$RELEASE_COMMIT" --run-number "$RUN_NUMBER" \
+            --output "$PLAN_PATH"
+          "$RUNNER_TEMP/tpa-release" run --config "$RELEASE_CONFIG" --workspace source \
+            --plan "$PLAN_PATH" --phase build --architecture "$TARGET_ARCH" --rebuild "$REBUILD_NUMBER"
+      - name: Initialize and build Debian package with TPA
+        shell: bash
+        env:
+          PLAN_PATH: ${{ runner.temp }}/release-plan.json
+          SOURCE_DATE_EPOCH: ${{ needs.prepare.outputs.source_date_epoch }}
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/tpa-release" package --config "$RELEASE_CONFIG" --workspace source \
+            --plan "$PLAN_PATH" --architecture "$TARGET_ARCH" --rebuild "$REBUILD_NUMBER" \
+            --output "$RUNNER_TEMP/release-output" --tpa "$RUNNER_TEMP/tpa-builder" \
+            --tpa-commit "$TPA_RELEASE_TPA_COMMIT"
+      - name: Run package-specific qualification
+        shell: bash
+        env:
+          PLAN_PATH: ${{ runner.temp }}/release-plan.json
+        run: |
+          set -euo pipefail
+          package=$(find "$RUNNER_TEMP/release-output" -maxdepth 1 -type f -name '*.deb' -print -quit)
+          test -n "$package"
+          "$RUNNER_TEMP/tpa-release" run --config "$RELEASE_CONFIG" --workspace source \
+            --plan "$PLAN_PATH" --phase qualify --architecture "$TARGET_ARCH" \
+            --rebuild "$REBUILD_NUMBER" --package "$package"
+      - name: Install and qualify package in an isolated target-architecture container
+        if: ${{ matrix.runtime != 'build-only' }}
+        shell: bash
+        env:
+          PLAN_PATH: ${{ runner.temp }}/release-plan.json
+        run: |
+          set -euo pipefail
+          package=$(find "$RUNNER_TEMP/release-output" -maxdepth 1 -type f -name '*.deb' -print -quit)
+          test -n "$package"
+          "$RUNNER_TEMP/tpa-release" run --config "$RELEASE_CONFIG" --workspace source \
+            --plan "$PLAN_PATH" --phase install --architecture "$TARGET_ARCH" \
+            --rebuild "$REBUILD_NUMBER" --package "$package"
+      - name: Qualify upgrade path
+        if: ${{ needs.prepare.outputs.has_upgrade == 'true' && matrix.runtime != 'build-only' }}
+        shell: bash
+        env:
+          PLAN_PATH: ${{ runner.temp }}/release-plan.json
+        run: |
+          set -euo pipefail
+          package=$(find "$RUNNER_TEMP/release-output" -maxdepth 1 -type f -name '*.deb' -print -quit)
+          test -n "$package"
+          "$RUNNER_TEMP/tpa-release" run --config "$RELEASE_CONFIG" --workspace source \
+            --plan "$PLAN_PATH" --phase upgrade --architecture "$TARGET_ARCH" \
+            --rebuild "$REBUILD_NUMBER" --package "$package"
+      - name: Record qualification and package metadata
+        shell: bash
+        env:
+          PLAN_PATH: ${{ runner.temp }}/release-plan.json
+        run: |
+          set -euo pipefail
+          package=$(find "$RUNNER_TEMP/release-output" -maxdepth 1 -type f -name '*.deb' -print -quit)
+          test -n "$package"
+          "$RUNNER_TEMP/tpa-release" record --config "$RELEASE_CONFIG" --workspace source \
+            --plan "$PLAN_PATH" --architecture "$TARGET_ARCH" --rebuild "$REBUILD_NUMBER" \
+            --package "$package" --tpa-version "$TPA_RELEASE_TPA_VERSION" \
+            --output "$RUNNER_TEMP/release-output"
+      - name: Upload verified architecture build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tpa-release-${{ matrix.architecture }}-${{ matrix.rebuild }}
+          path: ${{ runner.temp }}/release-output/*
+          if-no-files-found: error
+          retention-days: 7
+
+  bundle:
+    name: Verify reproducibility and create release bundle
+    needs: [prepare, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      TPA_WORKFLOW_REF: ${{ inputs.tpa-ref }}
+      TPA_VERSION_INPUT: ${{ inputs.tpa-version }}
+      RELEASE_CONFIG: ${{ inputs.config }}
+      RELEASE_COMMIT: ${{ needs.prepare.outputs.commit }}
+      RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - name: Check out project source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ needs.prepare.outputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: source
+      - name: Check out pinned TPA source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: ${{ inputs.tpa-repository }}
+          ref: ${{ inputs.tpa-ref }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: tpa-source
+      - name: Set up TPA's Go toolchain
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version-file: tpa-source/go.mod
+          cache: false
+      - name: Build pinned TPA verifier and release helper
+        shell: bash
+        env:
+          TPA_VERSION_INPUT: ${{ inputs.tpa-version }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$TPA_WORKFLOW_REF" =~ ^[0-9a-f]{40}$ ]] || { echo "tpa-ref must be a full lowercase commit SHA" >&2; exit 1; }
+          TPA_RELEASE_TPA_COMMIT=$(git -C tpa-source rev-parse HEAD)
+          [[ "$TPA_RELEASE_TPA_COMMIT" == "$TPA_WORKFLOW_REF" ]] || { echo "TPA checkout does not match tpa-ref" >&2; exit 1; }
+          if [[ "$TPA_VERSION_INPUT" == "from-release-tag" ]]; then TPA_RELEASE_TPA_VERSION="$RELEASE_VERSION"; else TPA_RELEASE_TPA_VERSION="$TPA_VERSION_INPUT"; fi
+          dpkg --validate-version "$TPA_RELEASE_TPA_VERSION"
+          echo "TPA_RELEASE_TPA_COMMIT=$TPA_RELEASE_TPA_COMMIT" >> "$GITHUB_ENV"
+          echo "TPA_RELEASE_TPA_VERSION=$TPA_RELEASE_TPA_VERSION" >> "$GITHUB_ENV"
+          go -C tpa-source build -trimpath -ldflags "-X github.com/eugen252009/tpa/internal/version.Version=$TPA_RELEASE_TPA_VERSION" -o "$RUNNER_TEMP/tpa-builder" .
+          go -C tpa-source build -trimpath -o "$RUNNER_TEMP/tpa-release" ./cmd/tpa-release
+          [[ $("$RUNNER_TEMP/tpa-builder" version) == "$TPA_RELEASE_TPA_VERSION" ]]
+      - name: Download all verified architecture packages
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: tpa-release-*
+          path: ${{ runner.temp }}/release-artifacts
+      - name: Create and independently verify release bundle
+        shell: bash
+        env:
+          PLAN_PATH: ${{ runner.temp }}/release-plan.json
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/tpa-release" plan \
+            --config "$RELEASE_CONFIG" --workspace source \
+            --event-name "$EVENT_NAME" --ref "$EVENT_REF" \
+            --commit "$RELEASE_COMMIT" --run-number "$RUN_NUMBER" \
+            --output "$PLAN_PATH"
+          "$RUNNER_TEMP/tpa-release" bundle --config "$RELEASE_CONFIG" --workspace source \
+            --plan "$PLAN_PATH" --artifacts "$RUNNER_TEMP/release-artifacts" \
+            --output "$RUNNER_TEMP/release-bundle" --tpa-commit "$TPA_RELEASE_TPA_COMMIT" \
+            --tpa-version "$TPA_RELEASE_TPA_VERSION" --go-version "$(go version)"
+          "$RUNNER_TEMP/tpa-release" verify-bundle --config "$RELEASE_CONFIG" --workspace source \
+            --plan "$PLAN_PATH" --bundle "$RUNNER_TEMP/release-bundle" \
+            --tpa-version "$TPA_RELEASE_TPA_VERSION"
+      - name: Upload complete release bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tpa-release-bundle
+          path: ${{ runner.temp }}/release-bundle/*
+          if-no-files-found: error
+          retention-days: 30
+
+  attest:
+    name: Attest qualified release assets
+    needs: [prepare, bundle]
+    if: ${{ needs.prepare.outputs.publish == 'true' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download complete release bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: tpa-release-bundle
+          path: ${{ runner.temp }}/release-bundle
+      - name: Create GitHub build provenance attestations
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-path: ${{ runner.temp }}/release-bundle/*
+
+  publish:
+    name: Publish complete GitHub Release
+    needs: [prepare, bundle, attest]
+    if: ${{ needs.prepare.outputs.publish == 'true' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      TPA_WORKFLOW_REF: ${{ inputs.tpa-ref }}
+      TPA_VERSION_INPUT: ${{ inputs.tpa-version }}
+      RELEASE_CONFIG: ${{ inputs.config }}
+      RELEASE_COMMIT: ${{ needs.prepare.outputs.commit }}
+      RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - name: Check out project source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ needs.prepare.outputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: source
+      - name: Check out pinned TPA source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: ${{ inputs.tpa-repository }}
+          ref: ${{ inputs.tpa-ref }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: tpa-source
+      - name: Set up TPA's Go toolchain
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version-file: tpa-source/go.mod
+          cache: false
+      - name: Build release publisher
+        shell: bash
+        env:
+          TPA_VERSION_INPUT: ${{ inputs.tpa-version }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$TPA_WORKFLOW_REF" =~ ^[0-9a-f]{40}$ ]]
+          TPA_RELEASE_TPA_COMMIT=$(git -C tpa-source rev-parse HEAD)
+          [[ "$TPA_RELEASE_TPA_COMMIT" == "$TPA_WORKFLOW_REF" ]]
+          if [[ "$TPA_VERSION_INPUT" == "from-release-tag" ]]; then TPA_RELEASE_TPA_VERSION="$RELEASE_VERSION"; else TPA_RELEASE_TPA_VERSION="$TPA_VERSION_INPUT"; fi
+          echo "TPA_RELEASE_TPA_COMMIT=$TPA_RELEASE_TPA_COMMIT" >> "$GITHUB_ENV"
+          echo "TPA_RELEASE_TPA_VERSION=$TPA_RELEASE_TPA_VERSION" >> "$GITHUB_ENV"
+          go -C tpa-source build -trimpath -o "$RUNNER_TEMP/tpa-release" ./cmd/tpa-release
+      - name: Download complete release bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: tpa-release-bundle
+          path: ${{ runner.temp }}/release-bundle
+      - name: Verify complete release bundle
+        shell: bash
+        env:
+          PLAN_PATH: ${{ runner.temp }}/release-plan.json
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/tpa-release" plan \
+            --config "$RELEASE_CONFIG" --workspace source \
+            --event-name "$EVENT_NAME" --ref "$EVENT_REF" \
+            --commit "$RELEASE_COMMIT" --run-number "$RUN_NUMBER" \
+            --output "$PLAN_PATH"
+          "$RUNNER_TEMP/tpa-release" verify-bundle --config "$RELEASE_CONFIG" --workspace source \
+            --plan "$PLAN_PATH" --bundle "$RUNNER_TEMP/release-bundle" \
+            --tpa-version "$TPA_RELEASE_TPA_VERSION"
+      - name: Publish complete GitHub Release
+        shell: bash
+        env:
+          PLAN_PATH: ${{ runner.temp }}/release-plan.json
+          GH_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/tpa-release" publish --config "$RELEASE_CONFIG" --workspace source \
+            --plan "$PLAN_PATH" --bundle "$RUNNER_TEMP/release-bundle" \
+            --repository "$GH_REPOSITORY" --tpa-version "$TPA_RELEASE_TPA_VERSION"

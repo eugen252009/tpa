@@ -1,0 +1,53 @@
+schema_version: 1
+
+project:
+  name: tpa
+  test_command: >-
+    go test -race ./... && go vet ./... &&
+    ./tests/qualification.sh &&
+    ./tests/repository-contract-qualification.sh &&
+    ./tests/dependency-qualification.sh &&
+    ./tests/ssh-output-qualification.sh &&
+    ./tests/version-qualification.sh
+
+build:
+  command: |
+    install -d "$TPA_RELEASE_STAGE_ROOT/usr/local/bin" "$TPA_RELEASE_STAGE_ROOT/usr/share/man/man1"
+    CGO_ENABLED=0 GOOS=linux GOARCH="$TPA_RELEASE_ARCH" \
+      go build -trimpath \
+      -ldflags "-X github.com/eugen252009/tpa/internal/version.Version=$TPA_RELEASE_VERSION" \
+      -o "$TPA_RELEASE_STAGE_ROOT/usr/local/bin/tpa" .
+    gzip -n -c manpage/usr/share/man/man1/tpa.1 \
+      > "$TPA_RELEASE_STAGE_ROOT/usr/share/man/man1/tpa.1.gz"
+    chmod 0755 "$TPA_RELEASE_STAGE_ROOT/usr/local/bin/tpa"
+    chmod 0644 "$TPA_RELEASE_STAGE_ROOT/usr/share/man/man1/tpa.1.gz"
+
+package:
+  name: tpa
+  description: Tool for Package Automation
+  maintainer: TPA Project <tpa@lupricht.net>
+  homepage: https://github.com/eugen252009/tpa
+  depends: libc6, dpkg, gpg, gzip
+  section: utils
+  priority: optional
+  stage_root: .release-stage
+  required_files:
+    - usr/local/bin/tpa
+    - usr/share/man/man1/tpa.1.gz
+  architectures:
+    amd64:
+      runner: ubuntu-24.04
+      runtime: native
+    arm64:
+      runner: ubuntu-24.04-arm
+      runtime: native
+    riscv64:
+      runner: ubuntu-24.04
+      runtime: emulated
+  qualification:
+    install_command: bash tests/release/install-package.sh
+
+release:
+  notes_file: docs/release-notes-0.7.0.md
+
+reproducibility: true

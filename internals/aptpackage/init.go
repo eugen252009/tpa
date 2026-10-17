@@ -1,8 +1,10 @@
 package aptpackage
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 )
 
@@ -12,7 +14,11 @@ func InitPackage(cfg Config) error {
 	if cfg.Provenance != nil && !*cfg.Provenance {
 		control, err = cfg.Control.Render()
 	} else {
-		control, err = cfg.Control.RenderWithProvenance(time.Now().UTC())
+		createdAt, timeErr := packageProvenanceTime()
+		if timeErr != nil {
+			return timeErr
+		}
+		control, err = cfg.Control.RenderWithProvenance(createdAt)
 	}
 	if err != nil {
 		return err
@@ -40,4 +46,20 @@ func InitPackage(cfg Config) error {
 		}
 	}
 	return nil
+}
+
+func packageProvenanceTime() (time.Time, error) {
+	value, ok := os.LookupEnv("SOURCE_DATE_EPOCH")
+	if !ok {
+		return time.Now().UTC(), nil
+	}
+	epoch, err := strconv.ParseInt(value, 10, 64)
+	if err != nil || epoch < 0 {
+		return time.Time{}, fmt.Errorf("invalid SOURCE_DATE_EPOCH %q", value)
+	}
+	instant := time.Unix(epoch, 0).UTC()
+	if instant.Year() < 1 || instant.Year() > 9999 {
+		return time.Time{}, fmt.Errorf("SOURCE_DATE_EPOCH is outside the supported package provenance date range")
+	}
+	return instant, nil
 }
