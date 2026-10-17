@@ -61,9 +61,15 @@ var completionOptions = map[string][]completionOption{
 		{"json", "bool", "JSON output"}, {"keyring", "file", "Public signing key"},
 		{"fingerprint", "text", "Expected signer fingerprint"}, {"require-signed", "bool", "Require signed metadata"},
 	},
-	"unlist": lifecycleCompletionOptions(false),
-	"delete": lifecycleCompletionOptions(true),
-	"json":   {{"no-provenance", "bool", "Disable automatic provenance"}},
+	"register": append(customerCompletionOptions(), completionOption{"confirm", "bool", "Confirm own browser enrollment"}, completionOption{"confirmation-file", "file", "Private confirmation file"}),
+	"login":    customerCompletionOptions(),
+	"unlist":   lifecycleCompletionOptions(false),
+	"delete":   lifecycleCompletionOptions(true),
+	"json":     {{"no-provenance", "bool", "Disable automatic provenance"}},
+}
+
+func customerCompletionOptions() []completionOption {
+	return []completionOption{{"address", "text", "Explicit customer SSH host:port"}, {"known-hosts", "file", "Pinned SSH host keys"}, {"identity", "file", "Client SSH identity"}, {"server", "text", "Expected HTTPS account origin"}}
 }
 
 func lifecycleCompletionOptions(deletion bool) []completionOption {

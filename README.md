@@ -19,8 +19,8 @@ Architecture authority: [TPA-ARCHITECTURE-CONTRACT.md](TPA-ARCHITECTURE-CONTRACT
 TPA builds/signs locally and publishes finished repositories; TPA.run is a
 receiving/verifying/storage/HTTP host, not another builder or signing authority.
 The [conformance audit](docs/architecture-conformance-audit.md) distinguishes
-reusable implementation from legacy hosted-ingestion deviations and missing
-SSH/CAS functionality. Existing command documentation below describes current
+reusable implementation from legacy hosted-ingestion deviations and historical
+SSH/CAS gaps at that audit date (now implemented). Existing command documentation below describes current
 implementation, not automatic approval of every historical integration path.
 
 TPA creates Debian package directory trees, builds and inspects `.deb` files,
@@ -54,6 +54,12 @@ The authoritative runtime version defaults to `dev`. `build.sh` injects the
 single `TPA_VERSION` value into the host and packaged binaries and uses that
 same value for Debian `Version`; automatic `TPA-Version` provenance and help
 output read the injected runtime value. Set `TPA_VERSION` for release builds.
+The package includes `tpa`, `tpa-utils` and the optional `tpa-release` orchestration
+CLI. Both supported build entrypoints share `scripts/stage-tpa-release.sh` and the
+normal TPA init/build engine, including all shell completions. `SOURCE_DATE_EPOCH`
+is optional; ordinary dynamic provenance remains supported. Release builds can
+record `Git-Commit` via `TPA_SOURCE_COMMIT` (or an available checkout HEAD) and
+`Repository-URL`; the completed DEB's SHA256 remains its artifact identity.
 
 `tpa --help` and `tpa -h` show the command list and project/support identity;
 `tpa --version` prints `tpa <version>`. Running `tpa` without a command prints
@@ -66,8 +72,10 @@ verified owner-signed Stable/main tree to an explicit `tparun+ssh://` destinatio
 The restricted host verifies and activates the original bytes without a builder
 or signing secret. Protocol2 negotiates fixed1MiB SHA256 chunks and uploads only
 missing content; repeated identical uploads send zero payload. Generations serve
-from immutable chunks without persistent full-tree copies. Fresh canonical host
-schema consolidation remains a separate phase. Ordinary OpenSSH output
+from immutable chunks without persistent full-tree copies. The current compatible
+hosting baseline is TPA.run 0.1.5~rc2, `tparun-hosting / 1`; qualification uses its
+exact unchanged source/package in disposable local fixtures, not production.
+Ordinary OpenSSH output
 remains independent through `pack --output=ssh://...` or `host:path`.
 
 ## Direct metadata-only repositories
@@ -542,13 +550,19 @@ operations, readers, signing, and publication/transport boundaries. The
 transport-independent candidate contract is documented in
 [`docs/tparun-integration-contract.md`](docs/tparun-integration-contract.md).
 
-Standalone TPA builds and verifies repository candidates and can publish one
-outbound over SSH/SFTP to a new remote path. It does not implement hosted
-authorization, quotas, managed key custody, or a hosted publication service. Any future hosted integration must submit candidates through TPA.run's
-authorized `stage` / `status` / `publish` workflow after independent server-side
-validation. It must never write directly to hosted live storage or pass a hosted
-private signing key to the TPA build. Compatibility with a particular TPA.run
-source/binary baseline is **NOT VERIFIED** by this standalone qualification.
+Standalone TPA builds/signs/verifies repositories and publishes through ordinary
+SSH/SFTP without a hosted service. Enhanced `publish` uses the explicitly selected
+TPA.run chunk-SSH receiver, with repository-scoped authority, expected parent,
+verified immutable chunks and original signed bytes. TPA.run 0.1.5~rc2 is the
+current qualified disposable-fixture baseline; its authorization, quota and serving
+state remain server-owned. TPA never writes directly to hosted live storage or
+requests a provider private signing key. Optional `register`/`login` commands
+explicitly delegate to the separately installed `tparun customer-ssh` CLI; that
+optional helper is not a dependency of package/repository building or publication.
+The optional `tpa-release` tool orchestrates project builds and calls TPA's existing
+JSON/init/build engine; it is not a second DEB builder. Publication commands are
+never run implicitly by local release staging. See
+[0.8.0 consolidation/release scope](docs/release-notes-0.8.0.md).
 
 ## Atomic publication
 

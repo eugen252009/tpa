@@ -42,6 +42,10 @@ for arch in amd64 arm64 riscv64; do
     extracted="$TMP/extracted-$arch"
     mkdir -p "$extracted"
     dpkg-deb -x "$deb" "$extracted"
+    for executable in tpa tpa-utils tpa-release; do
+        test -x "$extracted/usr/local/bin/$executable"
+        test "$(stat -c '%a' "$extracted/usr/local/bin/$executable")" = 755
+    done
     for completion in usr/share/bash-completion/completions/tpa \
         usr/share/zsh/vendor-completions/_tpa \
         usr/share/fish/vendor_completions.d/tpa.fish; do
@@ -53,6 +57,8 @@ for arch in amd64 arm64 riscv64; do
     done
     if [ "$arch" = "$HOST_ARCH" ]; then
         binary="$extracted/usr/local/bin/tpa"
+        "$extracted/usr/local/bin/tpa-utils" --help >/dev/null
+        "$extracted/usr/local/bin/tpa-release" --help >/dev/null 2>&1
         test "$("$binary" version)" = "$VERSION"
         test "$("$binary" --version)" = "tpa $VERSION"
         help=$("$binary" --help)

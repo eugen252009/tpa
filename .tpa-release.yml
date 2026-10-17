@@ -12,28 +12,26 @@ project:
 
 build:
   command: |
-    install -d "$TPA_RELEASE_STAGE_ROOT/usr/local/bin" "$TPA_RELEASE_STAGE_ROOT/usr/share/man/man1"
-    CGO_ENABLED=0 GOOS=linux GOARCH="$TPA_RELEASE_ARCH" \
-      go build -trimpath \
-      -ldflags "-X github.com/eugen252009/tpa/internal/version.Version=$TPA_RELEASE_VERSION" \
-      -o "$TPA_RELEASE_STAGE_ROOT/usr/local/bin/tpa" .
-    gzip -n -c manpage/usr/share/man/man1/tpa.1 \
-      > "$TPA_RELEASE_STAGE_ROOT/usr/share/man/man1/tpa.1.gz"
-    chmod 0755 "$TPA_RELEASE_STAGE_ROOT/usr/local/bin/tpa"
-    chmod 0644 "$TPA_RELEASE_STAGE_ROOT/usr/share/man/man1/tpa.1.gz"
+    ./scripts/stage-tpa-release.sh "$TPA_RELEASE_STAGE_ROOT" "$TPA_RELEASE_ARCH" "$TPA_RELEASE_VERSION"
 
 package:
   name: tpa
   description: Tool for Package Automation
   maintainer: TPA Project <tpa@lupricht.net>
   homepage: https://github.com/eugen252009/tpa
-  depends: libc6, dpkg, gpg, gzip
+  depends: libc6, dpkg, gpg, gzip, openssh-client
+  recommends: bash-completion
   section: utils
   priority: optional
   stage_root: .release-stage
   required_files:
     - usr/local/bin/tpa
+    - usr/local/bin/tpa-utils
+    - usr/local/bin/tpa-release
     - usr/share/man/man1/tpa.1.gz
+    - usr/share/bash-completion/completions/tpa
+    - usr/share/zsh/vendor-completions/_tpa
+    - usr/share/fish/vendor_completions.d/tpa.fish
   architectures:
     amd64:
       runner: ubuntu-24.04
@@ -48,6 +46,6 @@ package:
     install_command: bash tests/release/install-package.sh
 
 release:
-  notes_file: docs/release-notes-0.7.0.md
+  notes_file: docs/release-notes-0.8.0.md
 
 reproducibility: true

@@ -261,12 +261,21 @@ func TestBuildScriptUsesOneInjectedVersionForBinaryAndPackage(t *testing.T) {
 	for _, fragment := range []string{
 		"VERSION=${TPA_VERSION:-0.0.0~dev}",
 		"LDFLAGS=\"-X github.com/eugen252009/tpa/internal/version.Version=$VERSION\"",
-		"go build -trimpath -ldflags \"$LDFLAGS\" -o tpa .",
-		"go build -trimpath -ldflags \"$LDFLAGS\" -o \"$work_dir/usr/local/bin/tpa\" .",
+		"go build -trimpath -buildvcs=false -p=\"${TPA_BUILD_JOBS:-4}\" -ldflags \"$LDFLAGS\" -o tpa .",
+		"./scripts/stage-tpa-release.sh \"$ROOT/$work_dir\" \"$arch\" \"$VERSION\" \"$ROOT/tpa\"",
 		"-ver=\"$VERSION\"",
 	} {
 		if !strings.Contains(text, fragment) {
 			t.Errorf("build.sh is missing version-coupling fragment %q", fragment)
+		}
+	}
+	stage, err := os.ReadFile("scripts/stage-tpa-release.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, fragment := range []string{"for executable in tpa tpa-utils tpa-release", "CGO_ENABLED=0 GOOS=linux GOARCH=\"$ARCH\" go build -trimpath -buildvcs=false", "-ldflags \"$LDFLAGS\"", "completion bash", "completion zsh", "completion fish"} {
+		if !strings.Contains(string(stage), fragment) {
+			t.Errorf("shared staging missing %q", fragment)
 		}
 	}
 }

@@ -60,8 +60,8 @@ type brokenCompletionWriter struct{}
 
 func (brokenCompletionWriter) Write([]byte) (int, error) { return 0, errors.New("write failed") }
 
-// All completion flags must exist in the actual parser, and every declared flag
-// must be represented in at least one appropriate command's completion catalog.
+// Standalone completion flags must exist in our parser. Delegated account flags
+// belong to the separately qualified customer-ssh CLI, not main.go's FlagSet.
 func TestCompletionCatalogMatchesParser(t *testing.T) {
 	file, err := parser.ParseFile(token.NewFileSet(), "main.go", nil, 0)
 	if err != nil {
@@ -105,6 +105,17 @@ func TestCompletionCatalogMatchesParser(t *testing.T) {
 			t.Fatalf("unknown completion command %s", command)
 		}
 		for _, option := range options {
+			if command == "register" || command == "login" {
+				delegated := map[string]bool{"address": true, "known-hosts": true, "identity": true, "server": true}
+				if command == "register" {
+					delegated["confirm"] = true
+					delegated["confirmation-file"] = true
+				}
+				if !delegated[option.name] {
+					t.Fatalf("%s: unknown delegated flag %s", command, option.name)
+				}
+				continue
+			}
 			if !declared[option.name] {
 				t.Fatalf("%s: unknown parser flag %s", command, option.name)
 			}
