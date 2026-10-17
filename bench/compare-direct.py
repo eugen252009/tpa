@@ -95,6 +95,16 @@ def main():
     memory_before = pathlib.Path('/proc/meminfo').read_text()
     os_release = pathlib.Path('/etc/os-release').read_text()
     expected_semantics, corpora = {}, {}
+    # Preserve provenance even if a long run is interrupted; completed rows are
+    # checkpointed separately and must never be advertised as a completed matrix.
+    (args.output / 'run-start.json').write_text(json.dumps({
+        'source_commit': source_commit, 'dirty_source': dirty,
+        'counts': counts, 'repetitions_requested': args.repetitions,
+        'workers': args.workers, 'memory_before': memory_before,
+        'os_release': os_release, 'platform': platform.platform(),
+        'go': subprocess.check_output(['go', 'version'], text=True).strip(),
+        'load_average': os.getloadavg(),
+    }, indent=2) + '\n')
     with tempfile.TemporaryDirectory(prefix="tpa-direct-benchmark-", dir=args.tmpdir) as tmp:
         tmp = pathlib.Path(tmp)
         binary = tmp / "harness"
