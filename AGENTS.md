@@ -27,7 +27,9 @@ actual package artifacts.
 - Browser formats: utilities use a distinct convenience schema and never overwrite canonical TPA v1 sidecars
 - External tools: `dpkg-deb`, `gzip`, OpenSSH `ssh`/`sftp` for SSH transport, and optionally `gpg`
 - Atomic replacement: Linux `renameat2(RENAME_EXCHANGE)`
-- Release script: `build.sh`
+- Release script: `build.sh`; shared payload staging: `scripts/stage-tpa-release.sh`
+- Optional release orchestration: `cmd/tpa-release` / `.tpa-release.yml`, using the same TPA init/build engine
+- Packaged tools: `tpa`, `tpa-utils`, `tpa-release`; only account delegation optionally needs a separate `tparun` CLI
 - Release architectures: `amd64`, `arm64`, and `riscv64`
 - Generated release packages: `dist/` (ignored)
 
@@ -39,6 +41,9 @@ actual package artifacts.
 | `check` | Read-only package-tree metadata checks with aggregated, linked human/JSON diagnostics. |
 | `build` | Validates `DEBIAN/control`, fixes present maintainer-script modes, and invokes `dpkg-deb --root-owner-group --build`. |
 | `parse` | Reads plain, gzip, and xz control archives in-process; typed unsupported formats fall back to `dpkg-deb -f`, while malformed supported inputs fail directly. |
+| `compose` | Builds metadata-only JSON/JSONL/directory definitions through bounded direct writers and derives/verifies a new local repository; not a payload-tree replacement. |
+| `publish` | Verifies and streams an already-finished signed repository to explicit tparun+ssh:// using protocol2 missing-chunk negotiation, expected parent and owner public trust. |
+| `register`, `login` | Optional delegation to the installed pinned `tparun customer-ssh` client; not a dependency of standalone builds or either publishing strategy. |
 | `compose` | Builds metadata-only definitions (JSON/JSONL/directory) directly into reproducible DEBs and a verified, optionally signed new local APT tree; see `docs/direct-compose.md`. |
 | `pack` | Derives and verifies an APT repository from top-level `.deb` files; `--empty` is the canonical empty workflow. Local and SSH/SFTP output are supported; remote output is new-destination-only. |
 | `capabilities` | Prints the versioned machine-readable TPA capability/repository-format contract. |
@@ -152,8 +157,11 @@ Manual package smoke test:
 `internal/version.Version` is the sole runtime/provenance version source and
 defaults to `dev`. `build.sh` injects `TPA_VERSION` (default `0.0.0~dev`,
 validated by dpkg) into its host and target binaries, and uses that same value
-as Debian `Version`. It produces static Linux binaries for the configured
-architectures and packages them through TPA. Run
+as Debian `Version`. Both supported release entrypoints use the shared staging
+script for all three tools, manpage and completions, then package through TPA.
+Builds use bounded compilation and static path-independent Linux binaries. Optional
+`TPA_SOURCE_COMMIT` (or checkout HEAD) records Git-Commit/Repository-URL with the
+normal scalar provenance model; no extra artifact identity is introduced. Run
 `tests/version-qualification.sh` to check package/runtime/provenance/help
 consistency.
 
