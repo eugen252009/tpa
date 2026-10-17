@@ -1,6 +1,25 @@
 # Direct-RAM public benchmark qualification
 
-## Source consolidation
+## Accepted 50,000-package publication update
+
+Measured source: `ba7b5095935e00874738833fa06f8462b6f46854`, clean at measurement.
+Three trials per path completed, six total; every run independently checked
+50,000 archives and returned the same semantic digest. Conventional median
+133.62358221499017 s / direct median 22.248018918995513 s = 6.006089…, published
+as **133.624 s / 22.248 s / 6.01×**. See the
+[raw records](results/2026-10-17-50000/measurements.json) and
+[environment](results/2026-10-17-50000/environment.json).
+
+The owner explicitly accepted background activity (`ccc` observed at startup;
+recorded load 4.3–11.3). No attribution of the precise performance effect is made.
+This update contains documentation and retained evidence only: no implementation,
+harness or test changes, no benchmark rerun. Existing plain/race/vet and correctness
+gates below remain applicable to the unchanged code. Focused publication checks
+recompute medians/digests from all six rows, compare copied records byte-for-byte
+with retained originals, verify SHA256 manifests, review Markdown links and source
+references, and check secrets/large files and `git diff --check`.
+
+## Source consolidation (prior publication)
 
 The publication line starts from the clean, qualified 0.8.0~rc1 source
 `2d30f6ad8b1ea733228d74825263ee9f97fb2263`, already containing Direct-RAM.
@@ -57,10 +76,11 @@ additional load:
 - `git diff --check` — PASS.
 
 Public Go/oracle logs and gate hashes are in [results](results/qualification.json).
-The actual archived performance source is dc267c2, not b16ba07. Do not confuse code
-verification of the current harness with a newly completed performance matrix.
+The historical performance source is dc267c2, not b16ba07. The accepted current
+50,000-package source is ba7b509; differences from b16ba07 are documentation and
+evidence, not implementation/harness/test code. Do not confuse these two datasets.
 
-## Fresh attempts and owner-directed historical selection
+## Earlier attempts and historical selection (superseded publication scope)
 
 A10-package smoke run completed both paths, with matching whole-corpus semantic
 digests. Later contended runs completed all-archive semantic checks at1,000 and
@@ -71,9 +91,10 @@ The owner explicitly selected the existing qualified historical figures instead.
 
 The historical driver has no disk sampler; the improved current driver does.
 Consequently the attempts are not substitutes for the historical methodology even
-without contention. No50,000-package result or historical temporary-disk peak is
-claimed. See the [main report](README.md) for limitations and exact historical
-reproduction commands. The historical raw JSON/CSV is unchanged.
+without contention. At that earlier publication no 50,000-package result was
+claimed. The subsequent accepted rerun is now published separately above; no
+historical temporary-disk peak is invented. See the [main report](README.md) for
+limitations and both reproduction procedures. The historical raw JSON/CSV is unchanged.
 
 ## Boundaries
 

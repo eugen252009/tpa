@@ -1,0 +1,25 @@
+{
+  "existing": {
+    "wall_seconds": 133.62358221499017,
+    "peak_summed_rss_kib": 394460,
+    "wait4_maxrss_kib": 423424,
+    "sampled_peak_working_disk_bytes": 483594240,
+    "package_bytes": 37217424,
+    "output_bytes": 111204524
+  },
+  "direct": {
+    "wall_seconds": 22.248018918995513,
+    "peak_summed_rss_kib": 416908,
+    "wait4_maxrss_kib": 449980,
+    "sampled_peak_working_disk_bytes": 278827008,
+    "package_bytes": 28045404,
+    "output_bytes": 102061675
+  },
+  "speedup": 6.006089023095059,
+  "load1_range": [
+    4.294921875,
+    11.29052734375
+  ],
+  "semantic_sha256": "cc2c404fab05b1395eb55b6cac236f63c5cb89624dd33a905dbe50a15baed136",
+  "source_commit": "ba7b5095935e00874738833fa06f8462b6f46854"
+}

@@ -648,9 +648,11 @@ not authorize publication.
 ## Benchmarks
 
 - [Direct-RAM metadata-only package generation](bench/direct-ram/README.md):
-  historical qualified comparison with conventional directory staging, public raw
-  measurements and self-contained reproduction. At 10,000 metadata-only packages,
-  median 3.458 s versus 16.776 s (4.85×) on the documented fixture and host.
+  comparison with conventional directory staging, public raw measurements and
+  self-contained reproduction. At 50,000 metadata-only packages, three trials per
+  path measured median 22.248 s versus 133.624 s (**6.01×**) on the documented
+  workstation with concurrent background activity. Historical results are retained
+  separately; see the report for the full measurement note.
   This is distinct from the control-reader benchmark below and does not replace
   normal payload-package staging.
 

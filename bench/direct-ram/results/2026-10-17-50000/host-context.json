@@ -1,0 +1,4269 @@
+{
+  "complete": true,
+  "exit": 0,
+  "source_record_sha256": "64056051cfaf0d55fdd21063a72d41573726b2020e02530a7efea6c50cd79273",
+  "sampling_interval_seconds": 2,
+  "background_process_observation": "CPU-intensive ccc process observed at startup; no attribution of exact performance impact",
+  "samples": [
+    {
+      "utc": "2026-10-17T17:33:17.169713+00:00",
+      "elapsed_seconds": 0.0005374920001486316,
+      "load_average": [
+        11.29052734375,
+        9.87109375,
+        15.24462890625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34115728,
+        "SwapTotal": 25182204,
+        "SwapFree": 11988548
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:19.170159+00:00",
+      "elapsed_seconds": 2.00099069699354,
+      "load_average": [
+        11.29052734375,
+        9.87109375,
+        15.24462890625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33893160,
+        "SwapTotal": 25182204,
+        "SwapFree": 11988548
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:21.170676+00:00",
+      "elapsed_seconds": 4.0014988589973655,
+      "load_average": [
+        11.29052734375,
+        9.87109375,
+        15.24462890625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34194356,
+        "SwapTotal": 25182204,
+        "SwapFree": 11988548
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:23.171139+00:00",
+      "elapsed_seconds": 6.001964347000467,
+      "load_average": [
+        11.10693359375,
+        9.8564453125,
+        15.2109375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33720188,
+        "SwapTotal": 25182204,
+        "SwapFree": 11988548
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:25.171772+00:00",
+      "elapsed_seconds": 8.00260257300397,
+      "load_average": [
+        11.10693359375,
+        9.8564453125,
+        15.2109375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33713268,
+        "SwapTotal": 25182204,
+        "SwapFree": 12028996
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:27.172386+00:00",
+      "elapsed_seconds": 10.003213296993636,
+      "load_average": [
+        10.85791015625,
+        9.8251953125,
+        15.171875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33727340,
+        "SwapTotal": 25182204,
+        "SwapFree": 12028996
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:29.173037+00:00",
+      "elapsed_seconds": 12.003880185991875,
+      "load_average": [
+        10.85791015625,
+        9.8251953125,
+        15.171875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33752404,
+        "SwapTotal": 25182204,
+        "SwapFree": 12028996
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:31.173613+00:00",
+      "elapsed_seconds": 14.004439202995854,
+      "load_average": [
+        10.85791015625,
+        9.8251953125,
+        15.171875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33727500,
+        "SwapTotal": 25182204,
+        "SwapFree": 12028996
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:33.174140+00:00",
+      "elapsed_seconds": 16.004966505002812,
+      "load_average": [
+        10.548828125,
+        9.77783203125,
+        15.1279296875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33753400,
+        "SwapTotal": 25182204,
+        "SwapFree": 12028996
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:35.174853+00:00",
+      "elapsed_seconds": 18.005681576003553,
+      "load_average": [
+        10.548828125,
+        9.77783203125,
+        15.1279296875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33731312,
+        "SwapTotal": 25182204,
+        "SwapFree": 12028996
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:37.175491+00:00",
+      "elapsed_seconds": 20.006320403001155,
+      "load_average": [
+        10.02392578125,
+        9.681640625,
+        15.06787109375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33698804,
+        "SwapTotal": 25182204,
+        "SwapFree": 12028996
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:39.176185+00:00",
+      "elapsed_seconds": 22.007014656992396,
+      "load_average": [
+        10.02392578125,
+        9.681640625,
+        15.06787109375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33716028,
+        "SwapTotal": 25182204,
+        "SwapFree": 12028996
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:41.176865+00:00",
+      "elapsed_seconds": 24.007695117004914,
+      "load_average": [
+        10.02392578125,
+        9.681640625,
+        15.06787109375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33748880,
+        "SwapTotal": 25182204,
+        "SwapFree": 12028996
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:43.177525+00:00",
+      "elapsed_seconds": 26.008371214004,
+      "load_average": [
+        9.86181640625,
+        9.6533203125,
+        15.02978515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33712676,
+        "SwapTotal": 25182204,
+        "SwapFree": 12028996
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:45.178081+00:00",
+      "elapsed_seconds": 28.008908187999623,
+      "load_average": [
+        9.86181640625,
+        9.6533203125,
+        15.02978515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33741672,
+        "SwapTotal": 25182204,
+        "SwapFree": 12028996
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:47.178716+00:00",
+      "elapsed_seconds": 30.009544697997626,
+      "load_average": [
+        9.55224609375,
+        9.59228515625,
+        14.98095703125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33796460,
+        "SwapTotal": 25182204,
+        "SwapFree": 12028996
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:49.179414+00:00",
+      "elapsed_seconds": 32.01024064500234,
+      "load_average": [
+        9.55224609375,
+        9.59228515625,
+        14.98095703125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33790680,
+        "SwapTotal": 25182204,
+        "SwapFree": 12028996
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:51.180052+00:00",
+      "elapsed_seconds": 34.01087908899353,
+      "load_average": [
+        9.55224609375,
+        9.59228515625,
+        14.98095703125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33760324,
+        "SwapTotal": 25182204,
+        "SwapFree": 12028996
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:53.180647+00:00",
+      "elapsed_seconds": 36.01147144800052,
+      "load_average": [
+        9.427734375,
+        9.5654296875,
+        14.943359375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34148548,
+        "SwapTotal": 25182204,
+        "SwapFree": 12029252
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:55.181183+00:00",
+      "elapsed_seconds": 38.01200833500479,
+      "load_average": [
+        9.427734375,
+        9.5654296875,
+        14.943359375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34112988,
+        "SwapTotal": 25182204,
+        "SwapFree": 12029252
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:57.181859+00:00",
+      "elapsed_seconds": 40.01268639799673,
+      "load_average": [
+        9.15283203125,
+        9.505859375,
+        14.89501953125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34083916,
+        "SwapTotal": 25182204,
+        "SwapFree": 12029252
+      }
+    },
+    {
+      "utc": "2026-10-17T17:33:59.182558+00:00",
+      "elapsed_seconds": 42.01338318899798,
+      "load_average": [
+        9.15283203125,
+        9.505859375,
+        14.89501953125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34042856,
+        "SwapTotal": 25182204,
+        "SwapFree": 12029252
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:01.183134+00:00",
+      "elapsed_seconds": 44.013966054000775,
+      "load_average": [
+        9.15283203125,
+        9.505859375,
+        14.89501953125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34113280,
+        "SwapTotal": 25182204,
+        "SwapFree": 12029540
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:03.183798+00:00",
+      "elapsed_seconds": 46.01462376699783,
+      "load_average": [
+        9.06005859375,
+        9.48046875,
+        14.85791015625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34100868,
+        "SwapTotal": 25182204,
+        "SwapFree": 12029540
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:05.184442+00:00",
+      "elapsed_seconds": 48.015269526003976,
+      "load_average": [
+        9.06005859375,
+        9.48046875,
+        14.85791015625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34067048,
+        "SwapTotal": 25182204,
+        "SwapFree": 12029540
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:07.185247+00:00",
+      "elapsed_seconds": 50.01607958099339,
+      "load_average": [
+        9.2158203125,
+        9.505859375,
+        14.8369140625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33981704,
+        "SwapTotal": 25182204,
+        "SwapFree": 12029540
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:09.185926+00:00",
+      "elapsed_seconds": 52.0167520219984,
+      "load_average": [
+        9.2158203125,
+        9.505859375,
+        14.8369140625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33847332,
+        "SwapTotal": 25182204,
+        "SwapFree": 12029796
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:11.186550+00:00",
+      "elapsed_seconds": 54.01737552099803,
+      "load_average": [
+        9.2158203125,
+        9.505859375,
+        14.8369140625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33766968,
+        "SwapTotal": 25182204,
+        "SwapFree": 12030308
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:13.187126+00:00",
+      "elapsed_seconds": 56.01795281399973,
+      "load_average": [
+        9.51904296875,
+        9.56396484375,
+        14.82666015625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33747712,
+        "SwapTotal": 25182204,
+        "SwapFree": 12030308
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:15.187802+00:00",
+      "elapsed_seconds": 58.01862837400404,
+      "load_average": [
+        9.51904296875,
+        9.56396484375,
+        14.82666015625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33707132,
+        "SwapTotal": 25182204,
+        "SwapFree": 12030308
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:17.188394+00:00",
+      "elapsed_seconds": 60.01922057100455,
+      "load_average": [
+        9.7177734375,
+        9.6044921875,
+        14.81103515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33615852,
+        "SwapTotal": 25182204,
+        "SwapFree": 12030308
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:19.189138+00:00",
+      "elapsed_seconds": 62.01996345400403,
+      "load_average": [
+        9.7177734375,
+        9.6044921875,
+        14.81103515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33973032,
+        "SwapTotal": 25182204,
+        "SwapFree": 12030308
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:21.189836+00:00",
+      "elapsed_seconds": 64.02066229299817,
+      "load_average": [
+        9.7177734375,
+        9.6044921875,
+        14.81103515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34038860,
+        "SwapTotal": 25182204,
+        "SwapFree": 12030308
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:23.190562+00:00",
+      "elapsed_seconds": 66.02138718900096,
+      "load_average": [
+        10.14111328125,
+        9.6943359375,
+        14.8125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34034128,
+        "SwapTotal": 25182204,
+        "SwapFree": 12031076
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:25.191176+00:00",
+      "elapsed_seconds": 68.02200090000406,
+      "load_average": [
+        10.14111328125,
+        9.6943359375,
+        14.8125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34097332,
+        "SwapTotal": 25182204,
+        "SwapFree": 12031076
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:27.191763+00:00",
+      "elapsed_seconds": 70.02259044699895,
+      "load_average": [
+        10.04931640625,
+        9.6826171875,
+        14.78125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34305928,
+        "SwapTotal": 25182204,
+        "SwapFree": 12031076
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:29.192537+00:00",
+      "elapsed_seconds": 72.02336330099206,
+      "load_average": [
+        10.04931640625,
+        9.6826171875,
+        14.78125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34361820,
+        "SwapTotal": 25182204,
+        "SwapFree": 12031076
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:31.193242+00:00",
+      "elapsed_seconds": 74.02406791099929,
+      "load_average": [
+        10.04931640625,
+        9.6826171875,
+        14.78125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34284560,
+        "SwapTotal": 25182204,
+        "SwapFree": 12031076
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:33.193911+00:00",
+      "elapsed_seconds": 76.02473541599466,
+      "load_average": [
+        9.564453125,
+        9.587890625,
+        14.72314453125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34350128,
+        "SwapTotal": 25182204,
+        "SwapFree": 12031076
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:35.194649+00:00",
+      "elapsed_seconds": 78.02547632799542,
+      "load_average": [
+        9.564453125,
+        9.587890625,
+        14.72314453125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34340748,
+        "SwapTotal": 25182204,
+        "SwapFree": 12031076
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:37.195409+00:00",
+      "elapsed_seconds": 80.0262326469965,
+      "load_average": [
+        9.51904296875,
+        9.578125,
+        14.6923828125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34354156,
+        "SwapTotal": 25182204,
+        "SwapFree": 12031332
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:39.196044+00:00",
+      "elapsed_seconds": 82.02686889999313,
+      "load_average": [
+        9.51904296875,
+        9.578125,
+        14.6923828125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34368292,
+        "SwapTotal": 25182204,
+        "SwapFree": 12031332
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:41.196689+00:00",
+      "elapsed_seconds": 84.02751508000074,
+      "load_average": [
+        9.51904296875,
+        9.578125,
+        14.6923828125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34322456,
+        "SwapTotal": 25182204,
+        "SwapFree": 12031332
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:43.197375+00:00",
+      "elapsed_seconds": 86.0281987060007,
+      "load_average": [
+        9.23681640625,
+        9.5185546875,
+        14.6455078125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34349392,
+        "SwapTotal": 25182204,
+        "SwapFree": 12031332
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:45.198566+00:00",
+      "elapsed_seconds": 88.02939455899468,
+      "load_average": [
+        9.23681640625,
+        9.5185546875,
+        14.6455078125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34375180,
+        "SwapTotal": 25182204,
+        "SwapFree": 12031332
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:47.199251+00:00",
+      "elapsed_seconds": 90.03007730700483,
+      "load_average": [
+        8.8173828125,
+        9.4267578125,
+        14.587890625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34350436,
+        "SwapTotal": 25182204,
+        "SwapFree": 12031332
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:49.199951+00:00",
+      "elapsed_seconds": 92.0307768000057,
+      "load_average": [
+        8.8173828125,
+        9.4267578125,
+        14.587890625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34364860,
+        "SwapTotal": 25182204,
+        "SwapFree": 12031332
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:51.200603+00:00",
+      "elapsed_seconds": 94.03143144899514,
+      "load_average": [
+        8.8173828125,
+        9.4267578125,
+        14.587890625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34310564,
+        "SwapTotal": 25182204,
+        "SwapFree": 12032868
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:53.201347+00:00",
+      "elapsed_seconds": 96.03217511399998,
+      "load_average": [
+        8.59130859375,
+        9.36962890625,
+        14.54150390625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34347160,
+        "SwapTotal": 25182204,
+        "SwapFree": 12032868
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:55.202166+00:00",
+      "elapsed_seconds": 98.03299620500184,
+      "load_average": [
+        8.59130859375,
+        9.36962890625,
+        14.54150390625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33976200,
+        "SwapTotal": 25182204,
+        "SwapFree": 12032868
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:57.203237+00:00",
+      "elapsed_seconds": 100.03406568299397,
+      "load_average": [
+        10.14599609375,
+        9.67919921875,
+        14.6142578125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34161544,
+        "SwapTotal": 25182204,
+        "SwapFree": 12032868
+      }
+    },
+    {
+      "utc": "2026-10-17T17:34:59.204077+00:00",
+      "elapsed_seconds": 102.03490296599921,
+      "load_average": [
+        10.14599609375,
+        9.67919921875,
+        14.6142578125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34104272,
+        "SwapTotal": 25182204,
+        "SwapFree": 12032868
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:01.204731+00:00",
+      "elapsed_seconds": 104.03555639399565,
+      "load_average": [
+        10.14599609375,
+        9.67919921875,
+        14.6142578125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34049148,
+        "SwapTotal": 25182204,
+        "SwapFree": 12032868
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:03.205467+00:00",
+      "elapsed_seconds": 106.03629728700616,
+      "load_average": [
+        9.81396484375,
+        9.61767578125,
+        14.56787109375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33539324,
+        "SwapTotal": 25182204,
+        "SwapFree": 12032868
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:05.206240+00:00",
+      "elapsed_seconds": 108.03706498800602,
+      "load_average": [
+        9.81396484375,
+        9.61767578125,
+        14.56787109375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33154152,
+        "SwapTotal": 25182204,
+        "SwapFree": 12032868
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:07.206892+00:00",
+      "elapsed_seconds": 110.03771694199531,
+      "load_average": [
+        9.42822265625,
+        9.54052734375,
+        14.51611328125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33682840,
+        "SwapTotal": 25182204,
+        "SwapFree": 12032868
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:09.209758+00:00",
+      "elapsed_seconds": 112.04059010199853,
+      "load_average": [
+        9.42822265625,
+        9.54052734375,
+        14.51611328125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33696532,
+        "SwapTotal": 25182204,
+        "SwapFree": 12033124
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:11.210650+00:00",
+      "elapsed_seconds": 114.04147463900154,
+      "load_average": [
+        9.42822265625,
+        9.54052734375,
+        14.51611328125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33835908,
+        "SwapTotal": 25182204,
+        "SwapFree": 12033380
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:13.211330+00:00",
+      "elapsed_seconds": 116.04215369999292,
+      "load_average": [
+        9.0732421875,
+        9.46484375,
+        14.46484375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33823220,
+        "SwapTotal": 25182204,
+        "SwapFree": 12033636
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:15.211983+00:00",
+      "elapsed_seconds": 118.04280691800523,
+      "load_average": [
+        9.0732421875,
+        9.46484375,
+        14.46484375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34072392,
+        "SwapTotal": 25182204,
+        "SwapFree": 12033636
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:17.212749+00:00",
+      "elapsed_seconds": 120.04357269099273,
+      "load_average": [
+        8.66650390625,
+        9.3740234375,
+        14.408203125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34084888,
+        "SwapTotal": 25182204,
+        "SwapFree": 12033636
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:19.213430+00:00",
+      "elapsed_seconds": 122.04425564900157,
+      "load_average": [
+        8.66650390625,
+        9.3740234375,
+        14.408203125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34101652,
+        "SwapTotal": 25182204,
+        "SwapFree": 12033636
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:21.214142+00:00",
+      "elapsed_seconds": 124.04496679399745,
+      "load_average": [
+        8.66650390625,
+        9.3740234375,
+        14.408203125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34114812,
+        "SwapTotal": 25182204,
+        "SwapFree": 12033636
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:23.214816+00:00",
+      "elapsed_seconds": 126.04563974299526,
+      "load_average": [
+        8.29248046875,
+        9.28466796875,
+        14.35205078125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34057984,
+        "SwapTotal": 25182204,
+        "SwapFree": 12033892
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:25.215597+00:00",
+      "elapsed_seconds": 128.04642148800485,
+      "load_average": [
+        8.29248046875,
+        9.28466796875,
+        14.35205078125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33895224,
+        "SwapTotal": 25182204,
+        "SwapFree": 12034148
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:27.216330+00:00",
+      "elapsed_seconds": 130.0471541089937,
+      "load_average": [
+        8.02880859375,
+        9.21337890625,
+        14.3017578125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33902800,
+        "SwapTotal": 25182204,
+        "SwapFree": 12034148
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:29.217040+00:00",
+      "elapsed_seconds": 132.04786484499346,
+      "load_average": [
+        8.02880859375,
+        9.21337890625,
+        14.3017578125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33909812,
+        "SwapTotal": 25182204,
+        "SwapFree": 12034404
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:31.217692+00:00",
+      "elapsed_seconds": 134.04851668600168,
+      "load_average": [
+        8.02880859375,
+        9.21337890625,
+        14.3017578125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33714532,
+        "SwapTotal": 25182204,
+        "SwapFree": 12034404
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:33.218396+00:00",
+      "elapsed_seconds": 136.04922083299607,
+      "load_average": [
+        7.6259765625,
+        9.10986328125,
+        14.24072265625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34334024,
+        "SwapTotal": 25182204,
+        "SwapFree": 12035940
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:35.219263+00:00",
+      "elapsed_seconds": 138.05008746500243,
+      "load_average": [
+        7.6259765625,
+        9.10986328125,
+        14.24072265625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34377964,
+        "SwapTotal": 25182204,
+        "SwapFree": 12035940
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:37.219947+00:00",
+      "elapsed_seconds": 140.0507714330015,
+      "load_average": [
+        7.33544921875,
+        9.02490234375,
+        14.185546875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34429832,
+        "SwapTotal": 25182204,
+        "SwapFree": 12035940
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:39.220618+00:00",
+      "elapsed_seconds": 142.05144359500264,
+      "load_average": [
+        7.33544921875,
+        9.02490234375,
+        14.185546875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34411360,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:41.221322+00:00",
+      "elapsed_seconds": 144.05215113300073,
+      "load_average": [
+        7.33544921875,
+        9.02490234375,
+        14.185546875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34440624,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:43.222068+00:00",
+      "elapsed_seconds": 146.0528927270061,
+      "load_average": [
+        6.90771484375,
+        8.908203125,
+        14.11962890625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34490164,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:45.222756+00:00",
+      "elapsed_seconds": 148.05357976499363,
+      "load_average": [
+        6.90771484375,
+        8.908203125,
+        14.11962890625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34495460,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:47.223461+00:00",
+      "elapsed_seconds": 150.05428479900002,
+      "load_average": [
+        6.7548828125,
+        8.84326171875,
+        14.0703125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34496160,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:49.224242+00:00",
+      "elapsed_seconds": 152.0550668289943,
+      "load_average": [
+        6.7548828125,
+        8.84326171875,
+        14.0703125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34508892,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:51.224980+00:00",
+      "elapsed_seconds": 154.05580497300252,
+      "load_average": [
+        6.7548828125,
+        8.84326171875,
+        14.0703125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34785560,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:53.225703+00:00",
+      "elapsed_seconds": 156.0565271319938,
+      "load_average": [
+        6.2939453125,
+        8.712890625,
+        14.0
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34755152,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:55.226594+00:00",
+      "elapsed_seconds": 158.05742476700107,
+      "load_average": [
+        6.2939453125,
+        8.712890625,
+        14.0
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34470936,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:57.228137+00:00",
+      "elapsed_seconds": 160.0589713399968,
+      "load_average": [
+        6.27001953125,
+        8.66748046875,
+        13.95703125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34320412,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:35:59.229542+00:00",
+      "elapsed_seconds": 162.06045948699466,
+      "load_average": [
+        6.27001953125,
+        8.66748046875,
+        13.95703125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34177904,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:01.231424+00:00",
+      "elapsed_seconds": 164.06227767199744,
+      "load_average": [
+        6.27001953125,
+        8.66748046875,
+        13.95703125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34152864,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:03.232779+00:00",
+      "elapsed_seconds": 166.06360517999565,
+      "load_average": [
+        6.248046875,
+        8.623046875,
+        13.9140625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34018572,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:05.233576+00:00",
+      "elapsed_seconds": 168.06440216000192,
+      "load_average": [
+        6.248046875,
+        8.623046875,
+        13.9140625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34115956,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:07.234349+00:00",
+      "elapsed_seconds": 170.06517427500512,
+      "load_average": [
+        6.22802734375,
+        8.5791015625,
+        13.87109375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34334008,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:09.235177+00:00",
+      "elapsed_seconds": 172.06600631600304,
+      "load_average": [
+        6.22802734375,
+        8.5791015625,
+        13.87109375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34291484,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:11.236301+00:00",
+      "elapsed_seconds": 174.0671282419935,
+      "load_average": [
+        6.22802734375,
+        8.5791015625,
+        13.87109375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34164844,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:13.237117+00:00",
+      "elapsed_seconds": 176.06794201300363,
+      "load_average": [
+        5.96923828125,
+        8.486328125,
+        13.8125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34535300,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:15.237904+00:00",
+      "elapsed_seconds": 178.06872756799567,
+      "load_average": [
+        5.96923828125,
+        8.486328125,
+        13.8125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34455476,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:17.238712+00:00",
+      "elapsed_seconds": 180.0695385279978,
+      "load_average": [
+        5.7314453125,
+        8.39501953125,
+        13.75439453125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34450888,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:19.239684+00:00",
+      "elapsed_seconds": 182.07050900399918,
+      "load_average": [
+        5.7314453125,
+        8.39501953125,
+        13.75439453125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34447536,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:21.240461+00:00",
+      "elapsed_seconds": 184.07128517399542,
+      "load_average": [
+        5.7314453125,
+        8.39501953125,
+        13.75439453125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34472004,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:23.241224+00:00",
+      "elapsed_seconds": 186.07205303899536,
+      "load_average": [
+        5.3525390625,
+        8.27197265625,
+        13.685546875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34293992,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:25.242190+00:00",
+      "elapsed_seconds": 188.07301477900182,
+      "load_average": [
+        5.3525390625,
+        8.27197265625,
+        13.685546875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34066160,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:27.243014+00:00",
+      "elapsed_seconds": 190.07383803400444,
+      "load_average": [
+        5.56494140625,
+        8.26708984375,
+        13.65478515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34288860,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:29.243893+00:00",
+      "elapsed_seconds": 192.0747222439968,
+      "load_average": [
+        5.56494140625,
+        8.26708984375,
+        13.65478515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33897472,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:31.245197+00:00",
+      "elapsed_seconds": 194.07602734900138,
+      "load_average": [
+        5.56494140625,
+        8.26708984375,
+        13.65478515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33766152,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:33.246539+00:00",
+      "elapsed_seconds": 196.0773695109965,
+      "load_average": [
+        5.76025390625,
+        8.26220703125,
+        13.6240234375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33603400,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:35.247988+00:00",
+      "elapsed_seconds": 198.07881800699397,
+      "load_average": [
+        5.76025390625,
+        8.26220703125,
+        13.6240234375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33454348,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:37.249576+00:00",
+      "elapsed_seconds": 200.08040193900524,
+      "load_average": [
+        5.85986328125,
+        8.2412109375,
+        13.58837890625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33240584,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:39.250408+00:00",
+      "elapsed_seconds": 202.0812328220054,
+      "load_average": [
+        5.85986328125,
+        8.2412109375,
+        13.58837890625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33217768,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:41.251260+00:00",
+      "elapsed_seconds": 204.08208371000364,
+      "load_average": [
+        5.85986328125,
+        8.2412109375,
+        13.58837890625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33216148,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:43.252090+00:00",
+      "elapsed_seconds": 206.08291532300063,
+      "load_average": [
+        5.55029296875,
+        8.13720703125,
+        13.52587890625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33186952,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036452
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:45.252941+00:00",
+      "elapsed_seconds": 208.0837678109965,
+      "load_average": [
+        5.55029296875,
+        8.13720703125,
+        13.52587890625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33088848,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036708
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:47.253886+00:00",
+      "elapsed_seconds": 210.08471158299653,
+      "load_average": [
+        5.505859375,
+        8.0849609375,
+        13.47998046875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 32931244,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036708
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:49.255084+00:00",
+      "elapsed_seconds": 212.0859079810034,
+      "load_average": [
+        5.505859375,
+        8.0849609375,
+        13.47998046875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33339024,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036708
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:51.255933+00:00",
+      "elapsed_seconds": 214.0867615229945,
+      "load_average": [
+        5.505859375,
+        8.0849609375,
+        13.47998046875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33149500,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036708
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:53.256993+00:00",
+      "elapsed_seconds": 216.08781732000352,
+      "load_average": [
+        5.22509765625,
+        7.98388671875,
+        13.41796875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33083236,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036708
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:55.257834+00:00",
+      "elapsed_seconds": 218.088657211003,
+      "load_average": [
+        5.22509765625,
+        7.98388671875,
+        13.41796875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33155980,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036708
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:57.258727+00:00",
+      "elapsed_seconds": 220.08955023599265,
+      "load_average": [
+        4.966796875,
+        7.88427734375,
+        13.3564453125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33201664,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036708
+      }
+    },
+    {
+      "utc": "2026-10-17T17:36:59.259563+00:00",
+      "elapsed_seconds": 222.09038686599524,
+      "load_average": [
+        4.966796875,
+        7.88427734375,
+        13.3564453125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33253652,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036964
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:01.260526+00:00",
+      "elapsed_seconds": 224.09135365999828,
+      "load_average": [
+        4.966796875,
+        7.88427734375,
+        13.3564453125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33019916,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036964
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:03.261400+00:00",
+      "elapsed_seconds": 226.09222556899476,
+      "load_average": [
+        4.80908203125,
+        7.802734375,
+        13.30078125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33364688,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036964
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:05.262261+00:00",
+      "elapsed_seconds": 228.093085763001,
+      "load_average": [
+        4.80908203125,
+        7.802734375,
+        13.30078125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33458304,
+        "SwapTotal": 25182204,
+        "SwapFree": 12036964
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:07.263139+00:00",
+      "elapsed_seconds": 230.09396531099628,
+      "load_average": [
+        4.82470703125,
+        7.755859375,
+        13.255859375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33439208,
+        "SwapTotal": 25182204,
+        "SwapFree": 12037220
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:09.264421+00:00",
+      "elapsed_seconds": 232.09525098500308,
+      "load_average": [
+        4.82470703125,
+        7.755859375,
+        13.255859375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33430100,
+        "SwapTotal": 25182204,
+        "SwapFree": 12037220
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:11.265973+00:00",
+      "elapsed_seconds": 234.09680247500364,
+      "load_average": [
+        4.82470703125,
+        7.755859375,
+        13.255859375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33367432,
+        "SwapTotal": 25182204,
+        "SwapFree": 12037228
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:13.267004+00:00",
+      "elapsed_seconds": 236.0978283870063,
+      "load_average": [
+        5.2392578125,
+        7.79345703125,
+        13.23828125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33362088,
+        "SwapTotal": 25182204,
+        "SwapFree": 12037228
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:15.267928+00:00",
+      "elapsed_seconds": 238.09875425200153,
+      "load_average": [
+        5.2392578125,
+        7.79345703125,
+        13.23828125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33259112,
+        "SwapTotal": 25182204,
+        "SwapFree": 12037484
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:17.269017+00:00",
+      "elapsed_seconds": 240.09984162299952,
+      "load_average": [
+        5.38037109375,
+        7.7802734375,
+        13.20458984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33301500,
+        "SwapTotal": 25182204,
+        "SwapFree": 12037484
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:19.269944+00:00",
+      "elapsed_seconds": 242.10076835700602,
+      "load_average": [
+        5.38037109375,
+        7.7802734375,
+        13.20458984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33301716,
+        "SwapTotal": 25182204,
+        "SwapFree": 12037484
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:21.270923+00:00",
+      "elapsed_seconds": 244.10174861700216,
+      "load_average": [
+        5.38037109375,
+        7.7802734375,
+        13.20458984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33310012,
+        "SwapTotal": 25182204,
+        "SwapFree": 12037484
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:23.272116+00:00",
+      "elapsed_seconds": 246.10295066099206,
+      "load_average": [
+        5.26953125,
+        7.71728515625,
+        13.15478515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33140884,
+        "SwapTotal": 25182204,
+        "SwapFree": 12037484
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:25.273537+00:00",
+      "elapsed_seconds": 248.10437560999708,
+      "load_average": [
+        5.26953125,
+        7.71728515625,
+        13.15478515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33154028,
+        "SwapTotal": 25182204,
+        "SwapFree": 12037484
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:27.274854+00:00",
+      "elapsed_seconds": 250.105677724001,
+      "load_average": [
+        5.568359375,
+        7.73876953125,
+        13.13232421875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33844304,
+        "SwapTotal": 25182204,
+        "SwapFree": 12037484
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:29.275882+00:00",
+      "elapsed_seconds": 252.10670852000476,
+      "load_average": [
+        5.568359375,
+        7.73876953125,
+        13.13232421875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33908600,
+        "SwapTotal": 25182204,
+        "SwapFree": 12037484
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:31.277058+00:00",
+      "elapsed_seconds": 254.1078831909981,
+      "load_average": [
+        5.568359375,
+        7.73876953125,
+        13.13232421875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33939232,
+        "SwapTotal": 25182204,
+        "SwapFree": 12037484
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:33.278166+00:00",
+      "elapsed_seconds": 256.108992716996,
+      "load_average": [
+        5.4423828125,
+        7.67626953125,
+        13.0830078125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33939776,
+        "SwapTotal": 25182204,
+        "SwapFree": 12037484
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:35.279493+00:00",
+      "elapsed_seconds": 258.1103165370005,
+      "load_average": [
+        5.4423828125,
+        7.67626953125,
+        13.0830078125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33915640,
+        "SwapTotal": 25182204,
+        "SwapFree": 12042860
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:37.280447+00:00",
+      "elapsed_seconds": 260.11127213100553,
+      "load_average": [
+        5.8876953125,
+        7.73193359375,
+        13.07177734375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33927312,
+        "SwapTotal": 25182204,
+        "SwapFree": 12042860
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:39.281435+00:00",
+      "elapsed_seconds": 262.1122637590015,
+      "load_average": [
+        5.8876953125,
+        7.73193359375,
+        13.07177734375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33966808,
+        "SwapTotal": 25182204,
+        "SwapFree": 12042860
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:41.282470+00:00",
+      "elapsed_seconds": 264.11329559999285,
+      "load_average": [
+        5.8876953125,
+        7.73193359375,
+        13.07177734375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33955948,
+        "SwapTotal": 25182204,
+        "SwapFree": 12042860
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:43.283593+00:00",
+      "elapsed_seconds": 266.1144230570062,
+      "load_average": [
+        6.13720703125,
+        7.75341796875,
+        13.0498046875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33965760,
+        "SwapTotal": 25182204,
+        "SwapFree": 12042860
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:45.285051+00:00",
+      "elapsed_seconds": 268.11587820900604,
+      "load_average": [
+        6.13720703125,
+        7.75341796875,
+        13.0498046875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33945508,
+        "SwapTotal": 25182204,
+        "SwapFree": 12042860
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:47.286456+00:00",
+      "elapsed_seconds": 270.11728449500515,
+      "load_average": [
+        6.20654296875,
+        7.74072265625,
+        13.01708984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33942100,
+        "SwapTotal": 25182204,
+        "SwapFree": 12042860
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:49.287891+00:00",
+      "elapsed_seconds": 272.1187138450041,
+      "load_average": [
+        6.20654296875,
+        7.74072265625,
+        13.01708984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33947532,
+        "SwapTotal": 25182204,
+        "SwapFree": 12042860
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:51.288920+00:00",
+      "elapsed_seconds": 274.1197494280059,
+      "load_average": [
+        6.20654296875,
+        7.74072265625,
+        13.01708984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33919908,
+        "SwapTotal": 25182204,
+        "SwapFree": 12042860
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:53.290268+00:00",
+      "elapsed_seconds": 276.12109596599475,
+      "load_average": [
+        6.5107421875,
+        7.7783203125,
+        13.00048828125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33879780,
+        "SwapTotal": 25182204,
+        "SwapFree": 12042860
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:55.291353+00:00",
+      "elapsed_seconds": 278.12218041700544,
+      "load_average": [
+        6.5107421875,
+        7.7783203125,
+        13.00048828125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33890864,
+        "SwapTotal": 25182204,
+        "SwapFree": 12042860
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:57.292759+00:00",
+      "elapsed_seconds": 280.1235830229998,
+      "load_average": [
+        6.71044921875,
+        7.798828125,
+        12.978515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33938268,
+        "SwapTotal": 25182204,
+        "SwapFree": 12042860
+      }
+    },
+    {
+      "utc": "2026-10-17T17:37:59.293856+00:00",
+      "elapsed_seconds": 282.12468018199434,
+      "load_average": [
+        6.71044921875,
+        7.798828125,
+        12.978515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33925900,
+        "SwapTotal": 25182204,
+        "SwapFree": 12042860
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:01.294860+00:00",
+      "elapsed_seconds": 284.125685424995,
+      "load_average": [
+        6.71044921875,
+        7.798828125,
+        12.978515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33915036,
+        "SwapTotal": 25182204,
+        "SwapFree": 12042860
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:03.296465+00:00",
+      "elapsed_seconds": 286.12729040399427,
+      "load_average": [
+        6.6533203125,
+        7.7685546875,
+        12.94091796875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33927180,
+        "SwapTotal": 25182204,
+        "SwapFree": 12042860
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:05.297695+00:00",
+      "elapsed_seconds": 288.12852420599665,
+      "load_average": [
+        6.6533203125,
+        7.7685546875,
+        12.94091796875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33961060,
+        "SwapTotal": 25182204,
+        "SwapFree": 12042860
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:07.299172+00:00",
+      "elapsed_seconds": 290.1300001729978,
+      "load_average": [
+        6.92138671875,
+        7.8056640625,
+        12.9248046875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34140536,
+        "SwapTotal": 25182204,
+        "SwapFree": 12043116
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:09.300750+00:00",
+      "elapsed_seconds": 292.1315753039962,
+      "load_average": [
+        6.92138671875,
+        7.8056640625,
+        12.9248046875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33973696,
+        "SwapTotal": 25182204,
+        "SwapFree": 12043116
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:11.301877+00:00",
+      "elapsed_seconds": 294.1327027170046,
+      "load_average": [
+        6.92138671875,
+        7.8056640625,
+        12.9248046875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33932492,
+        "SwapTotal": 25182204,
+        "SwapFree": 12043116
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:13.303149+00:00",
+      "elapsed_seconds": 296.1339802250004,
+      "load_average": [
+        6.84716796875,
+        7.775390625,
+        12.88720703125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33935956,
+        "SwapTotal": 25182204,
+        "SwapFree": 12043116
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:15.304968+00:00",
+      "elapsed_seconds": 298.1357938479923,
+      "load_average": [
+        6.84716796875,
+        7.775390625,
+        12.88720703125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33837688,
+        "SwapTotal": 25182204,
+        "SwapFree": 12043116
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:17.306151+00:00",
+      "elapsed_seconds": 300.1369750939921,
+      "load_average": [
+        6.93994140625,
+        7.779296875,
+        12.86083984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33630452,
+        "SwapTotal": 25182204,
+        "SwapFree": 12044172
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:19.307330+00:00",
+      "elapsed_seconds": 302.1381555629923,
+      "load_average": [
+        6.93994140625,
+        7.779296875,
+        12.86083984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33827632,
+        "SwapTotal": 25182204,
+        "SwapFree": 12044784
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:21.308580+00:00",
+      "elapsed_seconds": 304.13940786599414,
+      "load_average": [
+        6.93994140625,
+        7.779296875,
+        12.86083984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33889240,
+        "SwapTotal": 25182204,
+        "SwapFree": 12044784
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:23.309750+00:00",
+      "elapsed_seconds": 306.1405772339931,
+      "load_average": [
+        6.8642578125,
+        7.74951171875,
+        12.82373046875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33922272,
+        "SwapTotal": 25182204,
+        "SwapFree": 12045040
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:25.310906+00:00",
+      "elapsed_seconds": 308.14173109400144,
+      "load_average": [
+        6.8642578125,
+        7.74951171875,
+        12.82373046875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33826544,
+        "SwapTotal": 25182204,
+        "SwapFree": 12045040
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:27.312030+00:00",
+      "elapsed_seconds": 310.1428575280006,
+      "load_average": [
+        6.95556640625,
+        7.75390625,
+        12.79736328125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33851640,
+        "SwapTotal": 25182204,
+        "SwapFree": 12045040
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:29.313695+00:00",
+      "elapsed_seconds": 312.144525538999,
+      "load_average": [
+        6.95556640625,
+        7.75390625,
+        12.79736328125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33749972,
+        "SwapTotal": 25182204,
+        "SwapFree": 12045296
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:31.315340+00:00",
+      "elapsed_seconds": 314.1461701130029,
+      "load_average": [
+        6.95556640625,
+        7.75390625,
+        12.79736328125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33784016,
+        "SwapTotal": 25182204,
+        "SwapFree": 12045296
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:33.316938+00:00",
+      "elapsed_seconds": 316.14776630999404,
+      "load_average": [
+        7.27978515625,
+        7.80810546875,
+        12.78759765625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33732640,
+        "SwapTotal": 25182204,
+        "SwapFree": 12045296
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:35.318141+00:00",
+      "elapsed_seconds": 318.1489661499945,
+      "load_average": [
+        7.27978515625,
+        7.80810546875,
+        12.78759765625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33709284,
+        "SwapTotal": 25182204,
+        "SwapFree": 12045296
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:37.319363+00:00",
+      "elapsed_seconds": 320.1501911230007,
+      "load_average": [
+        7.41796875,
+        7.828125,
+        12.76708984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33668636,
+        "SwapTotal": 25182204,
+        "SwapFree": 12045552
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:39.321059+00:00",
+      "elapsed_seconds": 322.15188859299815,
+      "load_average": [
+        7.41796875,
+        7.828125,
+        12.76708984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33670808,
+        "SwapTotal": 25182204,
+        "SwapFree": 12045808
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:41.322585+00:00",
+      "elapsed_seconds": 324.1534105949977,
+      "load_average": [
+        7.41796875,
+        7.828125,
+        12.76708984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33723108,
+        "SwapTotal": 25182204,
+        "SwapFree": 12045808
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:43.323638+00:00",
+      "elapsed_seconds": 326.1544618290063,
+      "load_average": [
+        7.22412109375,
+        7.78076171875,
+        12.72509765625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33807208,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046320
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:45.324750+00:00",
+      "elapsed_seconds": 328.1555747770035,
+      "load_average": [
+        7.22412109375,
+        7.78076171875,
+        12.72509765625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33765464,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046320
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:47.325863+00:00",
+      "elapsed_seconds": 330.1566921289923,
+      "load_average": [
+        6.8857421875,
+        7.701171875,
+        12.6728515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33182832,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046320
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:49.327206+00:00",
+      "elapsed_seconds": 332.15803071499977,
+      "load_average": [
+        6.8857421875,
+        7.701171875,
+        12.6728515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33120048,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046320
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:51.328303+00:00",
+      "elapsed_seconds": 334.159127713996,
+      "load_average": [
+        6.8857421875,
+        7.701171875,
+        12.6728515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33272504,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046320
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:53.329391+00:00",
+      "elapsed_seconds": 336.16021577699576,
+      "load_average": [
+        6.57421875,
+        7.623046875,
+        12.62060546875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33340980,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046320
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:55.330547+00:00",
+      "elapsed_seconds": 338.161371573995,
+      "load_average": [
+        6.57421875,
+        7.623046875,
+        12.62060546875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33364900,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046320
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:57.331659+00:00",
+      "elapsed_seconds": 340.1624840430013,
+      "load_average": [
+        6.52783203125,
+        7.595703125,
+        12.5849609375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33352844,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046320
+      }
+    },
+    {
+      "utc": "2026-10-17T17:38:59.332759+00:00",
+      "elapsed_seconds": 342.16358629599563,
+      "load_average": [
+        6.52783203125,
+        7.595703125,
+        12.5849609375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33331508,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046320
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:01.333989+00:00",
+      "elapsed_seconds": 344.1648145240033,
+      "load_average": [
+        6.52783203125,
+        7.595703125,
+        12.5849609375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33353924,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046320
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:03.335093+00:00",
+      "elapsed_seconds": 346.16592328499246,
+      "load_average": [
+        6.2451171875,
+        7.51904296875,
+        12.533203125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33370344,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:05.336745+00:00",
+      "elapsed_seconds": 348.1675727020047,
+      "load_average": [
+        6.2451171875,
+        7.51904296875,
+        12.533203125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33381236,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:07.338410+00:00",
+      "elapsed_seconds": 350.16923697099264,
+      "load_average": [
+        5.98486328125,
+        7.44384765625,
+        12.48193359375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33243524,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:09.339596+00:00",
+      "elapsed_seconds": 352.1704243830027,
+      "load_average": [
+        5.98486328125,
+        7.44384765625,
+        12.48193359375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33175108,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:11.340714+00:00",
+      "elapsed_seconds": 354.17154074700375,
+      "load_average": [
+        5.98486328125,
+        7.44384765625,
+        12.48193359375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33737452,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:13.342005+00:00",
+      "elapsed_seconds": 356.1728349460027,
+      "load_average": [
+        6.06640625,
+        7.43603515625,
+        12.4521484375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33683104,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:15.343663+00:00",
+      "elapsed_seconds": 358.1744881199993,
+      "load_average": [
+        6.06640625,
+        7.43603515625,
+        12.4521484375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33675504,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:17.344751+00:00",
+      "elapsed_seconds": 360.17557620600564,
+      "load_average": [
+        5.66064453125,
+        7.3291015625,
+        12.390625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34153816,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:19.345853+00:00",
+      "elapsed_seconds": 362.17667669500224,
+      "load_average": [
+        5.66064453125,
+        7.3291015625,
+        12.390625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34165372,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:21.347215+00:00",
+      "elapsed_seconds": 364.1780399679992,
+      "load_average": [
+        5.66064453125,
+        7.3291015625,
+        12.390625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34206176,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:23.348415+00:00",
+      "elapsed_seconds": 366.17923874399276,
+      "load_average": [
+        5.447265625,
+        7.2568359375,
+        12.33984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34125304,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:25.349531+00:00",
+      "elapsed_seconds": 368.1803546729934,
+      "load_average": [
+        5.447265625,
+        7.2568359375,
+        12.33984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34069516,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:27.350695+00:00",
+      "elapsed_seconds": 370.18151899499935,
+      "load_average": [
+        5.1708984375,
+        7.16943359375,
+        12.2841796875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33978052,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:29.351843+00:00",
+      "elapsed_seconds": 372.1826670409937,
+      "load_average": [
+        5.1708984375,
+        7.16943359375,
+        12.2841796875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33953796,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:31.353160+00:00",
+      "elapsed_seconds": 374.1839868810057,
+      "load_average": [
+        5.1708984375,
+        7.16943359375,
+        12.2841796875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33888784,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:33.354371+00:00",
+      "elapsed_seconds": 376.1851950940036,
+      "load_average": [
+        4.91650390625,
+        7.08349609375,
+        12.228515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33903456,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:35.355546+00:00",
+      "elapsed_seconds": 378.18637046999356,
+      "load_average": [
+        4.91650390625,
+        7.08349609375,
+        12.228515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34233500,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:37.356744+00:00",
+      "elapsed_seconds": 380.1875722989935,
+      "load_average": [
+        4.92333984375,
+        7.048828125,
+        12.189453125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34039084,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:39.358291+00:00",
+      "elapsed_seconds": 382.1891165039997,
+      "load_average": [
+        4.92333984375,
+        7.048828125,
+        12.189453125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34003436,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:41.359576+00:00",
+      "elapsed_seconds": 384.1904028610006,
+      "load_average": [
+        4.92333984375,
+        7.048828125,
+        12.189453125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34066684,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:43.360915+00:00",
+      "elapsed_seconds": 386.19174082999234,
+      "load_average": [
+        5.08984375,
+        7.0478515625,
+        12.1611328125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34122820,
+        "SwapTotal": 25182204,
+        "SwapFree": 12046576
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:45.362506+00:00",
+      "elapsed_seconds": 388.19333340499725,
+      "load_average": [
+        5.08984375,
+        7.0478515625,
+        12.1611328125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33981904,
+        "SwapTotal": 25182204,
+        "SwapFree": 12047088
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:47.364131+00:00",
+      "elapsed_seconds": 390.19495658199594,
+      "load_average": [
+        5.8037109375,
+        7.16357421875,
+        12.17138671875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33739144,
+        "SwapTotal": 25182204,
+        "SwapFree": 12049428
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:49.365811+00:00",
+      "elapsed_seconds": 392.19664008400287,
+      "load_average": [
+        5.8037109375,
+        7.16357421875,
+        12.17138671875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33609696,
+        "SwapTotal": 25182204,
+        "SwapFree": 12050196
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:51.367441+00:00",
+      "elapsed_seconds": 394.1982784080028,
+      "load_average": [
+        5.8037109375,
+        7.16357421875,
+        12.17138671875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33523264,
+        "SwapTotal": 25182204,
+        "SwapFree": 12050452
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:53.369472+00:00",
+      "elapsed_seconds": 396.2003004779981,
+      "load_average": [
+        6.06005859375,
+        7.1943359375,
+        12.154296875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33549488,
+        "SwapTotal": 25182204,
+        "SwapFree": 12050452
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:55.371105+00:00",
+      "elapsed_seconds": 398.2019304090063,
+      "load_average": [
+        6.06005859375,
+        7.1943359375,
+        12.154296875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33749208,
+        "SwapTotal": 25182204,
+        "SwapFree": 12050452
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:57.372660+00:00",
+      "elapsed_seconds": 400.2034918330028,
+      "load_average": [
+        6.5361328125,
+        7.2744140625,
+        12.1533203125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33826476,
+        "SwapTotal": 25182204,
+        "SwapFree": 12050452
+      }
+    },
+    {
+      "utc": "2026-10-17T17:39:59.374458+00:00",
+      "elapsed_seconds": 402.205304920004,
+      "load_average": [
+        6.5361328125,
+        7.2744140625,
+        12.1533203125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33852056,
+        "SwapTotal": 25182204,
+        "SwapFree": 12050452
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:01.376084+00:00",
+      "elapsed_seconds": 404.2069085609983,
+      "load_average": [
+        6.5361328125,
+        7.2744140625,
+        12.1533203125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33836568,
+        "SwapTotal": 25182204,
+        "SwapFree": 12050452
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:03.377333+00:00",
+      "elapsed_seconds": 406.20816032199946,
+      "load_average": [
+        6.65380859375,
+        7.28662109375,
+        12.130859375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33830592,
+        "SwapTotal": 25182204,
+        "SwapFree": 12050452
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:05.379037+00:00",
+      "elapsed_seconds": 408.2098658600007,
+      "load_average": [
+        6.65380859375,
+        7.28662109375,
+        12.130859375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33818820,
+        "SwapTotal": 25182204,
+        "SwapFree": 12050452
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:07.380453+00:00",
+      "elapsed_seconds": 410.2112772190012,
+      "load_average": [
+        6.76171875,
+        7.298828125,
+        12.1083984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33789144,
+        "SwapTotal": 25182204,
+        "SwapFree": 12050452
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:09.381709+00:00",
+      "elapsed_seconds": 412.2125352000003,
+      "load_average": [
+        6.76171875,
+        7.298828125,
+        12.1083984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33774500,
+        "SwapTotal": 25182204,
+        "SwapFree": 12050708
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:11.383087+00:00",
+      "elapsed_seconds": 414.2139137649938,
+      "load_average": [
+        6.76171875,
+        7.298828125,
+        12.1083984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33795344,
+        "SwapTotal": 25182204,
+        "SwapFree": 12050708
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:13.384549+00:00",
+      "elapsed_seconds": 416.2153741039947,
+      "load_average": [
+        6.861328125,
+        7.310546875,
+        12.0859375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33810744,
+        "SwapTotal": 25182204,
+        "SwapFree": 12050964
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:15.386114+00:00",
+      "elapsed_seconds": 418.2169406059984,
+      "load_average": [
+        6.861328125,
+        7.310546875,
+        12.0859375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33810892,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051220
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:17.387948+00:00",
+      "elapsed_seconds": 420.21877452300396,
+      "load_average": [
+        6.87255859375,
+        7.30517578125,
+        12.05859375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33898284,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051220
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:19.390155+00:00",
+      "elapsed_seconds": 422.22098118400027,
+      "load_average": [
+        6.87255859375,
+        7.30517578125,
+        12.05859375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33791560,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051220
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:21.392025+00:00",
+      "elapsed_seconds": 424.22285058599664,
+      "load_average": [
+        6.87255859375,
+        7.30517578125,
+        12.05859375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 34021752,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051220
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:23.393685+00:00",
+      "elapsed_seconds": 426.2245153709955,
+      "load_average": [
+        7.36328125,
+        7.39990234375,
+        12.06396484375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33880396,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051220
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:25.395613+00:00",
+      "elapsed_seconds": 428.22643736000464,
+      "load_average": [
+        7.36328125,
+        7.39990234375,
+        12.06396484375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33765784,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051220
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:27.397077+00:00",
+      "elapsed_seconds": 430.2279060199944,
+      "load_average": [
+        7.73486328125,
+        7.4765625,
+        12.0634765625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33597212,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051220
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:29.398945+00:00",
+      "elapsed_seconds": 432.22977062400605,
+      "load_average": [
+        7.73486328125,
+        7.4765625,
+        12.0634765625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33587864,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051220
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:31.400230+00:00",
+      "elapsed_seconds": 434.23105611999927,
+      "load_average": [
+        7.73486328125,
+        7.4765625,
+        12.0634765625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33575380,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051220
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:33.401744+00:00",
+      "elapsed_seconds": 436.2325710589939,
+      "load_average": [
+        7.75634765625,
+        7.4853515625,
+        12.04150390625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33564588,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051220
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:35.403128+00:00",
+      "elapsed_seconds": 438.23395460100437,
+      "load_average": [
+        7.75634765625,
+        7.4853515625,
+        12.04150390625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33561172,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051220
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:37.404547+00:00",
+      "elapsed_seconds": 440.2353730150062,
+      "load_average": [
+        7.53515625,
+        7.44384765625,
+        12.00341796875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33560336,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051220
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:39.406692+00:00",
+      "elapsed_seconds": 442.237518947004,
+      "load_average": [
+        7.53515625,
+        7.44384765625,
+        12.00341796875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33376040,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051476
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:41.408086+00:00",
+      "elapsed_seconds": 444.2389112670062,
+      "load_average": [
+        7.53515625,
+        7.44384765625,
+        12.00341796875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33367896,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051476
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:43.409392+00:00",
+      "elapsed_seconds": 446.24021987000015,
+      "load_average": [
+        7.33203125,
+        7.40283203125,
+        11.96533203125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33403284,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051732
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:45.411623+00:00",
+      "elapsed_seconds": 448.24245042000257,
+      "load_average": [
+        7.33203125,
+        7.40283203125,
+        11.96533203125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33436716,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051732
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:47.413177+00:00",
+      "elapsed_seconds": 450.24400156999764,
+      "load_average": [
+        7.5458984375,
+        7.4462890625,
+        11.95458984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33352392,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051732
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:49.414535+00:00",
+      "elapsed_seconds": 452.2453624519985,
+      "load_average": [
+        7.5458984375,
+        7.4462890625,
+        11.95458984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33356828,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051732
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:51.416266+00:00",
+      "elapsed_seconds": 454.2470920689957,
+      "load_average": [
+        7.5458984375,
+        7.4462890625,
+        11.95458984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33328208,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051732
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:53.417925+00:00",
+      "elapsed_seconds": 456.24875254799554,
+      "load_average": [
+        7.501953125,
+        7.4384765625,
+        11.927734375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33325548,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051732
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:55.419872+00:00",
+      "elapsed_seconds": 458.2506989310059,
+      "load_average": [
+        7.501953125,
+        7.4384765625,
+        11.927734375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33299552,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051732
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:57.421871+00:00",
+      "elapsed_seconds": 460.2526979880058,
+      "load_average": [
+        7.38134765625,
+        7.41455078125,
+        11.8955078125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33349104,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051732
+      }
+    },
+    {
+      "utc": "2026-10-17T17:40:59.423473+00:00",
+      "elapsed_seconds": 462.2542970249924,
+      "load_average": [
+        7.38134765625,
+        7.41455078125,
+        11.8955078125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33434656,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051732
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:01.424836+00:00",
+      "elapsed_seconds": 464.25566380500095,
+      "load_average": [
+        7.38134765625,
+        7.41455078125,
+        11.8955078125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33431768,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051732
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:03.427255+00:00",
+      "elapsed_seconds": 466.2580900610046,
+      "load_average": [
+        7.1904296875,
+        7.3740234375,
+        11.8583984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33403336,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051732
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:05.429139+00:00",
+      "elapsed_seconds": 468.2599676779937,
+      "load_average": [
+        7.1904296875,
+        7.3740234375,
+        11.8583984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33441316,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051732
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:07.430889+00:00",
+      "elapsed_seconds": 470.26171539799543,
+      "load_average": [
+        7.0146484375,
+        7.33447265625,
+        11.8212890625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33393976,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051732
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:09.432650+00:00",
+      "elapsed_seconds": 472.2634738199995,
+      "load_average": [
+        7.0146484375,
+        7.33447265625,
+        11.8212890625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33418288,
+        "SwapTotal": 25182204,
+        "SwapFree": 12051732
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:11.434291+00:00",
+      "elapsed_seconds": 474.2651150939928,
+      "load_average": [
+        7.0146484375,
+        7.33447265625,
+        11.8212890625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33464544,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052244
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:13.435726+00:00",
+      "elapsed_seconds": 476.2665641509957,
+      "load_average": [
+        6.93310546875,
+        7.31201171875,
+        11.78955078125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33471848,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052244
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:15.437378+00:00",
+      "elapsed_seconds": 478.2682020909997,
+      "load_average": [
+        6.93310546875,
+        7.31201171875,
+        11.78955078125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33513336,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052244
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:17.438726+00:00",
+      "elapsed_seconds": 480.2695498230023,
+      "load_average": [
+        6.69775390625,
+        7.2568359375,
+        11.74755859375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33454232,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052244
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:19.440147+00:00",
+      "elapsed_seconds": 482.2709714569937,
+      "load_average": [
+        6.69775390625,
+        7.2568359375,
+        11.74755859375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33086140,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052244
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:21.441578+00:00",
+      "elapsed_seconds": 484.2724045740033,
+      "load_average": [
+        6.69775390625,
+        7.2568359375,
+        11.74755859375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 32923028,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052244
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:23.443107+00:00",
+      "elapsed_seconds": 486.27393279499665,
+      "load_average": [
+        6.4814453125,
+        7.20263671875,
+        11.70556640625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33052160,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052244
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:25.444563+00:00",
+      "elapsed_seconds": 488.27538803800417,
+      "load_average": [
+        6.4814453125,
+        7.20263671875,
+        11.70556640625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33071096,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052244
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:27.446010+00:00",
+      "elapsed_seconds": 490.2768351029954,
+      "load_average": [
+        6.20263671875,
+        7.1328125,
+        11.65869140625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33082860,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052244
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:29.447305+00:00",
+      "elapsed_seconds": 492.278129311002,
+      "load_average": [
+        6.20263671875,
+        7.1328125,
+        11.65869140625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33061936,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052244
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:31.448631+00:00",
+      "elapsed_seconds": 494.2794581210037,
+      "load_average": [
+        6.20263671875,
+        7.1328125,
+        11.65869140625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33055288,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052244
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:33.450689+00:00",
+      "elapsed_seconds": 496.2815135669953,
+      "load_average": [
+        6.10595703125,
+        7.09716796875,
+        11.62255859375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33078980,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052244
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:35.452144+00:00",
+      "elapsed_seconds": 498.2829697929992,
+      "load_average": [
+        6.10595703125,
+        7.09716796875,
+        11.62255859375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33072852,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052244
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:37.453644+00:00",
+      "elapsed_seconds": 500.2844690030033,
+      "load_average": [
+        6.09716796875,
+        7.07861328125,
+        11.59228515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33080788,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052244
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:39.455065+00:00",
+      "elapsed_seconds": 502.28588831399975,
+      "load_average": [
+        6.09716796875,
+        7.07861328125,
+        11.59228515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33069248,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052244
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:41.456553+00:00",
+      "elapsed_seconds": 504.2873789580044,
+      "load_average": [
+        6.09716796875,
+        7.07861328125,
+        11.59228515625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 32948500,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052244
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:43.458050+00:00",
+      "elapsed_seconds": 506.28887532500084,
+      "load_average": [
+        6.00927734375,
+        7.0439453125,
+        11.556640625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 32952468,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052500
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:45.459658+00:00",
+      "elapsed_seconds": 508.2904860150011,
+      "load_average": [
+        6.00927734375,
+        7.0439453125,
+        11.556640625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 32828684,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052500
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:47.461983+00:00",
+      "elapsed_seconds": 510.29280799100525,
+      "load_average": [
+        5.92822265625,
+        7.009765625,
+        11.52099609375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33055784,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052500
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:49.463556+00:00",
+      "elapsed_seconds": 512.2943802459922,
+      "load_average": [
+        5.92822265625,
+        7.009765625,
+        11.52099609375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33448896,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052500
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:51.465049+00:00",
+      "elapsed_seconds": 514.295873281997,
+      "load_average": [
+        5.92822265625,
+        7.009765625,
+        11.52099609375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33339920,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052500
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:53.466575+00:00",
+      "elapsed_seconds": 516.2973989830061,
+      "load_average": [
+        5.693359375,
+        6.94287109375,
+        11.47509765625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33333328,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052500
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:55.468047+00:00",
+      "elapsed_seconds": 518.2988753450045,
+      "load_average": [
+        5.693359375,
+        6.94287109375,
+        11.47509765625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33365252,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052500
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:57.469667+00:00",
+      "elapsed_seconds": 520.3004920910025,
+      "load_average": [
+        5.71826171875,
+        6.9267578125,
+        11.4453125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33273104,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052500
+      }
+    },
+    {
+      "utc": "2026-10-17T17:41:59.471173+00:00",
+      "elapsed_seconds": 522.3019968089939,
+      "load_average": [
+        5.71826171875,
+        6.9267578125,
+        11.4453125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33299972,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052500
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:01.472655+00:00",
+      "elapsed_seconds": 524.3034793989937,
+      "load_average": [
+        5.71826171875,
+        6.9267578125,
+        11.4453125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33303908,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052500
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:03.474189+00:00",
+      "elapsed_seconds": 526.3050141519925,
+      "load_average": [
+        5.42041015625,
+        6.8447265625,
+        11.39453125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33347496,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052500
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:05.475715+00:00",
+      "elapsed_seconds": 528.3065403359942,
+      "load_average": [
+        5.42041015625,
+        6.8447265625,
+        11.39453125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33340284,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052500
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:07.477271+00:00",
+      "elapsed_seconds": 530.3080982139945,
+      "load_average": [
+        5.2265625,
+        6.78076171875,
+        11.34912109375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33717536,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052756
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:09.478973+00:00",
+      "elapsed_seconds": 532.3098292350041,
+      "load_average": [
+        5.2265625,
+        6.78076171875,
+        11.34912109375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33368972,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052756
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:11.482135+00:00",
+      "elapsed_seconds": 534.3129790139938,
+      "load_average": [
+        5.2265625,
+        6.78076171875,
+        11.34912109375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33216672,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052756
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:13.484467+00:00",
+      "elapsed_seconds": 536.3152903419978,
+      "load_average": [
+        5.28857421875,
+        6.767578125,
+        11.3203125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33088104,
+        "SwapTotal": 25182204,
+        "SwapFree": 12052756
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:15.486348+00:00",
+      "elapsed_seconds": 538.3171777209936,
+      "load_average": [
+        5.28857421875,
+        6.767578125,
+        11.3203125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33071008,
+        "SwapTotal": 25182204,
+        "SwapFree": 12053012
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:17.488153+00:00",
+      "elapsed_seconds": 540.3189773719932,
+      "load_average": [
+        5.345703125,
+        6.75439453125,
+        11.29150390625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 32968724,
+        "SwapTotal": 25182204,
+        "SwapFree": 12053012
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:19.489698+00:00",
+      "elapsed_seconds": 542.3205263349955,
+      "load_average": [
+        5.345703125,
+        6.75439453125,
+        11.29150390625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 32830212,
+        "SwapTotal": 25182204,
+        "SwapFree": 12053012
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:21.491292+00:00",
+      "elapsed_seconds": 544.3221177600062,
+      "load_average": [
+        5.345703125,
+        6.75439453125,
+        11.29150390625
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33051724,
+        "SwapTotal": 25182204,
+        "SwapFree": 12053012
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:23.492870+00:00",
+      "elapsed_seconds": 546.3236985969997,
+      "load_average": [
+        5.31787109375,
+        6.72509765625,
+        11.25732421875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33023672,
+        "SwapTotal": 25182204,
+        "SwapFree": 12053012
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:25.494603+00:00",
+      "elapsed_seconds": 548.3254319080006,
+      "load_average": [
+        5.31787109375,
+        6.72509765625,
+        11.25732421875
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 32923632,
+        "SwapTotal": 25182204,
+        "SwapFree": 12053012
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:27.496850+00:00",
+      "elapsed_seconds": 550.3276749719953,
+      "load_average": [
+        5.0517578125,
+        6.646484375,
+        11.20751953125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 32757932,
+        "SwapTotal": 25182204,
+        "SwapFree": 12053012
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:29.498427+00:00",
+      "elapsed_seconds": 552.3292508369923,
+      "load_average": [
+        5.0517578125,
+        6.646484375,
+        11.20751953125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33164712,
+        "SwapTotal": 25182204,
+        "SwapFree": 12053012
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:31.500039+00:00",
+      "elapsed_seconds": 554.3308634150017,
+      "load_average": [
+        5.0517578125,
+        6.646484375,
+        11.20751953125
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33049464,
+        "SwapTotal": 25182204,
+        "SwapFree": 12053012
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:33.501856+00:00",
+      "elapsed_seconds": 556.332681134998,
+      "load_average": [
+        4.80712890625,
+        6.5693359375,
+        11.15771484375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33040560,
+        "SwapTotal": 25182204,
+        "SwapFree": 12056732
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:35.503767+00:00",
+      "elapsed_seconds": 558.3345913579979,
+      "load_average": [
+        4.80712890625,
+        6.5693359375,
+        11.15771484375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33062184,
+        "SwapTotal": 25182204,
+        "SwapFree": 12056732
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:37.505646+00:00",
+      "elapsed_seconds": 560.3364717530058,
+      "load_average": [
+        4.58203125,
+        6.4931640625,
+        11.1083984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 32909104,
+        "SwapTotal": 25182204,
+        "SwapFree": 12059548
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:39.507392+00:00",
+      "elapsed_seconds": 562.3382159100001,
+      "load_average": [
+        4.58203125,
+        6.4931640625,
+        11.1083984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 32873784,
+        "SwapTotal": 25182204,
+        "SwapFree": 12059548
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:41.508895+00:00",
+      "elapsed_seconds": 564.3397186689981,
+      "load_average": [
+        4.58203125,
+        6.4931640625,
+        11.1083984375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33117736,
+        "SwapTotal": 25182204,
+        "SwapFree": 12059548
+      }
+    },
+    {
+      "utc": "2026-10-17T17:42:43.510512+00:00",
+      "elapsed_seconds": 566.341336559999,
+      "load_average": [
+        4.294921875,
+        6.40185546875,
+        11.0537109375
+      ],
+      "memory_kib": {
+        "MemTotal": 65203024,
+        "MemAvailable": 33351856,
+        "SwapTotal": 25182204,
+        "SwapFree": 12059548
+      }
+    }
+  ]
+}

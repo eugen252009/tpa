@@ -1,0 +1,18 @@
+{
+  "source_commit": "ba7b5095935e00874738833fa06f8462b6f46854",
+  "dirty_source": "",
+  "counts": [
+    50000
+  ],
+  "repetitions_requested": 3,
+  "workers": 4,
+  "memory_before": "MemTotal:       65203024 kB\nMemFree:         3058716 kB\nMemAvailable:   34106096 kB\nBuffers:          297964 kB\nCached:         24608592 kB\nSwapCached:      1915544 kB\nActive:         20383332 kB\nInactive:       32236196 kB\nActive(anon):   16455996 kB\nInactive(anon): 11568896 kB\nActive(file):    3927336 kB\nInactive(file): 20667300 kB\nUnevictable:       19576 kB\nMlocked:           19576 kB\nSwapTotal:      25182204 kB\nSwapFree:       11988548 kB\nZswap:                 0 kB\nZswapped:              0 kB\nDirty:              6580 kB\nWriteback:             0 kB\nAnonPages:      27238964 kB\nMapped:          1552340 kB\nShmem:            296188 kB\nKReclaimable:    7175524 kB\nSlab:            8232528 kB\nSReclaimable:    7175524 kB\nSUnreclaim:      1057004 kB\nKernelStack:       46944 kB\nPageTables:       322256 kB\nSecPageTables:      9184 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    57783716 kB\nCommitted_AS:   104610764 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      185092 kB\nVmallocChunk:          0 kB\nPercpu:            18432 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:   4321280 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:    40275896 kB\nDirectMap2M:    25661440 kB\nDirectMap1G:     1048576 kB\n",
+  "os_release": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.7\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\n",
+  "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+  "go": "go version go1.26.4 linux/amd64",
+  "load_average": [
+    11.29052734375,
+    9.87109375,
+    15.24462890625
+  ]
+}

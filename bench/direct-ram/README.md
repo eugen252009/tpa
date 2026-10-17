@@ -1,9 +1,11 @@
 # Direct-RAM: metadata-only Debian package generation
 
-**Historical, qualified measurements — not a fresh performance claim.**
-TPA built and verified 10,000 metadata-only packages and their repository in a
-median **3.458 seconds**, versus **16.776 seconds** through directory staging:
-**4.85×** faster in this specific workload. All 18 raw trial records are public.
+**Current accepted measurement: 50,000 metadata-only packages, three trials per path.**
+TPA built and verified the packages and their repository in a median
+**22.248 seconds**, versus **133.624 seconds** through directory staging:
+**6.01×** faster in this measured workload. All six individual measurements,
+archive-validation results and environment records are public below. Earlier
+historical results remain separately documented, without rewriting their values.
 
 ## What is Direct-RAM?
 
@@ -24,6 +26,64 @@ Implementation: [`direct.go`](../../internals/aptpackage/direct.go),
 [`definitions.go`](../../internals/aptpackage/definitions.go),
 [`input and resource contract`](../../docs/direct-compose.md).
 This is **not** the separate in-process Debian control-reader benchmark.
+
+## Current 50,000-package result (2026-10-17)
+
+Measured clean source: **`ba7b5095935e00874738833fa06f8462b6f46854`**.
+The implementation and benchmark code are unchanged by this results publication.
+
+| Pipeline | Trial 1 s | Trial 2 s | Trial 3 s | Median s |
+|---|---:|---:|---:|---:|
+| Conventional | 134.552 | 133.624 | 133.530 | **133.624** |
+| Direct-RAM | 22.248 | 22.612 | 21.608 | **22.248** |
+
+The speedup is the ratio of unrounded medians: 6.006089…, rounded to **6.01×**.
+All six successful runs validated all 50,000 generated archives. Their semantic
+digests match: `cc2c404fab05b1395eb55b6cac236f63c5cb89624dd33a905dbe50a15baed136`.
+Control fields, dependencies, architecture, script bodies/modes, root ownership
+and empty payload were checked independently; deterministic first/middle/last
+archives also passed dpkg-deb inspection. Both timed paths verify the repository.
+
+> **Measurement note:** The benchmark was conducted on a workstation with concurrent background activity. A CPU-intensive `ccc` process was observed, and recorded system load ranged from 4.3 to 11.3. Results reflect the measured environment and should not be interpreted as fully isolated performance measurements.
+
+Recorded environment: AMD Ryzen 7 5800X (8 cores/16 logical CPUs), Debian 13.7,
+Linux 6.12.111, glibc 2.41, Go 1.26.4, dpkg-deb 1.22.22, tmpfs `/tmp`.
+Four workers and GOMAXPROCS=4, DPKG_DEB_THREADS_MAX=1, SOURCE_DATE_EPOCH=0,
+128 MiB direct-worker scratch budget. Recorded MemTotal was 65,203,024 KiB and
+MemAvailable at start was 34,106,096 KiB. This is a Go API harness build (`dev`),
+not a rebuilt release package. Source and input hashes are retained.
+
+The input generator, metadata, four scripts and conventional/direct paths are
+as described below, scaled to 50,000 packages. Three repetitions alternate path
+order. Signing is excluded from both timings. Compilation, corpus generation,
+final run-directory cleanup and the additional archive oracle are outside timing;
+repository generation/verification and conventional intermediate cleanup are inside.
+
+| Median metric | Conventional | Direct-RAM |
+|---|---:|---:|
+| Sampled summed process RSS, KiB | 394,460 | 416,908 |
+| wait4 largest-process maxrss, KiB | 423,424 | 449,980 |
+| Sampled allocated workspace bytes | 483,594,240 | 278,827,008 |
+| Total package bytes | 37,217,424 | 28,045,404 |
+| Complete repository bytes | 111,204,524 | 102,061,675 |
+
+Direct is not lower-RSS in this run. Workspace sampling includes intermediates
+and final output, not merely temporary overhead; it misses brief peaks and adds
+traversal overhead. RSS and disk sampling limitations below apply. Compression
+is conventional xz versus direct gzip: this is logical equivalence, not identical
+archive bytes or compression work. No exact effect is attributed to background activity.
+
+Public evidence: [raw JSON](results/2026-10-17-50000/measurements.json),
+[CSV](results/2026-10-17-50000/measurements.csv),
+[computed summary](results/2026-10-17-50000/summary.json),
+[environment](results/2026-10-17-50000/environment.json),
+[run-start provenance](results/2026-10-17-50000/run-start.json),
+[recorded host context](results/2026-10-17-50000/host-context.json),
+[checksums and per-run logs](results/2026-10-17-50000/SHA256SUMS.txt).
+Host context is a compact projection of the retained monitor record, not invented
+samples. The earlier large run was superseded by this requested rerun; these six
+trials are the explicitly accepted publication set. No benchmark was rerun to
+prepare this documentation.
 
 ## Exact historical measurement baseline
 
@@ -65,7 +125,9 @@ Peak RAM columns are median sampled summed process-tree RSS, not hard limits.
 | 100 | 0.188 | 0.051 | 3.66× | 532 | 1,946 | 25.73 | 24.99 |
 | 1,000 | 1.886 | 0.432 | 4.37× | 530 | 2,316 | 29.18 | 34.19 |
 | 10,000 | 16.776 | 3.458 | 4.85× | 596 | 2,892 | 97.55 | 90.45 |
-| 50,000 | Not measured | Not measured | — | — | — | — | — |
+
+50,000 packages were not measured in that historical series; the current result
+above uses a different worker count and instrumented driver and is kept separate.
 
 | Packages | Conventional complete repository bytes | Direct complete repository bytes | Conventional wait4 maxrss MiB | Direct wait4 maxrss MiB |
 |---:|---:|---:|---:|---:|
@@ -118,12 +180,11 @@ pass independent `dpkg-deb -f` and `--contents`. Both timed paths already run TP
 repository verification. Timestamps/compression are excluded from semantic equality;
 no byte-identity claim is made. Small oracle regression tests are included.
 
-Fresh contended attempts also completed these checks for some1,000/10,000 runs,
-but were interrupted/time-limited. The host had load averages around40 on16 logical
-CPUs. **Those timings are excluded from these results.** No50,000 run was attempted.
-The owner selected the existing qualified historical results instead of more loaded
-runs. This page neither claims a freshly completed performance matrix nor extrapolates
-historical speedup to the current loaded machine. See [publication checks](QUALIFICATION.md).
+Earlier contended attempts at 1,000/10,000 packages were interrupted/time-limited
+with load around 40 on 16 logical CPUs; those attempts remain excluded. Subsequent
+runs were completed, including the accepted 50,000-package rerun above. Historical
+and current datasets are not pooled or presented as one identical-methodology
+matrix. See [publication checks](QUALIFICATION.md).
 
 ## Reproduce without private fixtures
 
@@ -137,9 +198,10 @@ Current harness (choose a new, absent output path; run on an otherwise quiet hos
 ```sh
 git clone https://github.com/eugen252009/tpa.git
 cd tpa
+git checkout --detach ba7b5095935e00874738833fa06f8462b6f46854
 export GOMAXPROCS=4 GOFLAGS=-p=4
 ./bench/direct-ram/bench.sh --output /tmp/tpa-direct-results \
-  --counts 1000,10000 --repetitions 3 --workers 4 --tmpdir /tmp
+  --counts 50000 --repetitions 3 --workers 4 --tmpdir /tmp
 python3 -m unittest discover -s bench/direct-ram -p 'test_*.py'
 ```
 
@@ -149,7 +211,8 @@ disk blocks. Disk sampling traverses the workspace every≥250ms: it adds overhe
 can miss brief peaks and delays RSS sampling. Thus current instrumented timings and
 four-worker defaults are **not apples-to-apples with the historical eight-worker
 non-disk-sampled driver**. Interrupted runs retain provenance/completed rows, not a
-false completed verdict. `--counts 50000` is supported but not a published result.
+false completed verdict. The command above reproduces the accepted 50,000-package
+workload; `--counts 1000,10000` can be used for smaller independent runs.
 
 To reproduce the exact historical strategy instead (separate checkout):
 
