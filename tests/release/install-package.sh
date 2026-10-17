@@ -19,6 +19,6 @@ docker run --rm --platform "linux/$TPA_RELEASE_ARCH" \
     apt-get update
     apt-get install -y --no-install-recommends /tmp/tpa-package.deb
     test "$(tpa version)" = "$TPA_RELEASE_VERSION"
-    dpkg-query -W -f="${Package} ${Version} ${Architecture}\n" tpa
+    dpkg-query -W -f='\''${Package} ${Version} ${Architecture}\n'\'' tpa
     tpa --help >/dev/null
   '
