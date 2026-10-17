@@ -1,0 +1,11 @@
+ok  	github.com/eugen252009/tpa	2.083s
+?   	github.com/eugen252009/tpa/bench/direct-pipeline	[no test files]
+?   	github.com/eugen252009/tpa/bench/generation-manifest	[no test files]
+?   	github.com/eugen252009/tpa/bench/metapackages	[no test files]
+ok  	github.com/eugen252009/tpa/cmd/tpa-release	1.716s
+ok  	github.com/eugen252009/tpa/cmd/tpa-utils	1.045s
+ok  	github.com/eugen252009/tpa/internal/releaseworkflow	8.773s
+?   	github.com/eugen252009/tpa/internal/version	[no test files]
+ok  	github.com/eugen252009/tpa/internals/aptpackage	8.992s
+ok  	github.com/eugen252009/tpa/pkg/debian	3.685s
+ok  	github.com/eugen252009/tpa/pkg/tpautils	1.084s

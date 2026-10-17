@@ -1,5 +1,11 @@
 # Direct composition and standalone utilities: implementation / qualification
 
+> Historical implementation/qualification record. For the public benchmark,
+> current reproduction instructions and integration status, see
+> [Direct-RAM](direct-ram/README.md). The no-push/unmerged statements below describe
+> the original handoff, not the later consolidated publication. The checksummed
+> historical driver is now retained as `direct-pipeline/compare-direct.py.snapshot`.
+
 ## Scope and source state
 
 Worktree: `/home/eugen/projekte/tpa-direct-utils`, branch

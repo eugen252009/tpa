@@ -1,0 +1,58 @@
+{
+  "source_commit_before_report": "b16ba07ae4d5f8619a2dce2cd94c9cab04683713",
+  "shipping_code_changes_since": "none; benchmark reporting only",
+  "GOMAXPROCS": 2,
+  "GOFLAGS": "-p=2",
+  "nice": 10,
+  "gates": [
+    {
+      "gate": "plain",
+      "exit": 0,
+      "log_sha256": "5eac8dc55c247a2757fab84b0c3fd0d72f6dae072595bb173da693bc7f9b472c",
+      "public_log": "plain.log"
+    },
+    {
+      "gate": "race",
+      "exit": 0,
+      "log_sha256": "45e70544bddadf811431fb6785951e165eebfcba8649e5f54d4551071715c116",
+      "public_log": "race.log"
+    },
+    {
+      "gate": "vet",
+      "exit": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "public_log": "vet.log"
+    },
+    {
+      "gate": "oracle-tests",
+      "exit": 0,
+      "log_sha256": "e6ec182765cd965f2837d8eeaef5a64af48a104f245cd1a0b7281559194c57c1",
+      "public_log": "oracle-tests.log"
+    },
+    {
+      "gate": "direct-pipeline-qualification",
+      "exit": 0,
+      "log_sha256": "d63332564a2ef4abe4dffc53be1a4eaded5e63f5b9ea30fea3b5357bb8f0e197",
+      "public_log": null
+    },
+    {
+      "gate": "qualification",
+      "exit": 0,
+      "log_sha256": "575afcdb0c579a54128367e34dc3faf7af2bcb69c4082e0bdbf22fea26ada7a5",
+      "public_log": null
+    },
+    {
+      "gate": "dependency-qualification",
+      "exit": 0,
+      "log_sha256": "3a00f2a358dc8f61df1f8f92068991f0d427c2a2e198f72e66870773b4325eb9",
+      "public_log": null
+    },
+    {
+      "gate": "repository-contract-qualification",
+      "exit": 0,
+      "log_sha256": "b9f537d3642232fb14393441b22a21e958f8168f394872eb9914a9f595a6fb5e",
+      "public_log": null
+    }
+  ],
+  "fresh_performance_matrix": "not claimed; historical figures selected by owner"
+}

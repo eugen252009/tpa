@@ -645,7 +645,16 @@ verify the result, and keep signing authority outside the TPA build. CI success
 and CI artifacts do not publish to or mutate a production repository and do
 not authorize publication.
 
-## 10,000-package benchmark snapshot
+## Benchmarks
+
+- [Direct-RAM metadata-only package generation](bench/direct-ram/README.md):
+  historical qualified comparison with conventional directory staging, public raw
+  measurements and self-contained reproduction. At 10,000 metadata-only packages,
+  median 3.458 s versus 16.776 s (4.85×) on the documented fixture and host.
+  This is distinct from the control-reader benchmark below and does not replace
+  normal payload-package staging.
+
+## 10,000-package control-reader benchmark snapshot
 
 The authoritative post-Phase-B measurements were collected on the exact
 committed reader at `078b62977e3cdec78fc84191172780f73468750f`. On Debian 13,
