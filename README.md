@@ -65,6 +65,15 @@ record `Git-Commit` via `TPA_SOURCE_COMMIT` (or an available checkout HEAD) and
 `tpa --version` prints `tpa <version>`. Running `tpa` without a command prints
 the same help and returns status 2.
 
+## Canonical bootstrap repository
+
+The single public bootstrap path is **https://tpa.run/r/tparun/bootstrap**.
+Repository identity is independent of package names. All future bootstrap releases
+use this existing path unless the owner explicitly changes it; do not introduce
+`/r/tpa/bootstrap`. Signing remains owner-local, and TPA.run serves the original
+client-built bytes without rebuilding or re-signing them. See the
+[bootstrap publication and preservation rules](docs/bootstrap.md).
+
 ## Client-signed SSH publication
 
 [`tpa publish`](docs/client-signed-ssh.md) streams a finished, independently
