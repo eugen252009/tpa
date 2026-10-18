@@ -23,7 +23,7 @@ actual package artifacts.
 - Language: Go 1.26.3 (`go.mod`)
 - Executable entry point: `main.go`
 - Internal implementation: `internals/aptpackage`
-- Standalone utilities: `cmd/tpa-utils`, public facade `pkg/tpautils`, pure shared rules `pkg/debian` (see `docs/tpa-utils.md`)
+- Standalone utilities: `cmd/tpa-utils`, public facade `pkg/tpautils`, pure shared rules `pkg/debian`, dependency-free explorer `pkg/repositoryweb` (see `docs/tpa-utils.md`, `docs/repository-ui.md`)
 - Browser formats: utilities use a distinct convenience schema and never overwrite canonical TPA v1 sidecars
 - External tools: `dpkg-deb`, `gzip`, OpenSSH `ssh`/`sftp` for SSH transport, and optionally `gpg`
 - Atomic replacement: Linux `renameat2(RENAME_EXCHANGE)`

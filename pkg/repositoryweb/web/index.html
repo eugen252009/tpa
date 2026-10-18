@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Package explorer</title>
+{{if .Inline}}<style>{{.CSS}}</style>{{else}}<link rel="stylesheet" href="assets/style.css">{{end}}
+</head><body><main>
+<a class="skip-link" href="#packages">Skip to packages</a>
+<header class="hero"><span class="eyebrow">APT repository · TPA</span><h1>Package explorer</h1>
+<p class="intro">Find packages, compare versions and choose your architecture.</p></header>
+<p class="intro">Convenience metadata, not an APT trust anchor. Configure APT with an independently trusted signing key.</p>
+<div id="search-dock-marker" aria-hidden="true"></div>
+<div id="search-dock" class="search-dock">
+<form id="filters" class="filters" aria-label="Filter packages">
+<label>Search<input id="search" type="search" placeholder="Package, description, dependency…" disabled></label>
+<button id="filter-toggle" type="button" aria-expanded="true" aria-controls="architecture-filter category-filter all-filter filter-footer" disabled>Filters</button>
+<label id="architecture-filter">Architecture<select id="architecture" disabled><option value="">Any architecture</option></select></label>
+<label id="category-filter">Category<select id="category" disabled><option value="">Any category</option></select></label>
+<label id="all-filter" class="toggle"><input id="include-all" type="checkbox" checked disabled> Include architecture-independent (all)</label>
+</form>
+<div id="filter-footer" class="dock-footer"><p id="matches" role="status" aria-live="polite"></p><nav class="resources" aria-label="Repository links"><a id="repository-link" hidden>Repository</a><a href="repository.json">JSON inventory</a></nav></div>
+</div><div id="search-dock-spacer" aria-hidden="true"></div>
+<p id="trust-warning" class="warning" role="status" hidden></p>
+<p id="status" role="status">Static preview: {{.Count}} package records. Search needs JavaScript and permission to fetch the inventory.{{if .Truncated}} Showing the first 50; the JSON inventory contains every record.{{end}}</p>
+<noscript><p>JavaScript is disabled. The static package details and downloads below remain usable. <a href="repository.json">Read the complete inventory.</a></p></noscript>
+<section id="packages" aria-label="Packages" tabindex="-1">
+{{range .Packages}}<article class="package-card static-card"><header><h2>{{.Package}}</h2><p class="version">{{.Version}} · {{.Architecture}}</p></header>
+<details><summary>Package details</summary><dl class="package-fields">{{range .Fields}}<dt>{{.Name}}</dt><dd>{{.Value}}</dd>{{end}}<dt>Size</dt><dd>{{.Size}} bytes</dd><dt>SHA-256</dt><dd>{{.SHA256}}</dd></dl></details>
+{{if .Link}}<a class="download" href="{{.Link}}">Download .deb · {{.Architecture}}</a>{{end}}</article>
+{{else}}<p>No packages are currently listed.</p>{{end}}
+</section>
+<nav id="pagination" class="pagination" aria-label="Package pages" hidden><button id="previous" type="button">Previous page</button><span id="page-number" aria-live="polite"></span><button id="more" type="button">Next page</button></nav>
+<dialog id="package-modal" aria-labelledby="modal-title"><header class="modal-heading"><h2 id="modal-title"></h2><button id="modal-close" type="button" aria-label="Close package details" title="Close (Esc)" autofocus><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header><div id="modal-body"></div></dialog>
+</main>{{if .Inline}}<script>{{.JS}}</script>{{else}}<script src="assets/app.js" defer></script>{{end}}
+</body></html>

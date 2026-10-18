@@ -102,7 +102,10 @@ or a replacement/publication service. See the [measured comparison](bench/DIRECT
 [`tpa-utils`](docs/tpa-utils.md) is a separately buildable CLI and Go library
 (`pkg/tpautils`, shared pure metadata rules in `pkg/debian`) for field/control
 validation, Debian version comparison, ordinary APT inspection and an interactive
-static browser. No TPA.run account or backend is required. Browser generation
+static browser. The generator and utilities share the same dependency-free
+`pkg/repositoryweb` explorer, with search, filters, grouped architectures and
+bounded 50-card pages. See [UI consolidation](docs/repository-ui.md).
+No TPA.run account or backend is required. Browser generation
 never changes APT indexes/signatures or overwrites canonical TPA sidecars.
 
 ## Shell completion
@@ -399,14 +402,20 @@ repo/
 └── pool/main/<initial>/<package>/<original-archive-name>.deb
 ```
 
-Opening the repository root in a browser serves a static package listing.
+Opening the repository root serves the modern client-generated package explorer,
+with text search, architecture/category filters, grouped version cards and
+accessible architecture-tabbed details. Only 50 cards exist per page; pagination
+replaces rather than indefinitely appends DOM. A bounded static preview with native
+package details/downloads remains when scripts are disabled by the browser/host.
 The static page and JSON inventory use repository-relative package links.
 `repository.json` has `format: "tpa-repository-index"`, `version: 1`, and a
 `packages` array sorted lexically by Package, Version, Architecture, then
 artifact Filename. Each entry has a `metadata` object preserving Debian control
 fields (including unknown/custom fields) and an `artifact` object with
 `filename`, numeric `size`, and `sha256`. Empty repositories use an empty
-`packages` array. The browser renders all metadata without JavaScript.
+`packages` array. The complete inventory remains in JSON. Without JavaScript the
+HTML previews the first 50 records and links to that complete inventory; search
+and interactive paging require JavaScript and same-origin inventory fetches.
 Lifecycle `unlist` operations regenerate both views from the updated APT
 indexes. These root-level files are an inseparable convenience pair, not APT
 trust metadata: they are not covered by `Release` or `InRelease`. See

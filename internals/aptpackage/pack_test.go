@@ -164,8 +164,8 @@ Built-Using: fixture-source (= 1.2.3)
 	if strings.Contains(htmlText, `<script>alert("owned")</script>`) || !strings.Contains(htmlText, "&lt;script&gt;") || !strings.Contains(htmlText, "&lt;description&gt;") {
 		t.Errorf("hostile package metadata was not safely HTML-escaped")
 	}
-	if strings.Contains(htmlText, "<script") {
-		t.Errorf("static repository browser unexpectedly contains executable script")
+	if strings.Count(htmlText, "<script>") != 1 || strings.Count(htmlText, "</script>") != 1 {
+		t.Errorf("repository browser must contain only its one first-party script, never package-provided markup")
 	}
 	firstJSON, firstHTML := append([]byte(nil), browserData...), append([]byte(nil), html...)
 	staleIndex := filepath.Join(out, "dists", "old", "main", "binary-all", "Packages")

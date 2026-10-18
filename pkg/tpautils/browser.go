@@ -2,17 +2,14 @@ package tpautils
 
 import (
 	"context"
-	"embed"
 	"encoding/json"
 	"fmt"
+	"github.com/eugen252009/tpa/pkg/repositoryweb"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 )
-
-//go:embed web/*
-var browserFiles embed.FS
 
 type BrowserOptions struct {
 	RepositoryOptions
@@ -60,12 +57,8 @@ func GenerateBrowser(ctx context.Context, locator string, options BrowserOptions
 		}
 		base = "./"
 	}
-	u, err := url.Parse(base)
-	if err != nil || u == nil || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Scheme != "" && u.Scheme != "https" && u.Scheme != "http") || (u.Scheme == "" && u.Host != "") {
-		return fmt.Errorf("base URL must be HTTP(S) or a relative repository path, without credentials/query/fragment")
-	}
-	if u.Scheme != "" && u.Host == "" {
-		return fmt.Errorf("base URL requires a host")
+	if err := repositoryweb.ValidateBase(base); err != nil {
+		return err
 	}
 	if !strings.HasSuffix(base, "/") {
 		base += "/"
@@ -126,11 +119,13 @@ func GenerateBrowser(ctx context.Context, locator string, options BrowserOptions
 			return err
 		}
 		content := data
-		if name != "repository.json" {
-			content, err = browserFiles.ReadFile("web/" + filepath.Base(name))
-			if err != nil {
-				return err
-			}
+		if name == "index.html" {
+			content, err = repositoryweb.Render(report.Packages, repositoryweb.Options{BaseURL: base})
+		} else if name != "repository.json" {
+			content, err = repositoryweb.Asset(filepath.Base(name))
+		}
+		if err != nil {
+			return err
 		}
 		path := filepath.Join(output, filepath.FromSlash(name))
 		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)

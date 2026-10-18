@@ -91,9 +91,13 @@ provided; it does not embed signing secrets in the tree.
 
 `index.html` and `repository.json` are an inseparable pair at the repository
 root. TPA generates both from the APT `Packages` indexes named by `Release`.
-They contain no scripts, credentials, or additional package authority. They are
-not included in the `Release` checksum section and are not covered by
-`InRelease`; serve them as untrusted display metadata.
+They contain no credentials or additional package authority. New `index.html`
+embeds the shared first-party CSS/JavaScript explorer; no extra canonical files,
+server renderer, API or JSON format is introduced. All package text is escaped
+in the static preview and assigned with textContent in the interactive view.
+These files are not included in the `Release` checksum section and are not
+covered by `InRelease`; continue serving them as UNTRUSTED display metadata.
+See [hosting-policy and backwards-compatibility notes](repository-ui.md).
 
 `repository.json` is UTF-8 JSON with this v1 shape:
 
@@ -123,11 +127,17 @@ string-to-string object, excluding `Filename`, `Size`, and `SHA256`. `artifact`
 contains those derived values. Entries are sorted by Package, Version,
 Architecture, then Filename. Empty repositories use `"packages": []`. JSON
 object key order and indentation are stable in TPA output but consumers must
-parse JSON rather than depend on whitespace. The static HTML page uses
-repository-relative links and HTML escaping; it does not require JavaScript.
+parse JSON rather than depend on whitespace. This JSON shape and its exact
+canonical derivation are unchanged. The HTML uses repository-relative links and
+escaping; its first-50-record preview and native details work without scripts.
+The interactive explorer requires JavaScript and inventory fetch permission.
 
 `VerifyTPARepositoryTree` checks the APT trust chain, package identities, and
-paired sidecars byte-for-byte against current APT indexes. Its `Config.Repo`
+paired sidecars byte-for-byte against current APT indexes. It accepts the exact
+modern rendering OR the exact legacy static rendering (including published0.8.0
+repositories); arbitrary/tampered HTML is still rejected. Old strict template-only
+verifiers may reject modern HTML; generic APT verification remains compatible.
+Its `Config.Repo`
 values must describe the expected Release metadata, and `Config.GPG` selects the
 expected signer when set. It also enforces the
 v1 directory/file allowlist, canonical distribution/component/index layout,

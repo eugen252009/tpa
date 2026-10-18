@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/eugen252009/tpa/pkg/repositoryweb"
 	"io"
 	"os"
 	"os/exec"
@@ -52,15 +53,9 @@ type RepositoryIndex struct {
 	SHA256 string `json:"sha256"`
 }
 
-type RepositoryPackage struct {
-	Package      string            `json:"package"`
-	Version      string            `json:"version"`
-	Architecture string            `json:"architecture"`
-	Filename     string            `json:"filename"`
-	Size         int64             `json:"size"`
-	SHA256       string            `json:"sha256"`
-	Control      map[string]string `json:"control,omitempty"`
-}
+// RepositoryPackage preserves the public inspect model while sharing the pure
+// presentation record with the independent utility browser.
+type RepositoryPackage = repositoryweb.Package
 
 type RepositoryReport struct {
 	Signed            bool                `json:"signed"`

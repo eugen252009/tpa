@@ -71,17 +71,20 @@ inspection does not download/verify all artifact bytes (use `tpa verify`).
 
 Generated files:
 
-- `index.html`: controls, accessible status, noscript link to JSON;
+- `index.html`: shared modern controls, accessible status, bounded static preview
+  with native details and a complete JSON-inventory link;
 - `repository.json`: `format: "tpa-utils-repository-browser"`, `version: 1`,
   `base_url`, and a shared `RepositoryReport` under `repository`;
-- `assets/app.js`: search, architecture filter, expandable package metadata,
-  size/hash information, encoded artifact links and bounded 200-row pagination;
+- `assets/app.js`: the SAME explorer used by TPA: search, architecture/category
+  filters, all-architecture handling, grouped versions, architecture-tabbed details,
+  size/hash information, encoded links and hard-bounded 50-card pagination;
 - `assets/style.css`: local system-font styling, light/dark support.
 
 No CDN, external font, framework, API account or backend is needed. Serve the
 files with ordinary HTTP(S), e.g. `python3 -m http.server --directory web`.
 Browsers generally disallow fetching JSON from `file://`. JSON alone remains
-usable without JavaScript. The page and its artifact host must be reachable;
+usable without JavaScript, along with the first 50 static package previews. The
+page and its artifact host must be reachable;
 there are no third-party asset dependencies. Separate output requires an
 explicit artifact base URL. Relative URLs work when deploying alongside APT
 metadata; absolute HTTP(S) URLs work for separately hosted pages.
@@ -94,7 +97,9 @@ write failure it removes only files it created. It never changes `Packages`,
 `Release`, `InRelease`, `.deb` files, or signing keys.
 
 **Format separation:** this browser JSON is deliberately distinct from canonical
-TPA format-v1 `repository.json`. Canonical TPA sidecars are verified byte-for-byte
-by the existing repository verifier and remain unchanged. Use separate output
+TPA format-v1 `repository.json`. The shared UI has explicit adapters for BOTH
+formats; it does not relabel or interchange them. Canonical JSON remains unchanged;
+new canonical HTML uses the same UI with embedded assets. Known legacy HTML
+remains byte-verifiable. Use separate output
 for TPA repositories, not a compatibility bypass. All browser files are
 convenience presentation, not additional signed APT trust data.

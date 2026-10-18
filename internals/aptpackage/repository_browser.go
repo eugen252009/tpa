@@ -1,12 +1,11 @@
 package aptpackage
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/eugen252009/tpa/pkg/repositoryweb"
 	"html/template"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -43,6 +42,12 @@ type repositoryBrowserField struct {
 // indexes named by this distribution's Release file, then renders both
 // convenience formats from that view.
 func renderRepositoryBrowserFiles(root string, repo RepoConfig) ([]byte, []byte, error) {
+	return renderRepositoryBrowserFilesStyle(root, repo, false)
+}
+
+// Legacy rendering is retained ONLY for strict verification of already-published
+// v1 trees. New generation always uses the shared modern explorer.
+func renderRepositoryBrowserFilesStyle(root string, repo RepoConfig, legacy bool) ([]byte, []byte, error) {
 	component := repo.Components
 	if component == "" {
 		component = "main"
@@ -129,14 +134,30 @@ func renderRepositoryBrowserFiles(root string, repo RepoConfig) ([]byte, []byte,
 		return nil, nil, fmt.Errorf("encode repository package index: %w", err)
 	}
 	jsonData = append(jsonData, '\n')
-	var htmlData bytes.Buffer
-	if err := repositoryBrowserTemplate.Execute(&htmlData, index); err != nil {
-		return nil, nil, fmt.Errorf("render repository browser: %w", err)
+	var htmlData []byte
+	if legacy {
+		var out bytes.Buffer
+		if err := repositoryBrowserTemplate.Execute(&out, index); err != nil {
+			return nil, nil, fmt.Errorf("render legacy repository browser: %w", err)
+		}
+		htmlData = out.Bytes()
+	} else {
+		packages := make([]repositoryweb.Package, 0, len(index.Packages))
+		for _, entry := range index.Packages {
+			name, _ := getRepositoryField(entry.Metadata, "Package")
+			version, _ := getRepositoryField(entry.Metadata, "Version")
+			arch, _ := getRepositoryField(entry.Metadata, "Architecture")
+			packages = append(packages, repositoryweb.Package{Package: name, Version: version, Architecture: arch, Filename: entry.Artifact.Filename, Size: entry.Artifact.Size, SHA256: entry.Artifact.SHA256, Control: entry.Metadata})
+		}
+		htmlData, err = repositoryweb.Render(packages, repositoryweb.Options{InlineAssets: true})
+		if err != nil {
+			return nil, nil, fmt.Errorf("render repository browser: %w", err)
+		}
 	}
-	if int64(len(jsonData)) > maxRepositoryIndexBytes || int64(htmlData.Len()) > maxRepositoryIndexBytes {
+	if int64(len(jsonData)) > maxRepositoryIndexBytes || int64(len(htmlData)) > maxRepositoryIndexBytes {
 		return nil, nil, fmt.Errorf("repository browser sidecar exceeds %d bytes", maxRepositoryIndexBytes)
 	}
-	return jsonData, htmlData.Bytes(), nil
+	return jsonData, htmlData, nil
 }
 
 func writeRepositoryBrowserFiles(root string, repo RepoConfig) error {
@@ -185,8 +206,17 @@ func verifyRepositoryBrowserFiles(root string, repo RepoConfig, required bool) e
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(gotJSON, wantJSON) || !bytes.Equal(gotHTML, wantHTML) {
+	if !bytes.Equal(gotJSON, wantJSON) {
 		return fmt.Errorf("repository browser sidecars do not match the APT package indexes")
+	}
+	if !bytes.Equal(gotHTML, wantHTML) {
+		_, legacyHTML, err := renderRepositoryBrowserFilesStyle(root, repo, true)
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(gotHTML, legacyHTML) {
+			return fmt.Errorf("repository browser sidecars do not match the APT package indexes")
+		}
 	}
 	return nil
 }
@@ -244,45 +274,29 @@ func getRepositoryField(fields map[string]string, name string) (string, bool) {
 }
 
 func safeRepositoryArtifactLink(filename string) (string, error) {
-	clean := path.Clean(filename)
-	if filename == "" || strings.ContainsAny(filename, "\\\x00") || path.IsAbs(filename) ||
-		clean != filename || clean == "." || clean == ".." || strings.HasPrefix(clean, "../") ||
-		!strings.HasPrefix(clean, "pool/") {
-		return "", fmt.Errorf("unsafe repository artifact filename %q", filename)
-	}
-	// Escape URL-significant characters so metadata cannot add a query,
-	// fragment, or encoded traversal to the repository-relative link.
-	return (&url.URL{Path: filename}).EscapedPath(), nil
+	return repositoryweb.ArtifactLink(filename)
 }
 
 func parseRepositoryBrowserMetadata(raw []byte) (map[string]string, error) {
-	metadata := make(map[string]string)
-	scanner := bufio.NewScanner(bytes.NewReader(raw))
-	scanner.Buffer(make([]byte, 64*1024), 16*1024*1024)
-	lastField := ""
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			continue
-		}
-		if line[0] == ' ' || line[0] == '\t' {
-			if lastField == "" {
-				return nil, fmt.Errorf("control continuation without a field")
-			}
-			metadata[lastField] += "\n" + strings.TrimLeft(line, " \t")
-			continue
-		}
-		colon := strings.IndexByte(line, ':')
-		if colon <= 0 {
-			return nil, fmt.Errorf("invalid control field %q", line)
-		}
-		lastField = line[:colon]
-		metadata[lastField] = strings.TrimSpace(line[colon+1:])
-	}
-	if err := scanner.Err(); err != nil {
+	// The inspector and browser use ONE strict Deb822 paragraph reader.
+	fields, err := parseRepositoryParagraphs(raw, true)
+	if err != nil {
 		return nil, err
 	}
-	return metadata, nil
+	if len(fields) != 1 {
+		return nil, fmt.Errorf("expected one package stanza")
+	}
+	// Preserve canonical v1's historical first-line whitespace normalization;
+	// continuation lines retain their original reader normalization.
+	for key, value := range fields[0] {
+		first, rest, found := strings.Cut(value, "\n")
+		value = strings.TrimSpace(first)
+		if found {
+			value += "\n" + rest
+		}
+		fields[0][key] = value
+	}
+	return fields[0], nil
 }
 
 var repositoryBrowserTemplate = template.Must(template.New("repository-browser").Parse(`<!doctype html>
