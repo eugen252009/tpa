@@ -23,7 +23,10 @@ qualification directory as tparun-public-assessment.json.
 Current repository CSP intentionally disables scripts/fetch and isolates untrusted
 uploaded HTML from account authority. The client-generated modern explorer has a
 qualified static fallback; interactive deployment needs a separately authorized
-repository-origin/CSP security review. Do not simply allow untrusted scripts and
+repository-origin/CSP security review. The existing bootstrap2 implementation
+already has an isolated RepositoryOrigin boundary (cookie stripping, repository-
+only routing and a script-capable CSP); review/adopt that existing capability
+rather than building a second hosting mechanism. Do not simply allow untrusted scripts and
 same-origin account cookies, change production Nginx in this phase, or move the
 repository renderer to TPA.run. No new package/signing/protocol authority is needed.
 
