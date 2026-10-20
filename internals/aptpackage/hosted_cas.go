@@ -68,6 +68,20 @@ func hostedCASRead(r io.Reader, v any) error {
 	if _, err := io.ReadFull(r, b); err != nil {
 		return err
 	}
+	// Every framed phase can terminate with the server's error envelope. Decode
+	// it before the phase-specific success shape; otherwise strict decoding hides
+	// a legitimate rejection (e.g. stale parent) as an unknown-field failure.
+	var envelope map[string]json.RawMessage
+	if err := json.Unmarshal(b, &envelope); err != nil {
+		return err
+	}
+	if raw, ok := envelope["error"]; ok {
+		var message string
+		if len(envelope) != 1 || json.Unmarshal(raw, &message) != nil || message == "" {
+			return fmt.Errorf("invalid CAS error envelope")
+		}
+		return fmt.Errorf("CAS rejected: %s", message)
+	}
 	d := json.NewDecoder(bytes.NewReader(b))
 	d.DisallowUnknownFields()
 	if err := d.Decode(v); err != nil {
