@@ -20,6 +20,11 @@ func TestBoundedEscapedStaticPreview(t *testing.T) {
 	if strings.Count(s, `class="package-card static-card"`) != 50 || strings.Contains(s, "fixture-0050") || !strings.Contains(s, "2000 package records") {
 		t.Fatal("unbounded or incomplete static preview")
 	}
+	// A promoted field named Package shadows the string field in templates.
+	// RV-STATIC-IDENTITY: title is the exact name, never the embedded record.
+	if !strings.Contains(s, "<h2>fixture-0000</h2>") || strings.Contains(s, "<h2>{") {
+		t.Fatal("static title leaked the full package record")
+	}
 	if strings.Contains(s, "<script>bad()") || !strings.Contains(s, "&lt;script&gt;bad()&lt;/script&gt;") || strings.Count(s, "<script>") != 1 {
 		t.Fatal("metadata escaping or inline first-party asset")
 	}

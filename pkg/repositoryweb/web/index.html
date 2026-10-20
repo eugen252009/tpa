@@ -22,7 +22,7 @@
 <p id="status" role="status">Static preview: {{.Count}} package records. Search needs JavaScript and permission to fetch the inventory.{{if .Truncated}} Showing the first 50; the JSON inventory contains every record.{{end}}</p>
 <noscript><p>JavaScript is disabled. The static package details and downloads below remain usable. <a href="repository.json">Read the complete inventory.</a></p></noscript>
 <section id="packages" aria-label="Packages" tabindex="-1">
-{{range .Packages}}<article class="package-card static-card"><header><h2>{{.Package}}</h2><p class="version">{{.Version}} · {{.Architecture}}</p></header>
+{{range .Packages}}<article class="package-card static-card"><header><h2>{{.Package.Package}}</h2><p class="version">{{.Version}} · {{.Architecture}}</p></header>
 <details><summary>Package details</summary><dl class="package-fields">{{range .Fields}}<dt>{{.Name}}</dt><dd>{{.Value}}</dd>{{end}}<dt>Size</dt><dd>{{.Size}} bytes</dd><dt>SHA-256</dt><dd>{{.SHA256}}</dd></dl></details>
 {{if .Link}}<a class="download" href="{{.Link}}">Download .deb · {{.Architecture}}</a>{{end}}</article>
 {{else}}<p>No packages are currently listed.</p>{{end}}
