@@ -6,6 +6,42 @@ import (
 	"testing"
 )
 
+type hostedTestInput struct{ bytes.Buffer }
+
+func (*hostedTestInput) Close() error { return nil }
+
+func TestHostedCASHandshakeAndNegotiationFailure(t *testing.T) {
+	for _, tc := range []struct{ name, ready, want string }{
+		{"version-mismatch", `{"version":3,"protocol":"tparun-chunk-ssh","state":"ready","algorithm":"fixed-sha256-1m-v1"}`, "no fallback"},
+		{"authorized-stale-parent", `{"version":2,"protocol":"tparun-chunk-ssh","state":"ready","algorithm":"fixed-sha256-1m-v1"}`, "CAS negotiation: CAS rejected: CAS parent changed"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var output bytes.Buffer
+			output.WriteString(tc.ready + "\n")
+			if err := hostedCASWrite(&output, map[string]string{"error": "CAS parent changed"}); err != nil {
+				t.Fatal(err)
+			}
+			input := &hostedTestInput{}
+			_, err := publishHostedCAS(t.TempDir(), GenerationManifest{}, input, &output)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("got %v, want %s", err, tc.want)
+			}
+			if tc.name == "version-mismatch" && input.Len() != 0 {
+				t.Fatal("sent inventory after incompatible handshake")
+			}
+			if tc.name == "authorized-stale-parent" {
+				var inv hostedCASInventory
+				if err := hostedCASRead(input, &inv); err != nil {
+					t.Fatal(err)
+				}
+				if input.Len() != 0 {
+					t.Fatal("transferred payload after rejected negotiation")
+				}
+			}
+		})
+	}
+}
+
 func TestHostedCASNegotiationReportsServerRejection(t *testing.T) {
 	var frame bytes.Buffer
 	if err := hostedCASWrite(&frame, map[string]string{"error": "CAS parent changed"}); err != nil {
