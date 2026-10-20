@@ -75,6 +75,16 @@ type page struct {
 // no new protocol paths, CDN, server endpoint or second package database.
 // The preview remains usable when scripts/fetch are disabled by host policy.
 func Render(packages []Package, options Options) ([]byte, error) {
+	return render(packages, options, false)
+}
+
+// PreviousStaticHeadingForVerification reproduces only the exact pre-fix heading
+// representation. Readers use it to verify existing v1 trees, never generators.
+func PreviousStaticHeadingForVerification(packages []Package, options Options) ([]byte, error) {
+	return render(packages, options, true)
+}
+
+func render(packages []Package, options Options, previous bool) ([]byte, error) {
 	base := options.BaseURL
 	if base == "" {
 		base = "./"
@@ -120,6 +130,9 @@ func Render(packages []Package, options Options) ([]byte, error) {
 	source, err := Asset("index.html")
 	if err != nil {
 		return nil, err
+	}
+	if previous {
+		source = bytes.Replace(source, []byte("{{.Package.Package}}"), []byte("{{.Package}}"), 1)
 	}
 	t, err := template.New("explorer").Parse(string(source))
 	if err != nil {

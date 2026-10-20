@@ -47,7 +47,7 @@ func renderRepositoryBrowserFiles(root string, repo RepoConfig) ([]byte, []byte,
 
 // Legacy rendering is retained ONLY for strict verification of already-published
 // v1 trees. New generation always uses the shared modern explorer.
-func renderRepositoryBrowserFilesStyle(root string, repo RepoConfig, legacy bool) ([]byte, []byte, error) {
+func renderRepositoryBrowserFilesStyle(root string, repo RepoConfig, legacy bool, previousStaticHeading ...bool) ([]byte, []byte, error) {
 	component := repo.Components
 	if component == "" {
 		component = "main"
@@ -149,7 +149,11 @@ func renderRepositoryBrowserFilesStyle(root string, repo RepoConfig, legacy bool
 			arch, _ := getRepositoryField(entry.Metadata, "Architecture")
 			packages = append(packages, repositoryweb.Package{Package: name, Version: version, Architecture: arch, Filename: entry.Artifact.Filename, Size: entry.Artifact.Size, SHA256: entry.Artifact.SHA256, Control: entry.Metadata})
 		}
-		htmlData, err = repositoryweb.Render(packages, repositoryweb.Options{InlineAssets: true})
+		if len(previousStaticHeading) > 0 && previousStaticHeading[0] {
+			htmlData, err = repositoryweb.PreviousStaticHeadingForVerification(packages, repositoryweb.Options{InlineAssets: true})
+		} else {
+			htmlData, err = repositoryweb.Render(packages, repositoryweb.Options{InlineAssets: true})
+		}
 		if err != nil {
 			return nil, nil, fmt.Errorf("render repository browser: %w", err)
 		}
@@ -215,7 +219,13 @@ func verifyRepositoryBrowserFiles(root string, repo RepoConfig, required bool) e
 			return err
 		}
 		if !bytes.Equal(gotHTML, legacyHTML) {
-			return fmt.Errorf("repository browser sidecars do not match the APT package indexes")
+			_, previousHTML, err := renderRepositoryBrowserFilesStyle(root, repo, false, true)
+			if err != nil {
+				return err
+			}
+			if !bytes.Equal(gotHTML, previousHTML) {
+				return fmt.Errorf("repository browser sidecars do not match the APT package indexes")
+			}
 		}
 	}
 	return nil

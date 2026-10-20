@@ -28,12 +28,22 @@ func TestModernAndLegacyCanonicalSidecarsRemainStrict(t *testing.T) {
 	if !bytes.Equal(modernJSON, legacyJSON) || bytes.Equal(modernHTML, legacyHTML) {
 		t.Fatal("canonical inventory changed, or no UI integration")
 	}
-	for _, html := range [][]byte{modernHTML, legacyHTML} {
+	previousJSON, previousHTML, err := renderRepositoryBrowserFilesStyle(out, cfg.Repo, false, true)
+	if err != nil || !bytes.Equal(previousJSON, modernJSON) || bytes.Equal(previousHTML, modernHTML) {
+		t.Fatal("previous qualified modern v1 rendering changed inventory", err)
+	}
+	for _, html := range [][]byte{modernHTML, legacyHTML, previousHTML} {
 		if err := os.WriteFile(filepath.Join(out, "index.html"), html, 0644); err != nil {
 			t.Fatal(err)
 		}
 		if err := verifyRepositoryBrowserFiles(out, cfg.Repo, true); err != nil {
 			t.Fatal("known canonical rendering rejected", err)
+		}
+		if err := os.WriteFile(filepath.Join(out, "index.html"), append(append([]byte(nil), html...), []byte("<script>bad()</script>")...), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := verifyRepositoryBrowserFiles(out, cfg.Repo, true); err == nil {
+			t.Fatal("tampered known rendering accepted")
 		}
 	}
 	if err := os.WriteFile(filepath.Join(out, "index.html"), append(legacyHTML, []byte("<script>bad()</script>")...), 0644); err != nil {
