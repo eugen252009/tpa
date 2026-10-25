@@ -4,7 +4,8 @@ TPA provides a tag-driven reusable GitHub Actions workflow at
 `.github/workflows/reusable-deb-release.yml`. It builds a project payload using
 project-owned build commands, then delegates Debian package initialization and
 archive creation to a pinned TPA `init`/`build` binary. It does not publish an
-APT repository and does not modify caller repositories.
+APT repository by default and does not modify caller repositories. Optional
+owner-side APT publication is described in [staged releases](staged-releases.md).
 
 ## Release contract
 
@@ -13,7 +14,11 @@ APT repository and does not modify caller repositories.
   such as `v1.4.0-rc.2` → `1.4.0~rc.2`. Unsupported tags fail closed.
 - The checked-out source SHA must equal the triggering SHA, and a release tag
   must resolve to that exact commit. The optional configured source-version
-  check must also agree with the tag.
+  check must also agree with the tag. When `release.source_branch` is set, the
+  tag commit must be contained in `origin/<source_branch>`. A complete remote
+  checkout is required; a same-named local branch is not sufficient. This is
+  rechecked before publication. Staging may advance normally while a candidate
+  awaits approval; deleting or rewriting it to exclude the candidate fails closed.
 - Every declared architecture is built. `native` and `emulated` runtimes must
   run the configured clean-install command. `build-only` is explicit in the
   manifest and is **not** reported as runtime-qualified. An optional upgrade
@@ -32,6 +37,20 @@ APT repository and does not modify caller repositories.
   Git submodules and Git LFS pointers are rejected rather than silently omitted
   from the source archive. Package metadata and qualification records are
   independently rechecked before bundling and before publication.
+- The qualified bundle is uploaded before approval. Its immutable artifact ID,
+  archive SHA-256, manifest SHA-256, version and source commit appear in the job
+  summary. Attestation and publication download that artifact ID, not a mutable
+  artifact name. Publication also checks the manifest against the bundle-job
+  output and independently verifies the complete bundle; it does not rebuild
+  packages. Missing/expired artifacts fail rather than triggering a rebuild.
+- When `release.publish_environment` is set, the environment must already exist,
+  require at least one user/team reviewer, prevent self-review, and disallow
+  administrator bypass. Missing, inaccessible or insufficient policy fails
+  closed before builds and is checked again before any release mutation. GitHub
+  gates the publication job on that environment; the read-only policy check is
+  not itself an approval receipt. Without this optional configuration, the
+  reusable workflow preserves automatic tag publication, using an environment
+  named `release` (whose protection, if any, still applies).
 - Tag pushes create a GitHub build-provenance attestation, create/populate a
   draft release, read every uploaded asset back, then publish it. Published
   releases are never overwritten: a repeat must match the tag, source commit,
@@ -73,6 +92,7 @@ permissions:
 jobs:
   release:
     permissions:
+      actions: read # protected environment policy lookup
       contents: write
       attestations: write
       id-token: write
@@ -99,6 +119,75 @@ Protect `v*` tags with repository rules that restrict who can create or update
 tags. The workflow rejects a tag/source mismatch and rechecks the remote tag
 before publishing, but no workflow can compensate for an unrestricted release
 identity or compromised repository administrator account.
+
+## TPA's staging and approval flow
+
+The existing [TPA caller](../.github/workflows/tpa-release.yml) uses the local
+reusable workflow and pins the builder to the triggering commit, so TPA builds
+itself with its own package engine. Its configuration now requires:
+
+```yaml
+release:
+  notes_file: docs/release-notes-0.8.0.md
+  source_branch: staging
+  publish_environment: tpa-release
+```
+
+Before pushing any release tag, a repository administrator must:
+
+1. Create/protect the `staging` branch, require reviewed merges and passing CI.
+   The normal package qualification workflow runs on both `main` and `staging`
+   pushes and on pull requests, without publication credentials.
+2. Create the GitHub environment `tpa-release` with required reviewers, enable
+   **Prevent self-review**, and disable **Allow administrators to bypass
+   configured protection rules**. Restrict deployments to protected release
+   tags. The reviewer must be different from the actor starting the run.
+3. Protect `v*` tag creation/update/deletion and restrict release permissions.
+   Grant the caller `actions: read` for environment-policy lookup; the provided
+   TPA caller already does so.
+
+Then merge to staging and tag the selected staging commit using the existing
+tag grammar. Merely merging does not publish a release. Tag builds run source
+tests, all-architecture package/install checks and byte-identical rebuilds, then
+upload a reviewable candidate. Review the summary, manifest, qualification
+records and attestations before approving the environment deployment. The
+publisher downloads and verifies that same candidate and publishes it to GitHub.
+Rejecting the deployment leaves the qualified artifact available until its
+retention expires and does not publish a GitHub Release.
+
+Choose the Debian version **before building**. For example, a `v1.4.0`
+candidate already contains Debian version `1.4.0`, so its tested bytes can be
+published unchanged after approval. An RC contains `1.4.0~rc.N`; it cannot be
+turned into `1.4.0` by renaming or retagging its DEB. A final-version build must
+receive its own qualification and approval. Do not move a release tag to change
+the candidate under review.
+
+**Scope:** the review bundle is a GitHub workflow artifact. With explicit
+`apt-destination` configuration, independent upload jobs populate a private CAS
+stage, a complete-manifest barrier precedes approval, and owner-side `tpa sign`
+publishes the finished signed tree through the existing receiver. See
+[configuration, keys and recovery](staged-releases.md). This does not create branches/environments,
+push tags, configure signing credentials, change installed TPA or enable
+automatic updates. GitHub policy and reviewed workflow/configuration source are
+trusted enforcement boundaries; repository administrators can change them.
+Local fake-API tests cannot establish that a real GitHub deployment was reviewed.
+
+For APT self-updates, configure explicit opt-in staging and stable repository
+inputs/variables and public trust keys. The owner-side runner uses existing TPA
+metadata generation, signing and finished-tree publication. Promotion must use the already
+qualified DEBs and verify their manifest hashes, not rerun package builds;
+channel-specific APT indexes/signatures may differ. Keep signing/publication
+credentials out of build/test jobs. Stable clients must not enable the staging
+source or automatic staging upgrades. Updates remain ordinary administrator-
+authorized APT operations, not a self-replacing TPA executable.
+
+TPA currently records upgrade qualification as `not-configured`: its dogfood
+install check tests a clean disposable installation, not an upgrade from a
+previous TPA version. Before treating the complete APT update path as qualified,
+configure a trusted previous-version fixture and an `upgrade_command`, and
+exercise install/upgrade through the signed staging channel. No existing
+bootstrap repository, customer repository, APT source, or signing key is changed
+by this workflow.
 
 ## Project configuration
 

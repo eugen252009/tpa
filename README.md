@@ -556,9 +556,18 @@ build project `.deb` files, verify package metadata and payloads, check
 reproducibility, qualify configured architectures, and publish complete GitHub
 Releases with checksums, source, manifests, provenance, and GitHub build
 attestations. Project compilation and payload staging remain project-owned; the
-workflow does not publish an APT repository. See
+workflow optionally stages exact qualified artifacts into private CAS stages and
+publishes an owner-signed APT snapshot after independent approval. Without an
+APT destination it retains GitHub-only behavior. TPA itself requires release tags
+contained in `staging` and an independently reviewed `tpa-release` environment;
+approval publishes the exact qualified bundle without rebuilding packages. See
 [`docs/reusable-deb-release.md`](docs/reusable-deb-release.md) for the
 configuration contract, TPA dogfood setup, and TPA.run/MEMA adoption examples.
+
+Persistent private stages and owner-side `tpa sign` use the same repository
+builder and SSH-CAS receiver, never a host builder or signing service. See
+[`docs/staged-releases.md`](docs/staged-releases.md) for commands, recovery,
+channel configuration and qualification.
 
 ## Hosted integration boundary
 

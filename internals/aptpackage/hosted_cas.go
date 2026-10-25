@@ -27,6 +27,7 @@ type hostedCASFile struct {
 	Chunks []hostedChunk `json:"chunks"`
 }
 type hostedCASInventory struct {
+	StageID          string          `json:"stage_id,omitempty"`
 	Version          int             `json:"version"`
 	Algorithm        string          `json:"algorithm"`
 	RepositoryID     string          `json:"repository_id"`
@@ -159,7 +160,7 @@ func (r *hostedCountOutput) Read(p []byte) (int, error) {
 	return n, e
 }
 
-func publishHostedCAS(directory string, m GenerationManifest, rawInput io.WriteCloser, rawOutput io.Reader) (HostedPublishResult, error) {
+func publishHostedCAS(directory string, m GenerationManifest, rawInput io.WriteCloser, rawOutput io.Reader, stages ...string) (HostedPublishResult, error) {
 	input := &hostedCountInput{WriteCloser: rawInput}
 	output := &hostedCountOutput{Reader: rawOutput}
 	var result HostedPublishResult
@@ -181,6 +182,9 @@ func publishHostedCAS(directory string, m GenerationManifest, rawInput io.WriteC
 	inv, locations, err := hostedCASInventoryFor(directory, m)
 	if err != nil {
 		return result, err
+	}
+	if len(stages) > 0 {
+		inv.StageID = stages[0]
 	}
 	if err := hostedCASWrite(input, inv); err != nil {
 		return result, err

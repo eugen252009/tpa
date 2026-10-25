@@ -47,5 +47,7 @@ package:
 
 release:
   notes_file: docs/release-notes-0.8.0.md
+  source_branch: staging
+  publish_environment: tpa-release
 
 reproducibility: true

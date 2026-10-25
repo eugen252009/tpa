@@ -63,42 +63,44 @@ func (brokenCompletionWriter) Write([]byte) (int, error) { return 0, errors.New(
 // Standalone completion flags must exist in our parser. Delegated account flags
 // belong to the separately qualified customer-ssh CLI, not main.go's FlagSet.
 func TestCompletionCatalogMatchesParser(t *testing.T) {
-	file, err := parser.ParseFile(token.NewFileSet(), "main.go", nil, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
 	declared := map[string]bool{}
-	ast.Inspect(file, func(node ast.Node) bool {
-		call, ok := node.(*ast.CallExpr)
-		if !ok {
-			return true
+	for _, path := range []string{"main.go", "hosted_stage_cli.go"} {
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if err != nil {
+			t.Fatal(err)
 		}
-		method, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok {
-			return true
-		}
-		owner, ok := method.X.(*ast.Ident)
-		if !ok || owner.Name != "flags" {
-			return true
-		}
-		index := 0
-		switch method.Sel.Name {
-		case "StringVar", "BoolVar", "IntVar", "Int64Var":
-			index = 1
-		case "String", "Bool", "Int", "Int64":
-		default:
-			return true
-		}
-		literal, ok := call.Args[index].(*ast.BasicLit)
-		if ok {
-			name, err := strconv.Unquote(literal.Value)
-			if err != nil {
-				t.Fatal(err)
+		ast.Inspect(file, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok {
+				return true
 			}
-			declared[name] = true
-		}
-		return true
-	})
+			method, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			owner, ok := method.X.(*ast.Ident)
+			if !ok || owner.Name != "flags" {
+				return true
+			}
+			index := 0
+			switch method.Sel.Name {
+			case "StringVar", "BoolVar", "IntVar", "Int64Var":
+				index = 1
+			case "String", "Bool", "Int", "Int64":
+			default:
+				return true
+			}
+			literal, ok := call.Args[index].(*ast.BasicLit)
+			if ok {
+				name, err := strconv.Unquote(literal.Value)
+				if err != nil {
+					t.Fatal(err)
+				}
+				declared[name] = true
+			}
+			return true
+		})
+	}
 	covered := map[string]bool{}
 	for command, options := range completionOptions {
 		if !isPublicCommand(command) {

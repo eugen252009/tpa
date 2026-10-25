@@ -36,6 +36,8 @@ var completionOptions = map[string][]completionOption{
 		{"gpg", "text", "Signing identity"}, {"origin", "text", "Repository origin"}, {"label", "text", "Repository label"}, {"suite", "text", "Suite"}, {"codename", "text", "Codename"}, {"components", "text", "Component"}, {"repo-description", "text", "Repository description"},
 	},
 	"publish": {{"json", "none", "Publish result and transfer counters as JSON"}, {"in", "dir", "Finished signed repository"}, {"out", "text", "Explicit TPA.run SSH destination"}, {"output", "text", "Explicit TPA.run SSH destination"}, {"ssh-config", "file", "OpenSSH config"}, {"keyring", "file", "Owner public key"}, {"fingerprint", "text", "Expected owner signer"}, {"generation-id", "text", "Generation identity"}, {"parent-generation", "text", "Expected parent"}},
+	"stage":   {{"output", "text", "Repository SSH-CAS destination"}, {"stage", "text", "Persistent 32-hex stage identity"}, {"manifest", "file", "Qualified artifact manifest"}, {"in", "file", "Already-built Debian archive"}, {"ssh-config", "file", "Pinned SSH configuration"}, {"parent-generation", "text", "Pinned base or auto"}, {"json", "bool", "JSON stage result"}},
+	"sign":    {{"output", "text", "Repository SSH-CAS destination"}, {"stage", "text", "Persistent release stage"}, {"manifest", "file", "Approved artifact manifest"}, {"gpg", "text", "Owner signing identity"}, {"keyring", "file", "Owner public trust"}, {"fingerprint", "text", "Expected signer"}, {"ssh-config", "file", "Pinned SSH configuration"}, {"origin", "text", "Existing APT origin"}, {"label", "text", "Existing APT label"}, {"json", "bool", "JSON receipt"}},
 	"parse":   {{"in", "file", "Debian archive"}},
 	"pack": {
 		{"in", "dir", "Package input directory"}, {"out", "dir", "Repository output"},
@@ -143,7 +145,7 @@ _tpa() {
     if (( cword == 1 )); then
 `)
 	fmt.Fprintf(w, "        COMPREPLY=( $(compgen -W '%s -h --help -version --version' -- \"$cur\") ); return\n", completionCommandNames())
-	fmt.Fprint(w, "    fi\n    case \"$command\" in\n")
+	fmt.Fprint(w, "    fi\n    if [[ $command == stage && $cword == 2 ]]; then\n        COMPREPLY=( $(compgen -W 'create upload inspect cancel' -- \"$cur\") ); return\n    fi\n    case \"$command\" in\n")
 	for _, command := range publicCommands {
 		var names []string
 		for _, option := range commandCompletionOptions(command.Name) {
@@ -232,6 +234,10 @@ func writeZshCompletion(w io.Writer) {
 		switch command.Name {
 		case "completion":
 			fmt.Fprint(w, " '1:shell:(bash zsh fish)'")
+		case "stage":
+			fmt.Fprint(w, " '1:operation:(create upload inspect cancel)'")
+		case "sign":
+			fmt.Fprint(w, " '1:repository SSH URL:'")
 		case "pack", "inspect", "verify", "check":
 			fmt.Fprint(w, " '1:path or URL:_files'")
 		}
@@ -281,6 +287,7 @@ func writeFishCompletion(w io.Writer) {
 	}
 	fmt.Fprint(w, `complete -c tpa -n '__fish_use_subcommand' -a help -d 'Show help'
 complete -c tpa -n '__fish_seen_subcommand_from completion' -a 'bash zsh fish'
+complete -c tpa -n '__fish_seen_subcommand_from stage; and not __fish_seen_subcommand_from create upload inspect cancel' -a 'create upload inspect cancel'
 complete -c tpa -n '__fish_seen_subcommand_from pack inspect verify check; and __tpa_positional_files' -F
 `)
 }

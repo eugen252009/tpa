@@ -36,6 +36,8 @@ var publicCommands = []commandDescription{
 	{"parse", "Read package metadata"},
 	{"pack", "Build an APT repository"},
 	{"publish", "Publish an already-signed repository to an explicit TPA.run SSH destination"},
+	{"stage", "Create, upload, inspect or cancel a private repository-scoped CAS stage"},
+	{"sign", "Finalize a staged release with owner-side signing and atomic SSH-CAS publication"},
 	{"inspect", "Inspect an existing repository"},
 	{"capabilities", "Print machine-readable TPA capabilities"},
 	{"completion", "Print shell completion for bash, zsh, or fish"},
@@ -216,6 +218,9 @@ func runWithTerminal(args []string, stdin io.Reader, stdout, stderr io.Writer, i
 	command := args[0]
 	if !isPublicCommand(command) {
 		return unknownCommand(stderr, command)
+	}
+	if command == "stage" || command == "sign" {
+		return runHostedStage(args, stdout, stderr)
 	}
 	if command == "completion" {
 		if len(args) != 2 || (args[1] != "bash" && args[1] != "zsh" && args[1] != "fish") {

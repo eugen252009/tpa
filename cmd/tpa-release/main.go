@@ -33,6 +33,8 @@ func main() {
 		err = verifyBundleCommand(os.Args[2:])
 	case "publish":
 		err = publishCommand(os.Args[2:])
+	case "check-environment":
+		err = checkEnvironmentCommand(os.Args[2:])
 	case "help", "--help", "-h":
 		usage()
 		return
@@ -55,7 +57,21 @@ Commands:
   record        Record package and qualification results for one architecture
   bundle        Verify builds and create checksums, manifest, source, provenance
   verify-bundle Independently validate a release bundle
-  publish       Safely publish a complete bundle as a GitHub Release`)
+  publish       Safely publish a complete bundle as a GitHub Release
+  check-environment Verify a GitHub environment requires independent approval`)
+}
+
+func checkEnvironmentCommand(args []string) error {
+	flags := flag.NewFlagSet("check-environment", flag.ContinueOnError)
+	repository := flags.String("repository", "", "GitHub owner/repository")
+	environment := flags.String("environment", "", "protected publication environment")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 {
+		return fmt.Errorf("check-environment accepts no positional arguments")
+	}
+	return releaseworkflow.VerifyReleaseEnvironment(*repository, *environment)
 }
 
 func planCommand(args []string) error {
@@ -95,11 +111,14 @@ func planCommand(args []string) error {
 	if *githubOutput != "" {
 		values := map[string]string{
 			"version": plan.Version, "tag": plan.Tag, "commit": plan.SourceCommit,
-			"source_date_epoch": strconv.FormatInt(plan.SourceDateEpoch, 10),
-			"publish":           strconv.FormatBool(plan.Publish),
-			"release":           strconv.FormatBool(plan.Release),
-			"matrix":            string(mustJSON(matrix)),
-			"has_upgrade":       strconv.FormatBool(releaseworkflow.CommandConfigured(cfg.Package.Qualification.UpgradeCommand)),
+			"source_date_epoch":   strconv.FormatInt(plan.SourceDateEpoch, 10),
+			"publish":             strconv.FormatBool(plan.Publish),
+			"release":             strconv.FormatBool(plan.Release),
+			"matrix":              string(mustJSON(matrix)),
+			"has_upgrade":         strconv.FormatBool(releaseworkflow.CommandConfigured(cfg.Package.Qualification.UpgradeCommand)),
+			"publish_environment": cfg.Release.PublishEnvironment,
+			"source_branch":       cfg.Release.SourceBranch,
+			"upload_matrix":       string(mustJSON(plan.Architectures)),
 		}
 		if err := appendGitHubOutputs(*githubOutput, values); err != nil {
 			return err

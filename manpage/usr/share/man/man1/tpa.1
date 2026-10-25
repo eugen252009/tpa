@@ -80,6 +80,25 @@ fixed 1MiB SHA256 chunks and streams only missing content. Identical repeats sen
 zero payload chunks. -json reports activation and transfer counters. Ordinary SSH
 remains available independently through pack --output. See docs/client-signed-ssh.md for scope and failure semantics.
 .TP
+.B stage create|upload|inspect|cancel
+Manage a private persistent CAS stage through an explicit --output=tparun+ssh://
+destination, -stage=32-hex-id and optional -ssh-config. Create requires
+-manifest=qualified-artifacts.json (the existing release-manifest.json is accepted).
+The complete expected artifact set and base generation are immutable. Upload
+uses -in=already-built.deb; inspect lists expected/ready artifacts and status.
+Cancellation releases unpublished stage leases. No staged artifact is public.
+.TP
+.B sign
+Finalize a stage on the owner machine: tpa sign tparun+ssh://host/repository-id
+-stage=id -manifest=qualified-artifacts.json -gpg=OWNER -keyring=owner-public.gpg
+-fingerprint=OWNER. Retrieve authenticated artifacts, verify their exact approved
+hashes and identities, derive/sign/verify metadata with the existing pack engine,
+then atomically publish through SSH-CAS. Debian packages are never rebuilt and
+private keys never go to TPA.run. Reuse the same stage identity after uncertain
+results. Completed stages return the original generation receipt. Stale parents
+fail without automatic rebasing. Preserve the existing -origin and -label values.
+See docs/staged-releases.md for lifecycle, channels and CI configuration.
+.TP
 .B inspect
 Read repository Release metadata and Packages indexes from a local path or read-only HTTP(S)/SSH locator. Supports human or JSON output and exact package identity lookup.
 .TP

@@ -27,6 +27,35 @@ on:
         required: false
         type: string
         default: ''
+      apt-destination:
+        description: Optional explicit tparun+ssh:// owner-authorized APT channel repository
+        required: false
+        type: string
+        default: ''
+      apt-channel:
+        description: Explicit staging or stable channel (distinct repository IDs)
+        required: false
+        type: string
+        default: stable
+      apt-known-hosts:
+        description: Pinned OpenSSH known_hosts for the destination
+        required: false
+        type: string
+        default: ''
+      apt-public-key:
+        description: ASCII-armored owner public signing key
+        required: false
+        type: string
+        default: ''
+      apt-signing-fingerprint:
+        description: Full owner signing fingerprint
+        required: false
+        type: string
+        default: ''
+    secrets:
+      stage-ssh-key:
+        description: Repository-authorized SSH key for private artifact staging (no signing key)
+        required: false
   workflow_dispatch:
     inputs:
       config:
@@ -53,6 +82,31 @@ on:
         required: false
         type: string
         default: ''
+      apt-destination:
+        description: Optional explicit tparun+ssh:// owner-authorized APT channel repository
+        required: false
+        type: string
+        default: ''
+      apt-channel:
+        description: Explicit staging or stable channel (distinct repository IDs)
+        required: false
+        type: string
+        default: stable
+      apt-known-hosts:
+        description: Pinned OpenSSH known_hosts for the destination
+        required: false
+        type: string
+        default: ''
+      apt-public-key:
+        description: ASCII-armored owner public signing key
+        required: false
+        type: string
+        default: ''
+      apt-signing-fingerprint:
+        description: Full owner signing fingerprint
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -63,6 +117,7 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
+      actions: read
     outputs:
       version: ${{ steps.plan.outputs.version }}
       tag: ${{ steps.plan.outputs.tag }}
@@ -72,6 +127,7 @@ jobs:
       release: ${{ steps.plan.outputs.release }}
       matrix: ${{ steps.plan.outputs.matrix }}
       has_upgrade: ${{ steps.plan.outputs.has_upgrade }}
+      publish_environment: ${{ steps.plan.outputs.publish_environment }}
     env:
       TPA_WORKFLOW_REF: ${{ inputs.tpa-ref }}
       RELEASE_CONFIG: ${{ inputs.config }}
@@ -119,6 +175,30 @@ jobs:
             --event-name "$EVENT_NAME" --ref "$EVENT_REF" --commit "$EVENT_SHA" \
             --run-number "$RUN_NUMBER" --output "$RUNNER_TEMP/release-plan.json" \
             --github-output "$GITHUB_OUTPUT"
+      - name: Require independently protected release approval
+        if: ${{ steps.plan.outputs.publish == 'true' && steps.plan.outputs.publish_environment != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+          RELEASE_ENVIRONMENT: ${{ steps.plan.outputs.publish_environment }}
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/tpa-release" check-environment \
+            --repository "$RELEASE_REPOSITORY" --environment "$RELEASE_ENVIRONMENT"
+      - name: Validate hosted stage approval boundary
+        if: ${{ inputs.apt-destination != '' }}
+        shell: bash
+        env:
+          APT_CHANNEL: ${{ inputs.apt-channel }}
+          ENVIRONMENT: ${{ steps.plan.outputs.publish_environment }}
+          SOURCE_BRANCH: ${{ steps.plan.outputs.source_branch }}
+        run: |
+          set -euo pipefail
+          [[ "$APT_CHANNEL" == staging || "$APT_CHANNEL" == stable ]]
+          [[ "$ENVIRONMENT" == tpa-release && "$SOURCE_BRANCH" == staging ]] || {
+            echo "APT stages require staging source and protected tpa-release approval" >&2; exit 1;
+          }
 
   test:
     name: Project tests
@@ -343,8 +423,17 @@ jobs:
           retention-days: 7
 
   bundle:
-    name: Verify reproducibility and create release bundle
+    name: Verify reproducibility and create staging candidate
     needs: [prepare, build]
+    outputs:
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+      artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
+      manifest_sha256: ${{ steps.bundle.outputs.manifest_sha256 }}
+      tools_artifact_id: ${{ steps.tools-upload.outputs.artifact-id }}
+      tpa_sha256: ${{ steps.bundle.outputs.tpa_sha256 }}
+      helper_sha256: ${{ steps.bundle.outputs.helper_sha256 }}
+      builder_version: ${{ steps.bundle.outputs.builder_version }}
+      artifact_filenames: ${{ steps.bundle.outputs.artifact_filenames }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -395,9 +484,10 @@ jobs:
       - name: Download all verified architecture packages
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
-          pattern: tpa-release-*
+          pattern: tpa-release-*-*
           path: ${{ runner.temp }}/release-artifacts
       - name: Create and independently verify release bundle
+        id: bundle
         shell: bash
         env:
           PLAN_PATH: ${{ runner.temp }}/release-plan.json
@@ -418,13 +508,212 @@ jobs:
           "$RUNNER_TEMP/tpa-release" verify-bundle --config "$RELEASE_CONFIG" --workspace source \
             --plan "$PLAN_PATH" --bundle "$RUNNER_TEMP/release-bundle" \
             --tpa-version "$TPA_RELEASE_TPA_VERSION"
-      - name: Upload complete release bundle
+          manifest_sum=$(sha256sum "$RUNNER_TEMP/release-bundle/release-manifest.json")
+          echo "manifest_sha256=${manifest_sum%% *}" >> "$GITHUB_OUTPUT"
+          native_sum=$(sha256sum "$RUNNER_TEMP/tpa-builder")
+          helper_sum=$(sha256sum "$RUNNER_TEMP/tpa-release")
+          echo "tpa_sha256=${native_sum%% *}" >> "$GITHUB_OUTPUT"
+          echo "helper_sha256=${helper_sum%% *}" >> "$GITHUB_OUTPUT"
+          echo "builder_version=$TPA_RELEASE_TPA_VERSION" >> "$GITHUB_OUTPUT"
+          python3 -c 'import json,sys; print("artifact_filenames="+json.dumps([a["filename"] for a in json.load(open(sys.argv[1]))["artifacts"]],separators=(",",":")))' "$RUNNER_TEMP/release-bundle/release-manifest.json" >> "$GITHUB_OUTPUT"
+      - name: Preserve prebuilt release tools
+        id: tools-upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tpa-release-tools
+          path: |
+            ${{ runner.temp }}/tpa-builder
+            ${{ runner.temp }}/tpa-release
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload qualified staging candidate bundle
+        id: upload
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: tpa-release-bundle
           path: ${{ runner.temp }}/release-bundle/*
           if-no-files-found: error
           retention-days: 30
+      - name: Summarize candidate for release review
+        shell: bash
+        env:
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+          ARTIFACT_DIGEST: ${{ steps.upload.outputs.artifact-digest }}
+          MANIFEST_SHA256: ${{ steps.bundle.outputs.manifest_sha256 }}
+          APPROVAL_ENVIRONMENT: ${{ needs.prepare.outputs.publish_environment }}
+        run: |
+          set -euo pipefail
+          {
+            printf '### Qualified release candidate\n\n'
+            printf -- '- Debian version: `%s`\n' "$RELEASE_VERSION"
+            printf -- '- Source commit: `%s`\n' "$RELEASE_COMMIT"
+            printf -- '- Artifact ID: `%s`\n' "$ARTIFACT_ID"
+            printf -- '- Artifact SHA256: `%s`\n' "$ARTIFACT_DIGEST"
+            printf -- '- Manifest SHA256: `%s`\n' "$MANIFEST_SHA256"
+            printf -- '- Publication environment: `%s`\n' "${APPROVAL_ENVIRONMENT:-release (no required policy configured)}"
+            printf '\nReview the bundle manifest and qualification records before approval. Publication downloads this immutable artifact ID and does not rebuild packages.\n'
+            printf '\nThis candidate is a workflow artifact, not a hosted APT staging channel.\n'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  stage-create:
+    name: Bind private CAS stage to the qualified manifest
+    needs: [prepare, bundle]
+    if: ${{ needs.prepare.outputs.publish == 'true' && inputs.apt-destination != '' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      stage_id: ${{ steps.stage.outputs.stage_id }}
+    env:
+      APT_DESTINATION: ${{ inputs.apt-destination }}
+      APT_CHANNEL: ${{ inputs.apt-channel }}
+      APT_KNOWN_HOSTS: ${{ inputs.apt-known-hosts }}
+      APPROVED_MANIFEST_SHA256: ${{ needs.bundle.outputs.manifest_sha256 }}
+      STAGE_SSH_KEY: ${{ secrets.stage-ssh-key }}
+    steps:
+      - name: Check out project source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ needs.prepare.outputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: source
+      - name: Download prebuilt release tools
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          artifact-ids: ${{ needs.bundle.outputs.tools_artifact_id }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/release-tools
+      - name: Verify prebuilt release tools
+        shell: bash
+        env:
+          TPA_SHA256: ${{ needs.bundle.outputs.tpa_sha256 }}
+          HELPER_SHA256: ${{ needs.bundle.outputs.helper_sha256 }}
+        run: |
+          set -euo pipefail
+          [[ "$TPA_SHA256" =~ ^[0-9a-f]{64}$ && "$HELPER_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          printf '%s  %s\n' "$TPA_SHA256" "$RUNNER_TEMP/release-tools/tpa-builder" "$HELPER_SHA256" "$RUNNER_TEMP/release-tools/tpa-release" | sha256sum -c -
+          chmod 700 "$RUNNER_TEMP/release-tools/tpa-builder" "$RUNNER_TEMP/release-tools/tpa-release"
+          ln -s "$RUNNER_TEMP/release-tools/tpa-builder" "$RUNNER_TEMP/tpa-builder"
+          ln -s "$RUNNER_TEMP/release-tools/tpa-release" "$RUNNER_TEMP/tpa-release"
+      - name: Download complete release bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          artifact-ids: ${{ needs.bundle.outputs.artifact_id }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/release-bundle
+      - name: Create immutable release stage
+        id: stage
+        shell: bash
+        run: bash source/scripts/github-apt-stage.sh create
+
+  stage-upload:
+    name: Stage qualified ${{ matrix.filename }}
+    needs: [prepare, bundle, stage-create]
+    if: ${{ needs.stage-create.result == 'success' }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        filename: ${{ fromJSON(needs.bundle.outputs.artifact_filenames) }}
+    permissions:
+      contents: read
+    env:
+      APT_DESTINATION: ${{ inputs.apt-destination }}
+      APT_CHANNEL: ${{ inputs.apt-channel }}
+      APT_KNOWN_HOSTS: ${{ inputs.apt-known-hosts }}
+      APPROVED_MANIFEST_SHA256: ${{ needs.bundle.outputs.manifest_sha256 }}
+      STAGE_SSH_KEY: ${{ secrets.stage-ssh-key }}
+      STAGE_ID: ${{ needs.stage-create.outputs.stage_id }}
+      TARGET_FILENAME: ${{ matrix.filename }}
+    steps:
+      - name: Check out project source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ needs.prepare.outputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: source
+      - name: Download prebuilt release tools
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          artifact-ids: ${{ needs.bundle.outputs.tools_artifact_id }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/release-tools
+      - name: Verify prebuilt release tools
+        shell: bash
+        env:
+          TPA_SHA256: ${{ needs.bundle.outputs.tpa_sha256 }}
+          HELPER_SHA256: ${{ needs.bundle.outputs.helper_sha256 }}
+        run: |
+          set -euo pipefail
+          [[ "$TPA_SHA256" =~ ^[0-9a-f]{64}$ && "$HELPER_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          printf '%s  %s\n' "$TPA_SHA256" "$RUNNER_TEMP/release-tools/tpa-builder" "$HELPER_SHA256" "$RUNNER_TEMP/release-tools/tpa-release" | sha256sum -c -
+          chmod 700 "$RUNNER_TEMP/release-tools/tpa-builder" "$RUNNER_TEMP/release-tools/tpa-release"
+          ln -s "$RUNNER_TEMP/release-tools/tpa-builder" "$RUNNER_TEMP/tpa-builder"
+          ln -s "$RUNNER_TEMP/release-tools/tpa-release" "$RUNNER_TEMP/tpa-release"
+      - name: Download complete release bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          artifact-ids: ${{ needs.bundle.outputs.artifact_id }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/release-bundle
+      - name: Upload exact qualified package
+        shell: bash
+        run: bash source/scripts/github-apt-stage.sh upload
+
+  stage-verify:
+    name: Verify all required uploads before approval
+    needs: [prepare, bundle, stage-create, stage-upload]
+    if: ${{ needs.stage-create.result == 'success' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      APT_DESTINATION: ${{ inputs.apt-destination }}
+      APT_CHANNEL: ${{ inputs.apt-channel }}
+      APT_KNOWN_HOSTS: ${{ inputs.apt-known-hosts }}
+      APPROVED_MANIFEST_SHA256: ${{ needs.bundle.outputs.manifest_sha256 }}
+      STAGE_SSH_KEY: ${{ secrets.stage-ssh-key }}
+      STAGE_ID: ${{ needs.stage-create.outputs.stage_id }}
+    steps:
+      - name: Check out project source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ needs.prepare.outputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: source
+      - name: Download prebuilt release tools
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          artifact-ids: ${{ needs.bundle.outputs.tools_artifact_id }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/release-tools
+      - name: Verify prebuilt release tools
+        shell: bash
+        env:
+          TPA_SHA256: ${{ needs.bundle.outputs.tpa_sha256 }}
+          HELPER_SHA256: ${{ needs.bundle.outputs.helper_sha256 }}
+        run: |
+          set -euo pipefail
+          [[ "$TPA_SHA256" =~ ^[0-9a-f]{64}$ && "$HELPER_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          printf '%s  %s\n' "$TPA_SHA256" "$RUNNER_TEMP/release-tools/tpa-builder" "$HELPER_SHA256" "$RUNNER_TEMP/release-tools/tpa-release" | sha256sum -c -
+          chmod 700 "$RUNNER_TEMP/release-tools/tpa-builder" "$RUNNER_TEMP/release-tools/tpa-release"
+          ln -s "$RUNNER_TEMP/release-tools/tpa-builder" "$RUNNER_TEMP/tpa-builder"
+          ln -s "$RUNNER_TEMP/release-tools/tpa-release" "$RUNNER_TEMP/tpa-release"
+      - name: Download complete release bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          artifact-ids: ${{ needs.bundle.outputs.artifact_id }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/release-bundle
+      - name: Verify complete staged artifact manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash source/scripts/github-apt-stage.sh verify
+          printf '### Complete private CAS stage\n\nStage: `%s`\n\nManifest SHA256: `%s`\n\nChannel: `%s`\n\nNo package is publicly visible yet.\n' "$STAGE_ID" "$APPROVED_MANIFEST_SHA256" "$APT_CHANNEL" >> "$GITHUB_STEP_SUMMARY"
 
   attest:
     name: Attest qualified release assets
@@ -439,7 +728,8 @@ jobs:
       - name: Download complete release bundle
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
-          name: tpa-release-bundle
+          artifact-ids: ${{ needs.bundle.outputs.artifact_id }}
+          merge-multiple: true
           path: ${{ runner.temp }}/release-bundle
       - name: Create GitHub build provenance attestations
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
@@ -447,12 +737,15 @@ jobs:
           subject-path: ${{ runner.temp }}/release-bundle/*
 
   publish:
-    name: Publish complete GitHub Release
-    needs: [prepare, bundle, attest]
-    if: ${{ needs.prepare.outputs.publish == 'true' }}
+    name: Approve and publish the tested candidate
+    needs: [prepare, bundle, attest, stage-create, stage-upload, stage-verify]
+    environment:
+      name: ${{ needs.prepare.outputs.publish_environment || 'release' }}
+    if: ${{ !cancelled() && needs.prepare.outputs.publish == 'true' && needs.bundle.result == 'success' && needs.attest.result == 'success' && (inputs.apt-destination == '' || needs.stage-verify.result == 'success') }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      actions: read
     env:
       TPA_WORKFLOW_REF: ${{ inputs.tpa-ref }}
       TPA_VERSION_INPUT: ${{ inputs.tpa-version }}
@@ -467,41 +760,43 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
           path: source
-      - name: Check out pinned TPA source
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Download prebuilt release tools
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
-          repository: ${{ inputs.tpa-repository }}
-          ref: ${{ inputs.tpa-ref }}
-          fetch-depth: 1
-          persist-credentials: false
-          path: tpa-source
-      - name: Set up TPA's Go toolchain
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
-        with:
-          go-version-file: tpa-source/go.mod
-          cache: false
-      - name: Build release publisher
+          artifact-ids: ${{ needs.bundle.outputs.tools_artifact_id }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/release-tools
+      - name: Verify prebuilt release tools
         shell: bash
         env:
-          TPA_VERSION_INPUT: ${{ inputs.tpa-version }}
-          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+          TPA_SHA256: ${{ needs.bundle.outputs.tpa_sha256 }}
+          HELPER_SHA256: ${{ needs.bundle.outputs.helper_sha256 }}
         run: |
           set -euo pipefail
-          [[ "$TPA_WORKFLOW_REF" =~ ^[0-9a-f]{40}$ ]]
-          TPA_RELEASE_TPA_COMMIT=$(git -C tpa-source rev-parse HEAD)
-          [[ "$TPA_RELEASE_TPA_COMMIT" == "$TPA_WORKFLOW_REF" ]]
-          if [[ "$TPA_VERSION_INPUT" == "from-release-tag" ]]; then TPA_RELEASE_TPA_VERSION="$RELEASE_VERSION"; else TPA_RELEASE_TPA_VERSION="$TPA_VERSION_INPUT"; fi
-          echo "TPA_RELEASE_TPA_COMMIT=$TPA_RELEASE_TPA_COMMIT" >> "$GITHUB_ENV"
-          echo "TPA_RELEASE_TPA_VERSION=$TPA_RELEASE_TPA_VERSION" >> "$GITHUB_ENV"
-          go -C tpa-source build -trimpath -o "$RUNNER_TEMP/tpa-release" ./cmd/tpa-release
+          [[ "$TPA_SHA256" =~ ^[0-9a-f]{64}$ && "$HELPER_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          printf '%s  %s\n' "$TPA_SHA256" "$RUNNER_TEMP/release-tools/tpa-builder" "$HELPER_SHA256" "$RUNNER_TEMP/release-tools/tpa-release" | sha256sum -c -
+          chmod 700 "$RUNNER_TEMP/release-tools/tpa-builder" "$RUNNER_TEMP/release-tools/tpa-release"
+          ln -s "$RUNNER_TEMP/release-tools/tpa-builder" "$RUNNER_TEMP/tpa-builder"
+          ln -s "$RUNNER_TEMP/release-tools/tpa-release" "$RUNNER_TEMP/tpa-release"
       - name: Download complete release bundle
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
-          name: tpa-release-bundle
+          artifact-ids: ${{ needs.bundle.outputs.artifact_id }}
+          merge-multiple: true
           path: ${{ runner.temp }}/release-bundle
+      - name: Establish pinned publisher identity
+        shell: bash
+        env:
+          BUILDER_VERSION: ${{ needs.bundle.outputs.builder_version }}
+        run: |
+          set -euo pipefail
+          [[ "$TPA_WORKFLOW_REF" =~ ^[0-9a-f]{40}$ ]]
+          echo "TPA_RELEASE_TPA_COMMIT=$TPA_WORKFLOW_REF" >> "$GITHUB_ENV"
+          echo "TPA_RELEASE_TPA_VERSION=$BUILDER_VERSION" >> "$GITHUB_ENV"
       - name: Verify complete release bundle
         shell: bash
         env:
+          APPROVED_MANIFEST_SHA256: ${{ needs.bundle.outputs.manifest_sha256 }}
           PLAN_PATH: ${{ runner.temp }}/release-plan.json
           EVENT_NAME: ${{ github.event_name }}
           EVENT_REF: ${{ github.ref }}
@@ -513,9 +808,37 @@ jobs:
             --event-name "$EVENT_NAME" --ref "$EVENT_REF" \
             --commit "$RELEASE_COMMIT" --run-number "$RUN_NUMBER" \
             --output "$PLAN_PATH"
+          manifest_sum=$(sha256sum "$RUNNER_TEMP/release-bundle/release-manifest.json")
+          [[ "$APPROVED_MANIFEST_SHA256" =~ ^[0-9a-f]{64}$ && "${manifest_sum%% *}" == "$APPROVED_MANIFEST_SHA256" ]] || {
+            echo "downloaded manifest does not match the qualified candidate" >&2; exit 1;
+          }
           "$RUNNER_TEMP/tpa-release" verify-bundle --config "$RELEASE_CONFIG" --workspace source \
             --plan "$PLAN_PATH" --bundle "$RUNNER_TEMP/release-bundle" \
             --tpa-version "$TPA_RELEASE_TPA_VERSION"
+      - name: Recheck independent approval policy before APT signing
+        if: ${{ inputs.apt-destination != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/tpa-release" check-environment --repository "$RELEASE_REPOSITORY" --environment tpa-release
+      - name: Owner-side sign and atomic SSH-CAS publication
+        if: ${{ inputs.apt-destination != '' }}
+        shell: bash
+        env:
+          APT_DESTINATION: ${{ inputs.apt-destination }}
+          APT_CHANNEL: ${{ inputs.apt-channel }}
+          APT_KNOWN_HOSTS: ${{ inputs.apt-known-hosts }}
+          APPROVED_MANIFEST_SHA256: ${{ needs.bundle.outputs.manifest_sha256 }}
+          STAGE_SSH_KEY: ${{ secrets.stage-ssh-key }}
+          STAGE_ID: ${{ needs.stage-create.outputs.stage_id }}
+          APT_PUBLIC_KEY: ${{ inputs.apt-public-key }}
+          APT_SIGNING_FINGERPRINT: ${{ inputs.apt-signing-fingerprint }}
+          APT_SIGNING_PRIVATE_KEY: ${{ secrets[inputs.apt-channel == 'staging' && 'APT_STAGING_SIGNING_PRIVATE_KEY' || 'APT_STABLE_SIGNING_PRIVATE_KEY'] }}
+          APT_SIGNING_PASSPHRASE: ${{ secrets[inputs.apt-channel == 'staging' && 'APT_STAGING_SIGNING_PASSPHRASE' || 'APT_STABLE_SIGNING_PASSPHRASE'] }}
+        run: bash source/scripts/github-apt-stage.sh sign
       - name: Publish complete GitHub Release
         shell: bash
         env:

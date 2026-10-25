@@ -23,6 +23,7 @@ const hostedGenerationProtocol = "tparun-prebuilt-ssh"
 var hostedIDPattern = regexp.MustCompile(`^[a-f0-9]{32}$`)
 
 type HostedPublishOptions struct {
+	StageID          string
 	LegacyFullTree   bool
 	SSHConfig        string
 	Keyring          []byte
@@ -50,6 +51,9 @@ type HostedPublishResult struct {
 // No files are modified, no package/repository build or signing is performed.
 func PublishRepositoryToTPARunSSH(ctx context.Context, directory, destination string, opts HostedPublishOptions) (HostedPublishResult, error) {
 	var result HostedPublishResult
+	if opts.StageID != "" && (!hostedIDPattern.MatchString(opts.StageID) || opts.LegacyFullTree) {
+		return result, fmt.Errorf("staged publication requires a valid stage identity and chunk-CAS protocol")
+	}
 	if !strings.HasPrefix(destination, "tparun+ssh://") {
 		return result, fmt.Errorf("explicit tparun+ssh:// destination required; no fallback to ordinary SSH")
 	}
@@ -137,7 +141,7 @@ func PublishRepositoryToTPARunSSH(ctx context.Context, directory, destination st
 		}
 	}()
 	if !opts.LegacyFullTree {
-		result, err = publishHostedCAS(directory, manifest, stdin, stdout)
+		result, err = publishHostedCAS(directory, manifest, stdin, stdout, opts.StageID)
 		if err != nil {
 			return result, err
 		}

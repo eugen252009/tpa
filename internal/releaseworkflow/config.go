@@ -81,7 +81,9 @@ type QualificationConfig struct {
 }
 
 type ReleaseConfig struct {
-	NotesFile string `yaml:"notes_file" json:"notes_file"`
+	NotesFile          string `yaml:"notes_file" json:"notes_file"`
+	SourceBranch       string `yaml:"source_branch" json:"source_branch,omitempty"`
+	PublishEnvironment string `yaml:"publish_environment" json:"publish_environment,omitempty"`
 }
 
 var (
@@ -269,6 +271,12 @@ func (c Config) Validate(workspace string) error {
 		if !isScalar(value) {
 			return fmt.Errorf("additional control field %q must be a string, number, or boolean", name)
 		}
+	}
+	if err := validateReleaseBranchName(c.Release.SourceBranch); err != nil {
+		return err
+	}
+	if c.Release.PublishEnvironment != "" && !releaseEnvironmentRE.MatchString(c.Release.PublishEnvironment) {
+		return fmt.Errorf("release.publish_environment must be 1-64 letters, digits, dots, underscores or hyphens, starting with a letter or digit")
 	}
 	if strings.TrimSpace(c.Release.NotesFile) == "" {
 		return fmt.Errorf("release.notes_file is required for a tagged release")

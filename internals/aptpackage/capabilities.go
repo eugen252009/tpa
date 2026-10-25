@@ -82,6 +82,8 @@ func GetCapabilities() Capabilities {
 		"repository.publish-client-signed-tparun-ssh.v1",
 		"repository.publish-client-signed-tparun-ssh.v2",
 		"repository.publish-ssh-new.v1",
+		"repository.sign-staged-owner-side.v1",
+		"repository.stage-tparun-cas.v1",
 		"repository.unlist.v1",
 		"repository.verify.v1",
 	}

@@ -65,6 +65,11 @@ func PublishGitHubRelease(options PublishOptions) error {
 	if err != nil {
 		return fmt.Errorf("read bundled release notes: %w", err)
 	}
+	if environment := options.Config.Release.PublishEnvironment; environment != "" {
+		if err := VerifyReleaseEnvironment(options.Repository, environment); err != nil {
+			return err
+		}
+	}
 	sentinel := draftSentinel(options.Config, options.Plan, manifest.ReleaseNotesSHA256)
 	if err := verifyRemoteTag(options.Repository, options.Plan.Tag, options.Plan.SourceCommit); err != nil {
 		return err

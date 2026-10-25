@@ -27,8 +27,8 @@ func TestRepositoryReleaseConfigurationAndPinnedActions(t *testing.T) {
 		t.Fatal(err)
 	}
 	workflowText := string(workflow)
-	if got := strings.Count(workflowText, "repository: ${{ inputs.tpa-repository }}"); got != 5 {
-		t.Fatalf("expected all five TPA source checkouts to use the configured repository; found %d", got)
+	if got := strings.Count(workflowText, "repository: ${{ inputs.tpa-repository }}"); got != 4 {
+		t.Fatalf("expected all four build-time TPA source checkouts to use the configured repository; found %d", got)
 	}
 	if !strings.Contains(workflowText, "default: eugen252009/tpa") {
 		t.Fatal("the upstream TPA repository must remain the default")
@@ -176,6 +176,7 @@ func TestBuildPackageAndReproducibleBundle(t *testing.T) {
 	cfg := testConfig()
 	cfg.Project.Name = "example"
 	cfg.Package.Name = "example"
+	cfg.Release.PublishEnvironment = "tpa-release"
 	cfg.Reproducibility = true
 	cfg.Package.Architectures = map[string]ArchitectureConfig{"amd64": {Runner: "ubuntu-24.04", Runtime: "native"}}
 	cfg.Package.ControlFields = map[string]any{"ExampleField": "version-${version}"}
@@ -245,9 +246,30 @@ func TestBuildPackageAndReproducibleBundle(t *testing.T) {
 	t.Setenv("FAKE_GH_COMMIT", commit)
 	t.Setenv("TPA_RELEASE_TPA_COMMIT", tpaCommit)
 	options := PublishOptions{Workspace: workspace, BundleDir: bundleDir, Repository: "example/project", Config: cfg, Plan: plan, TPAVersion: "dev"}
+	t.Setenv("FAKE_GH_ENVIRONMENT_POLICY", "{}")
+	if err := PublishGitHubRelease(options); err == nil {
+		t.Fatal("publisher accepted missing approval policy")
+	}
+	if _, err := os.Stat(statePath); !os.IsNotExist(err) {
+		t.Fatalf("publisher mutated the release before approval policy validation: %v", err)
+	}
+	t.Setenv("FAKE_GH_ENVIRONMENT_POLICY", protectedReleaseEnvironment)
 	if err := PublishGitHubRelease(options); err != nil {
 		t.Fatalf("publish through fake GitHub API: %v", err)
 	}
+	beforePolicyChange, err := os.ReadFile(statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("FAKE_GH_ENVIRONMENT_POLICY", "{}")
+	if err := PublishGitHubRelease(options); err == nil {
+		t.Fatal("publisher did not recheck approval policy")
+	}
+	afterPolicyChange, err := os.ReadFile(statePath)
+	if err != nil || string(afterPolicyChange) != string(beforePolicyChange) {
+		t.Fatal("changed approval policy caused a release mutation")
+	}
+	t.Setenv("FAKE_GH_ENVIRONMENT_POLICY", protectedReleaseEnvironment)
 	if err := PublishGitHubRelease(options); err != nil {
 		t.Fatalf("idempotent publication retry: %v", err)
 	}
@@ -325,7 +347,9 @@ def check_repo():
         print("release command omitted explicit repository: " + repr(args), file=sys.stderr); sys.exit(2)
 if args[0] == "api":
     target = path_arg()
-    if "/commits/" in target:
+    if "/environments/" in target:
+        print(os.environ["FAKE_GH_ENVIRONMENT_POLICY"])
+    elif "/commits/" in target:
         print(json.dumps({"sha": os.environ["FAKE_GH_COMMIT"]}))
     elif "--method" in args and "PATCH" in args:
         value = load(); value["draft"] = False; save(value); print(json.dumps(value))

@@ -1,4 +1,4 @@
-name: TPA GitHub Release
+name: TPA staging candidate and approved release
 
 on:
   push:
@@ -13,6 +13,7 @@ permissions:
 jobs:
   release:
     permissions:
+      actions: read
       contents: write
       attestations: write
       id-token: write
@@ -23,3 +24,10 @@ jobs:
       tpa-ref: ${{ github.sha }}
       tpa-version: from-release-tag
       go-version: "1.26.3"
+      apt-channel: ${{ contains(github.ref_name, '-') && 'staging' || 'stable' }}
+      apt-destination: ${{ vars[contains(github.ref_name, '-') && 'TPA_APT_STAGING_DESTINATION' || 'TPA_APT_STABLE_DESTINATION'] }}
+      apt-known-hosts: ${{ vars.TPA_APT_KNOWN_HOSTS }}
+      apt-public-key: ${{ vars[contains(github.ref_name, '-') && 'TPA_APT_STAGING_PUBLIC_KEY' || 'TPA_APT_STABLE_PUBLIC_KEY'] }}
+      apt-signing-fingerprint: ${{ vars[contains(github.ref_name, '-') && 'TPA_APT_STAGING_FINGERPRINT' || 'TPA_APT_STABLE_FINGERPRINT'] }}
+    secrets:
+      stage-ssh-key: ${{ secrets.TPA_STAGE_SSH_KEY }}

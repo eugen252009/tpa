@@ -85,6 +85,9 @@ func CreatePlan(cfg Config, workspace, eventName, ref, commit string, runNumber 
 		if tagCommit != commit {
 			return Plan{}, nil, fmt.Errorf("tag %s resolves to %s, not workflow source commit %s", plan.Tag, tagCommit, commit)
 		}
+		if err := validateReleaseSourceBranch(workspace, cfg.Release.SourceBranch, commit); err != nil {
+			return Plan{}, nil, err
+		}
 		plan.Version = version
 		plan.Release = true
 		plan.Publish = eventName == "push"
@@ -246,6 +249,9 @@ func ValidatePlanInputs(cfg Config, workspace string, plan Plan) error {
 		tagCommit, err := gitOutput(workspace, "rev-parse", "--verify", "refs/tags/"+plan.Tag+"^{commit}")
 		if err != nil || tagCommit != plan.SourceCommit {
 			return fmt.Errorf("release tag no longer resolves to the planned source commit")
+		}
+		if err := validateReleaseSourceBranch(workspace, cfg.Release.SourceBranch, plan.SourceCommit); err != nil {
+			return err
 		}
 	} else if plan.Release || plan.Publish {
 		return fmt.Errorf("non-tag qualification plan cannot publish")
