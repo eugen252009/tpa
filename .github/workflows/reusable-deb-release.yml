@@ -52,6 +52,31 @@ on:
         required: false
         type: string
         default: ''
+      apt-origin:
+        description: Preserve the existing repository Origin
+        required: false
+        type: string
+        default: TPA-Repo
+      apt-label:
+        description: Preserve the existing repository Label
+        required: false
+        type: string
+        default: TPA-Repo
+      apt-description:
+        description: Repository description
+        required: false
+        type: string
+        default: ''
+      apt-publication-runner:
+        description: Protected owner-side Linux amd64 publication runner label
+        required: false
+        type: string
+        default: ubuntu-24.04
+      apt-signing-home:
+        description: Optional existing owner GPG home on the protected publication runner (never exported)
+        required: false
+        type: string
+        default: ''
     secrets:
       stage-ssh-key:
         description: Repository-authorized SSH key for private artifact staging (no signing key)
@@ -742,7 +767,7 @@ jobs:
     environment:
       name: ${{ needs.prepare.outputs.publish_environment || 'release' }}
     if: ${{ !cancelled() && needs.prepare.outputs.publish == 'true' && needs.bundle.result == 'success' && needs.attest.result == 'success' && (inputs.apt-destination == '' || needs.stage-verify.result == 'success') }}
-    runs-on: ubuntu-24.04
+    runs-on: ${{ inputs.apt-publication-runner || 'ubuntu-24.04' }}
     permissions:
       contents: write
       actions: read
@@ -835,6 +860,10 @@ jobs:
           STAGE_SSH_KEY: ${{ secrets.stage-ssh-key }}
           STAGE_ID: ${{ needs.stage-create.outputs.stage_id }}
           APT_PUBLIC_KEY: ${{ inputs.apt-public-key }}
+          APT_ORIGIN: ${{ inputs.apt-origin }}
+          APT_LABEL: ${{ inputs.apt-label }}
+          APT_DESCRIPTION: ${{ inputs.apt-description }}
+          APT_SIGNING_HOME: ${{ inputs.apt-signing-home }}
           APT_SIGNING_FINGERPRINT: ${{ inputs.apt-signing-fingerprint }}
           APT_SIGNING_PRIVATE_KEY: ${{ secrets[inputs.apt-channel == 'staging' && 'APT_STAGING_SIGNING_PRIVATE_KEY' || 'APT_STABLE_SIGNING_PRIVATE_KEY'] }}
           APT_SIGNING_PASSPHRASE: ${{ secrets[inputs.apt-channel == 'staging' && 'APT_STAGING_SIGNING_PASSPHRASE' || 'APT_STABLE_SIGNING_PASSPHRASE'] }}

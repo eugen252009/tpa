@@ -96,7 +96,8 @@ hashes and identities, derive/sign/verify metadata with the existing pack engine
 then atomically publish through SSH-CAS. Debian packages are never rebuilt and
 private keys never go to TPA.run. Reuse the same stage identity after uncertain
 results. Completed stages return the original generation receipt. Stale parents
-fail without automatic rebasing. Preserve the existing -origin and -label values.
+fail without automatic rebasing. Preserve the existing -origin, -label and
+-repo-description values.
 See docs/staged-releases.md for lifecycle, channels and CI configuration.
 .TP
 .B inspect

@@ -96,7 +96,10 @@ and server-side signing are not used.
 ## Existing GitHub Actions integration
 
 Optional reusable inputs: `apt-destination`, `apt-channel` (`staging` or `stable`),
-`apt-known-hosts`, `apt-public-key`, `apt-signing-fingerprint`.
+`apt-known-hosts`, `apt-public-key`, `apt-signing-fingerprint`. Preserve existing
+APT client policy with `apt-origin`, `apt-label`, and `apt-description` (including
+when moving a repository into CI). These extra inputs are for `workflow_call`;
+manual dispatch remains qualification-only.
 Without a destination, GitHub-only releases remain supported.
 
 APT publication requires `release.source_branch: staging` and
@@ -122,19 +125,30 @@ build/test jobs. Supply existing owner key material only in protected environmen
 and optional corresponding `APT_*_SIGNING_PASSPHRASE`. The hosted-runner adapter
 imports into a private temporary owner-side GPG home and removes it/its agent on
 exit. Nothing transfers that key to TPA.run. Local CLI use may instead use an
-existing owner agent/hardware identity without exporting its secret.
+existing owner agent/hardware identity without exporting its secret. The reusable
+workflow also accepts `apt-publication-runner` (default `ubuntu-24.04`) and
+`apt-signing-home`: on a protected owner-side Linux amd64 runner, a nonempty
+absolute existing home reuses that agent without importing/exporting keys,
+killing the agent, or deleting owner state, including on failure. No private-key
+secret is required in this mode. The runner must enforce approved-workflow/run
+isolation; do not expose this signing home to arbitrary public-repository or PR
+jobs. Merely assigning a runner label is not such isolation.
 
-The TPA caller selects separate pre-existing repositories using variables:
+The TPA caller pins final tags to the existing canonical bootstrap repository,
+its original fingerprint, and its existing Origin/Label/Description. It uses:
 
-- `TPA_APT_STAGING_DESTINATION`, `TPA_APT_STABLE_DESTINATION`
+- `TPA_APT_STAGING_DESTINATION` (explicit opt-in; cannot equal bootstrap)
 - `TPA_APT_STAGING_PUBLIC_KEY`, `TPA_APT_STABLE_PUBLIC_KEY`
-- `TPA_APT_STAGING_FINGERPRINT`, `TPA_APT_STABLE_FINGERPRINT`
-- `TPA_APT_KNOWN_HOSTS`, plus caller secret `TPA_STAGE_SSH_KEY`.
+- `TPA_APT_STAGING_FINGERPRINT` (the bootstrap fingerprint is pinned in source)
+- `TPA_APT_KNOWN_HOSTS`, plus caller secret `TPA_STAGE_SSH_KEY`
+- Optional `TPA_APT_PUBLICATION_RUNNER`, `TPA_APT_SIGNING_HOME` for the isolated
+  protected owner-side runner described above.
 
 Prerelease tags select staging; final tags select stable. Missing staging config
-never falls through to stable. Unset destinations disable that channel's APT
-publication. Both use the current Stable/main tree contract at distinct URLs,
-not a new channel service. Stable clients must not enable the opt-in staging
+never falls through to stable. Unset staging destinations disable staging APT
+publication. Final TPA tags cannot silently fall back to GitHub-only publication;
+missing bootstrap credentials or receiver support fail closed. Both use the
+current Stable/main tree contract at distinct URLs, not a new channel service. Stable clients must not enable the opt-in staging
 source. Promotion is explicit: stage the approved DEBs to the stable repository
 and obtain independent approval. RC-to-final still requires a new version/build
 and qualification; filenames cannot change Debian control metadata.

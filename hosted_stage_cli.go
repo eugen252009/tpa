@@ -41,6 +41,7 @@ func runHostedStage(args []string, stdout, stderr io.Writer) int {
 	fingerprint := flags.String("fingerprint", "", "Expected owner signer fingerprint")
 	label := flags.String("label", "TPA-Repo", "APT repository label (channels use distinct repository IDs)")
 	origin := flags.String("origin", "TPA-Repo", "APT repository origin; preserve existing client policy")
+	description := flags.String("repo-description", "", "APT repository description")
 	_ = flags.Bool("json", false, "JSON output (always used for stage operations)")
 	if err := flags.Parse(operands); err != nil {
 		return 2
@@ -64,7 +65,7 @@ func runHostedStage(args []string, stdout, stderr io.Writer) int {
 		if readErr != nil {
 			return commandFailure(stderr, fmt.Sprintf("read owner public keyring: %v", readErr))
 		}
-		result, err = aptpackage.FinalizeHostedStage(context.Background(), destination, aptpackage.HostedSignOptions{StageID: *stage, SSHConfig: *sshConfig, ManifestSHA256: hash, Artifacts: artifacts, GPG: *gpg, Keyring: public, Fingerprint: *fingerprint, Repo: aptpackage.RepoConfig{Label: *label, Origin: *origin, Suite: "stable", Codename: "stable", Components: "main"}})
+		result, err = aptpackage.FinalizeHostedStage(context.Background(), destination, aptpackage.HostedSignOptions{StageID: *stage, SSHConfig: *sshConfig, ManifestSHA256: hash, Artifacts: artifacts, GPG: *gpg, Keyring: public, Fingerprint: *fingerprint, Repo: aptpackage.RepoConfig{Label: *label, Origin: *origin, Description: *description, Suite: "stable", Codename: "stable", Components: "main"}})
 	} else {
 		if operation != "create" && operation != "upload" && operation != "inspect" && operation != "cancel" {
 			return usageError(stderr, "stage operation must be create, upload, inspect, or cancel")

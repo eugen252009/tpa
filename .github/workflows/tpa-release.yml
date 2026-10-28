@@ -11,7 +11,23 @@ permissions:
   id-token: write
 
 jobs:
+  bootstrap-policy:
+    name: Keep bootstrap stable and staging separate
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - name: Validate opt-in staging target
+        shell: bash
+        env:
+          STAGING_DESTINATION: ${{ vars.TPA_APT_STAGING_DESTINATION }}
+        run: |
+          set -euo pipefail
+          bootstrap=tparun+ssh://tparun@tpa.run:2222/e47afe7164e1147e5c715e5885d7cee0
+          [[ "$STAGING_DESTINATION" != "$bootstrap" ]] || {
+            echo "The opt-in staging channel must not target the public bootstrap repository" >&2; exit 1;
+          }
   release:
+    needs: bootstrap-policy
     permissions:
       actions: read
       contents: write
@@ -25,9 +41,14 @@ jobs:
       tpa-version: from-release-tag
       go-version: "1.26.3"
       apt-channel: ${{ contains(github.ref_name, '-') && 'staging' || 'stable' }}
-      apt-destination: ${{ vars[contains(github.ref_name, '-') && 'TPA_APT_STAGING_DESTINATION' || 'TPA_APT_STABLE_DESTINATION'] }}
+      apt-destination: ${{ !contains(github.ref_name, '-') && 'tparun+ssh://tparun@tpa.run:2222/e47afe7164e1147e5c715e5885d7cee0' || vars.TPA_APT_STAGING_DESTINATION }}
       apt-known-hosts: ${{ vars.TPA_APT_KNOWN_HOSTS }}
       apt-public-key: ${{ vars[contains(github.ref_name, '-') && 'TPA_APT_STAGING_PUBLIC_KEY' || 'TPA_APT_STABLE_PUBLIC_KEY'] }}
-      apt-signing-fingerprint: ${{ vars[contains(github.ref_name, '-') && 'TPA_APT_STAGING_FINGERPRINT' || 'TPA_APT_STABLE_FINGERPRINT'] }}
+      apt-signing-fingerprint: ${{ !contains(github.ref_name, '-') && 'EDCEE63AA803737C8ABBC1E4A34190A2829D5E54' || vars.TPA_APT_STAGING_FINGERPRINT }}
+      apt-origin: TPA
+      apt-label: ${{ !contains(github.ref_name, '-') && 'TPA Bootstrap' || 'TPA Staging' }}
+      apt-description: ${{ !contains(github.ref_name, '-') && 'Canonical TPA bootstrap repository' || 'Opt-in TPA qualification repository' }}
+      apt-publication-runner: ${{ vars.TPA_APT_PUBLICATION_RUNNER || 'ubuntu-24.04' }}
+      apt-signing-home: ${{ vars.TPA_APT_SIGNING_HOME }}
     secrets:
       stage-ssh-key: ${{ secrets.TPA_STAGE_SSH_KEY }}

@@ -76,6 +76,38 @@ update must not cause an unapproved TPA.run runtime installation. This document
 does not enable an updater, configure `.tpa` project defaults or authorize backend
 changes.
 
+## GitHub pipeline
+
+Pushes to `main` and `staging` run the existing package qualification pipeline
+for amd64, arm64 and riscv64; they do not publish. Manual dispatch is likewise
+qualification-only. A reviewed `vMAJOR.MINOR.PATCH` tag whose commit is on
+`staging` runs `tpa-release.yml`: build/test once, preserve the immutable tested
+bundle, stage its exact DEBs, require independent `tpa-release` environment
+approval, then owner-side sign and atomic SSH-CAS publication. No DEB rebuild
+occurs after approval.
+
+Final tags pin repository ID `e47afe7164e1147e5c715e5885d7cee0`, the original
+fingerprint above, and the existing APT policy: Origin `TPA`, Label
+`TPA Bootstrap`, description `Canonical TPA bootstrap repository`. Prerelease
+tags use only an explicitly configured separate staging repository and cannot
+target bootstrap. Other users of the reusable workflow retain optional APT
+publication.
+
+See [staged releases](staged-releases.md) for public variables, the restricted
+upload credential, protected signing options, receiver requirements and full
+stopped-state backup/rollback before a receiver upgrade. A GitHub environment
+with only the initiating owner's reviewer identity cannot approve that owner's
+own run when self-review is disabled: provide an independent reviewer or an
+independent authorized initiator. Do not disable that guard to make a release
+pass. Keep original signing keys on the owner's computer where possible; the
+existing-agent runner option does not require exporting them to GitHub.
+
+This wiring is not evidence of live publication. Before enabling publication,
+inspect the current complete bootstrap inventory as required above; if it has
+other bootstrap packages, include those exact qualified bytes in the approved
+snapshot instead of publishing a TPA-only replacement. Do not tag or publish an
+already-used version with changed bytes.
+
 ## Availability versus canonical identity
 
 The canonical URL is a binding path decision, not a claim that a release is live.

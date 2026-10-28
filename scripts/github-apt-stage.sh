@@ -75,12 +75,19 @@ PY
     if [[ $mode == sign ]]; then
       : "${APT_PUBLIC_KEY:?}" "${APT_SIGNING_FINGERPRINT:?}"
       [[ $APT_SIGNING_FINGERPRINT =~ ^[A-Fa-f0-9]{40}$ ]] || { echo 'full owner signing fingerprint required' >&2; exit 1; }
-      export GNUPGHOME=$RUNNER_TEMP/apt-owner-gnupg
-      mkdir -p -m 700 "$GNUPGHOME"
-      owner_home=$GNUPGHOME
+      if [[ -n ${APT_SIGNING_HOME:-} ]]; then
+        [[ $APT_SIGNING_HOME == /* && -d $APT_SIGNING_HOME ]] || { echo "existing absolute owner signing home required" >&2; exit 1; }
+        export GNUPGHOME=$APT_SIGNING_HOME
+        # Reuse the owner's existing agent/hardware identity. Never import,
+        # export, remove or kill it as if it were disposable runner state.
+      else
+        export GNUPGHOME=$RUNNER_TEMP/apt-owner-gnupg
+        mkdir -p -m 700 "$GNUPGHOME"
+        owner_home=$GNUPGHOME
+      fi
       printf '%s\n' "$APT_PUBLIC_KEY" | gpg --batch --yes --dearmor > "$RUNNER_TEMP/apt-owner-public.gpg"
       state=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["stage"]["state"])' "$RUNNER_TEMP/stage-review.json")
-      if [[ $state != PUBLISHED ]]; then
+      if [[ $state != PUBLISHED && -n $owner_home ]]; then
         : "${APT_SIGNING_PRIVATE_KEY:?protected environment owner key required}"
         printf '%s\n' "$APT_SIGNING_PRIVATE_KEY" | gpg --batch --import
         # Unlock only this protected runner's local agent. The key/passphrase
@@ -91,7 +98,8 @@ PY
       fi
       "$tpa" sign "${common[@]}" "-manifest=$manifest" \
         "-gpg=$APT_SIGNING_FINGERPRINT" "-fingerprint=$APT_SIGNING_FINGERPRINT" \
-        "-keyring=$RUNNER_TEMP/apt-owner-public.gpg" "-label=${APT_LABEL:-TPA-Repo}" \
+        "-keyring=$RUNNER_TEMP/apt-owner-public.gpg" "-origin=${APT_ORIGIN:-TPA-Repo}" \
+        "-label=${APT_LABEL:-TPA-Repo}" "-repo-description=${APT_DESCRIPTION:-}" \
         > "$RUNNER_TEMP/stage-publication.json"
     fi
     ;;
