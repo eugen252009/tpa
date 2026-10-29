@@ -41,7 +41,9 @@ existing repository's opaque ID and use the actual hosted transport:
 FINGERPRINT=EDCEE63AA803737C8ABBC1E4A34190A2829D5E54
 GNUPGHOME="$OWNER_GPG_HOME" tpa pack -in="$COMPLETE_QUALIFIED_INPUT" \
   -out="$NEW_FINISHED_TREE" -gpg="$FINGERPRINT" \
-  -suite=stable -codename=stable -components=main
+  -suite=stable -codename=stable -components=main \
+  -origin=TPA -label="TPA Bootstrap" \
+  -repo-description="Canonical TPA bootstrap repository"
 
 tpa verify --require-signed -keyring="$BOOTSTRAP_PUBLIC_KEYRING" \
   -fingerprint="$FINGERPRINT" "$NEW_FINISHED_TREE"
@@ -109,6 +111,10 @@ snapshot instead of publishing a TPA-only replacement. Do not tag or publish an
 already-used version with changed bytes.
 
 ## Availability versus canonical identity
+
+The [0.8.0 local preparation plan](bootstrap-release-0.8.0.md) describes the
+qualified-source/public-package discrepancy, licensing distribution and approval
+steps. It does not announce publication.
 
 The canonical URL is a binding path decision, not a claim that a release is live.
 Use the publication report and current HTTP/APT checks to establish availability.
