@@ -28,7 +28,7 @@ docker run --rm --platform "linux/$TPA_RELEASE_ARCH" \
     for command in compose stage sign verify publish; do
       grep -E "^[[:space:]]+$command[[:space:]]" /tmp/tpa-help
     done
-    printf '\''[{"control":{"package":"tpa-install-proof","version":"1.0","architecture":"all","maintainer":"Fixture <fixture@example.invalid>","description":"Installed compiler proof"}}]\'' > /tmp/definition.json
+    printf '\''[{"control":{"name":"tpa-install-proof","version":"1.0","architecture":"all","maintainer":"Fixture <fixture@example.invalid>","description":"Installed compiler proof"}}]\'' > /tmp/definition.json
     tpa compose -in=/tmp/definition.json -out=/tmp/compiled -epoch=1700000000 -workers=2
     tpa verify /tmp/compiled
     tpa-utils --help >/dev/null
