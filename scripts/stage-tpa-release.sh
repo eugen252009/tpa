@@ -21,7 +21,9 @@ if [ -z "$HOST" ]; then
     CGO_ENABLED=0 go build -trimpath -buildvcs=false -p="${TPA_BUILD_JOBS:-4}" -ldflags "$LDFLAGS" -o "$HOST" .
 fi
 mkdir -p "$STAGE/usr/local/bin" "$STAGE/usr/share/man/man1" "$STAGE/usr/share/doc/tpa"
-cp LICENSE "$STAGE/usr/share/doc/tpa/copyright"
+# Debian slim images exclude most docs but explicitly preserve copyright.
+# Keep all required notices there, not solely in an optional separate doc file.
+cat LICENSE THIRD_PARTY_NOTICES > "$STAGE/usr/share/doc/tpa/copyright"
 cp THIRD_PARTY_NOTICES "$STAGE/usr/share/doc/tpa/THIRD_PARTY_NOTICES"
 chmod 0644 "$STAGE/usr/share/doc/tpa/copyright" "$STAGE/usr/share/doc/tpa/THIRD_PARTY_NOTICES"
 for executable in tpa tpa-utils tpa-release; do

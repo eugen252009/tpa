@@ -21,7 +21,9 @@ THIRD_PARTY_NOTICES retains the original Go runtime/standard library, xz, x/sys
 and YAML terms, YAML's upstream NOTICE and full Apache-2.0 text. The test-only
 check.v1 module is not linked into release tools. External dpkg/GPG/gzip/OpenSSH
 are not bundled or relicensed. Browser assets are first-party. Both package build
-entrypoints stage license documents under /usr/share/doc/tpa; preserved native CI
+entrypoints stage license documents under /usr/share/doc/tpa. The mandatory
+copyright file includes MIT plus complete dependency notices so Debian slim's
+documentation exclusion cannot discard the only copy. Preserved native CI
 tool artifacts carry the same notices. TPA.run must be evaluated separately.
 
 ## What was missing

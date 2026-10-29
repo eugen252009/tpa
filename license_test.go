@@ -44,6 +44,9 @@ func TestTPALicenseAndDistribution(t *testing.T) {
 			t.Errorf("missing dependency notice %q", notice)
 		}
 	}
+	if !strings.Contains(read("scripts/stage-tpa-release.sh"), "cat LICENSE THIRD_PARTY_NOTICES") {
+		t.Fatal("mandatory copyright must retain dependency notices under Debian doc filters")
+	}
 	for _, path := range []string{"copyright", "THIRD_PARTY_NOTICES"} {
 		if !strings.Contains(read(".tpa-release.yml"), "usr/share/doc/tpa/"+path) {
 			t.Errorf("reusable build must require packaged %s", path)

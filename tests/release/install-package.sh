@@ -21,9 +21,12 @@ docker run --rm --platform "linux/$TPA_RELEASE_ARCH" \
     test "$(tpa version)" = "$TPA_RELEASE_VERSION"
     dpkg-query -W -f='\''${Package} ${Version} ${Architecture}\n'\'' tpa
     test -s /usr/share/doc/tpa/copyright
-    test -s /usr/share/doc/tpa/THIRD_PARTY_NOTICES
     grep -F "MIT License" /usr/share/doc/tpa/copyright
     grep -F "the tpa.run Team" /usr/share/doc/tpa/copyright
+    # Full third-party terms must survive Debian slim path-exclude doc filters.
+    for notice in "Ulrich Kunitz" "Go Authors" "Kirill Simonov" "Canonical Ltd" "END OF TERMS AND CONDITIONS"; do
+      grep -F "$notice" /usr/share/doc/tpa/copyright
+    done
     tpa --help > /tmp/tpa-help
     for command in compose stage sign verify publish; do
       grep -E "^[[:space:]]+$command[[:space:]]" /tmp/tpa-help
