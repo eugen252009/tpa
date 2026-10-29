@@ -28,6 +28,8 @@ package:
     - usr/local/bin/tpa
     - usr/local/bin/tpa-utils
     - usr/local/bin/tpa-release
+    - usr/share/doc/tpa/copyright
+    - usr/share/doc/tpa/THIRD_PARTY_NOTICES
     - usr/share/man/man1/tpa.1.gz
     - usr/share/bash-completion/completions/tpa
     - usr/share/zsh/vendor-completions/_tpa
