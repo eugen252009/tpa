@@ -72,7 +72,9 @@ Repository identity is independent of package names. All future bootstrap releas
 use this existing path unless the owner explicitly changes it; do not introduce
 `/r/tpa/bootstrap`. Signing remains owner-local, and TPA.run serves the original
 client-built bytes without rebuilding or re-signing them. See the
-[bootstrap publication and preservation rules](docs/bootstrap.md).
+[bootstrap publication and preservation rules](docs/bootstrap.md) and the
+[0.8.0 candidate release plan](docs/bootstrap-release-0.8.0.md). A local candidate
+is not a claim of public availability.
 
 ## Client-signed SSH publication
 
@@ -147,6 +149,8 @@ The packaged files are:
 | `parse` | `.deb` archive at `-in` | Human-readable parsed control summary on standard output |
 | `compose` | Metadata-only JSON, JSONL or directory at `-in` | New local repository at `-out`, direct reproducible DEBs, optional existing GPG signer; no package trees |
 | `publish` | Finished signed tree at `-in`, explicit `tparun+ssh://` output and owner public keyring | Restricted chunk-CAS SSH publication, exact byte preservation and zero-payload repeat; no server signing/building |
+| `stage` | Explicit hosted SSH destination, exact approved manifest and already-built DEBs | Private persistent create/upload/inspect/cancel; pinned parent, no live repository mutation |
+| `sign` | Complete stage, original approved manifest and owner signing/public trust | Owner-side metadata generation/signing, verified SSH-CAS atomic publication; no DEB rebuild |
 | `pack` | Top-level `.deb` files in `-in`, an optional JSON config path, or `--empty` | Verified APT repository at local or SSH/SFTP `--output`, or local `--atomic-publish`; optionally a generation inventory |
 | `inspect` | Local repository path or read-only HTTP(S)/SSH locator | Release metadata and rich package-index entries; optionally exact `-package`, `-ver`, `-arch` lookup |
 | `verify` | Local repository path or read-only HTTP(S)/SSH locator | Verifies Release/index integrity, signatures when present, and every indexed `.deb` artifact |
@@ -726,4 +730,8 @@ requirements:
 
 ## License
 
-MIT @ Coffee Maker Studio
+TPA is free software under the [MIT License](LICENSE), by the tpa.run Team.
+Copyright (c) 2026 the tpa.run Team. See [third-party notices](THIRD_PARTY_NOTICES)
+for linked dependencies under their own terms. Debian packages install both
+notices in `/usr/share/doc/tpa/`. This license applies to TPA, not automatically
+to the separate TPA.run hosting service.

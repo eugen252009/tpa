@@ -20,5 +20,18 @@ docker run --rm --platform "linux/$TPA_RELEASE_ARCH" \
     apt-get install -y --no-install-recommends /tmp/tpa-package.deb
     test "$(tpa version)" = "$TPA_RELEASE_VERSION"
     dpkg-query -W -f='\''${Package} ${Version} ${Architecture}\n'\'' tpa
-    tpa --help >/dev/null
+    test -s /usr/share/doc/tpa/copyright
+    test -s /usr/share/doc/tpa/THIRD_PARTY_NOTICES
+    grep -F "MIT License" /usr/share/doc/tpa/copyright
+    grep -F "the tpa.run Team" /usr/share/doc/tpa/copyright
+    tpa --help > /tmp/tpa-help
+    for command in compose stage sign verify publish; do
+      grep -E "^[[:space:]]+$command[[:space:]]" /tmp/tpa-help
+    done
+    printf '\''[{"control":{"package":"tpa-install-proof","version":"1.0","architecture":"all","maintainer":"Fixture <fixture@example.invalid>","description":"Installed compiler proof"}}]\'' > /tmp/definition.json
+    tpa compose -in=/tmp/definition.json -out=/tmp/compiled -epoch=1700000000 -workers=2
+    tpa verify /tmp/compiled
+    tpa-utils --help >/dev/null
+    tpa-release --help >/dev/null
+
   '

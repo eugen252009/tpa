@@ -44,6 +44,10 @@ for arch in amd64 arm64 riscv64; do
     extracted="$TMP/extracted-$arch"
     mkdir -p "$extracted"
     dpkg-deb -x "$deb" "$extracted"
+    cmp "$ROOT/LICENSE" "$extracted/usr/share/doc/tpa/copyright"
+    cmp "$ROOT/THIRD_PARTY_NOTICES" "$extracted/usr/share/doc/tpa/THIRD_PARTY_NOTICES"
+    test "$(stat -c '%a' "$extracted/usr/share/doc/tpa/copyright")" = 644
+    test "$(stat -c '%a' "$extracted/usr/share/doc/tpa/THIRD_PARTY_NOTICES")" = 644
     for executable in tpa tpa-utils tpa-release; do
         test -x "$extracted/usr/local/bin/$executable"
         test "$(stat -c '%a' "$extracted/usr/local/bin/$executable")" = 755

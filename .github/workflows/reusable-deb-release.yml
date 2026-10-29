@@ -535,6 +535,7 @@ jobs:
             --tpa-version "$TPA_RELEASE_TPA_VERSION"
           manifest_sum=$(sha256sum "$RUNNER_TEMP/release-bundle/release-manifest.json")
           echo "manifest_sha256=${manifest_sum%% *}" >> "$GITHUB_OUTPUT"
+          cp tpa-source/LICENSE tpa-source/THIRD_PARTY_NOTICES "$RUNNER_TEMP/"
           native_sum=$(sha256sum "$RUNNER_TEMP/tpa-builder")
           helper_sum=$(sha256sum "$RUNNER_TEMP/tpa-release")
           echo "tpa_sha256=${native_sum%% *}" >> "$GITHUB_OUTPUT"
@@ -549,6 +550,8 @@ jobs:
           path: |
             ${{ runner.temp }}/tpa-builder
             ${{ runner.temp }}/tpa-release
+            ${{ runner.temp }}/LICENSE
+            ${{ runner.temp }}/THIRD_PARTY_NOTICES
           if-no-files-found: error
           retention-days: 30
       - name: Upload qualified staging candidate bundle

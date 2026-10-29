@@ -20,7 +20,10 @@ if [ -z "$HOST" ]; then
     HOST="$TMP/tpa"
     CGO_ENABLED=0 go build -trimpath -buildvcs=false -p="${TPA_BUILD_JOBS:-4}" -ldflags "$LDFLAGS" -o "$HOST" .
 fi
-mkdir -p "$STAGE/usr/local/bin" "$STAGE/usr/share/man/man1"
+mkdir -p "$STAGE/usr/local/bin" "$STAGE/usr/share/man/man1" "$STAGE/usr/share/doc/tpa"
+cp LICENSE "$STAGE/usr/share/doc/tpa/copyright"
+cp THIRD_PARTY_NOTICES "$STAGE/usr/share/doc/tpa/THIRD_PARTY_NOTICES"
+chmod 0644 "$STAGE/usr/share/doc/tpa/copyright" "$STAGE/usr/share/doc/tpa/THIRD_PARTY_NOTICES"
 for executable in tpa tpa-utils tpa-release; do
     case "$executable" in tpa) package=. ;; *) package=./cmd/$executable ;; esac
     CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go build -trimpath -buildvcs=false \
